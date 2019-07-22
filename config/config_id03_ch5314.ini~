@@ -1,0 +1,86 @@
+[Beamline_setup]
+name = "ID03"
+cen = [108,222]
+sdd = 754
+energy = 22.5
+pix_size = [0.055, 0.055]
+
+[Sample_info]
+substrate = "Au(111)"
+film_material_cif = "Co3O4.cif"
+ph = 13
+
+[Data_storage]
+data_keys=['potential','current_density','Time','pcov_ip',\
+           'pcov_oop','cen_ip','FWHM_ip', 'amp_ip', 'lfrac_ip',\
+           'bg_slope_ip','bg_offset_ip','cen_oop','FWHM_oop',\
+           'amp_oop','lfrac_oop','bg_slope_oop','bg_offset_oop']
+
+[Scan_setup]
+debug = 0
+debug_img = 0
+live_image = 1
+scan_nos = [56]
+hkl = [4, 0, 4]
+boost_mapping=True
+l_scan=True
+#is it a potential step scan
+is_zap_scan = False
+#How is the file saved?
+#normal_save_format = True : save fio file and one nxs file for each frame
+#normal_save_format = False: no fio file, one nxs file for all frames
+#At this moment, pot step data is saved in two different formates, which should be avoided in future!!
+spec_file = '/home/qiu/data/CH5314/ch5314_sixcvertical.spec'
+img_path =  '/home/qiu/data/CH5314/ch5314_img/'
+time_step = [10, 40, 50]
+pot_step = [0.4, 0.7, 0.4]
+save_all_frames = 0
+
+[Fit_setup]
+#the small integration window size(num of pix from one side. Smaller more reliable but worse statistics)
+#fit boundaries for ip and oop cuts, you need to play with it a bit
+#(x0, FWHM, area, lfrac, bg_slope, bg_offset)
+#bounds for ip
+bounds_ip = [[-1, 0.0050, 0, 0, -1000, 0],[10, 0.22, 1e3, 1, 1e3, 1e3]]
+#bounds for oop
+bounds_oop =  [[-1, 0.0050, 0, 0, -1000, 0],[10, 0.22, 1e3, 1, 1e3, 1e3]]
+guess_ip = [2.54, 0.01, 0.05, 1, 0, 0.5]
+guess_oop = [3.54, 0.01, 0.05, 0.5, 0, 0.5]
+#Cut and fit range for two-step peak-fitting processes, 
+#First window should be big enough to cover the peak
+#The first window use the detector center as the peak center for calculating fit range
+#The second fit window use the peak center from the 1st step fit
+cut_offset={'hor':[250,5],'ver':[250,5]}
+data_range_offset={'hor':[250,150],'ver':[250,150]}
+#use the first fit results for the ip/oop position?
+use_first_fit_for_pos = True
+
+[Mask_setup]
+remove_pix = [[152,146],[176,131],[176,132],[172,143],[172,144],[172,147],[172,148],\
+              [172,149],[173,145],[173,146],[173,148],[191,145],[192,145],[192,146],\
+              [193,144],[193,146],[203,145],[203,146],[203,147],[204,146],[204,147],\
+              [203,124],[202,126],[243,140],[245,133]]
+#remove_columns = [0,1,2,-1,-2,-3]+range(91,110)
+remove_columns = [0,1,2,-1,-2,-3]
+remove_rows = [0,1,2,-1,-2,-3]
+#equivalent to remove rows with q_ver between these range
+#remove_q_par = [[3.4,3.45]]
+remove_q_par = []
+#equivalent to remove columns with q_par between these ranges
+#remove_q_ver = [[2.48,2.55]]
+remove_q_ver = []
+#eg line_strike_segments =[{'p1':[2.4,3.0],'p2':[2.55,3.3]},{'p1':[2.1,3.2],'p2':[2.75,3.5]}]
+#each list item is a lib of two items with key=p1 and p2 without exception
+#each list item define two ends of one line segment
+#each point is of form [q_para, q_vert]
+line_strike_segments = [{'p1':[2.48,3.32],'p2':[2.50,3.28]}]
+#in pixel unit eg [10,10], make sure the length is the same as line_strike_segments
+line_strike_width = [12]
+
+[Image_setup]
+vmax_2d_img=0.005
+vmin_2d_img=0
+
+[Func_keys]
+get_UB = ['name','lattice_constants','energy','or0_angles','or1_angles','or0_hkl','or1_hkl']
+

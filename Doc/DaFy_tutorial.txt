@@ -1,0 +1,40 @@
+DaFy is Python software package short for Data Analysis Factory.
+
+It is designed to process data in a pipe-line pattern, which comprises of several 'Data_Filter-->Data_Engine' components.
+Filter and Engine packages are stored in seperated Python packages, which can be called in the main script. In principle,
+all functions during data analysis can be wrapped into either a filter-like or engine-like objects. To make the main script
+concise and readable, we should be forced to do that if you want to make any script contribution to DaFy package.
+
+Inside DaFy, you can write many main scripts for different projects to expand its functionality. To develop a project, you 
+write first the associated filter and engine objects to be called in your main script.
+
+At present, I have written the CV_XRD_DaFy.py project, which is used to process XRD data collected from either P23 or ID03 beamline.
+Instruction of running CV_XRD_DaFy
+**Dependency**
+  scripy, numpy, PyMca5, matplotlib
+  [mpi4py] is optional, only reqired if you want to run the script on multi-processors
+**Project overview**
+  The main script take in spectial configuration files to reconize which data format to process (P23 or ID03). You should edit the
+  configuration file accordingly for data processing.
+  The main script will loop through all frames to extract following informations in the reciprocal space: peak position, peak width.
+  You can easily customize the peak fitting by editing the configuration file accordingly.
+**Step by Step running procedure**
+ 1. Edit the config file (config_id03.ini or config_p23.ini). Most important items to be changed include 'spec_file', 'img_path', 
+    'scan_no','l_scan', 'cut_offset'. Read the comments inside the config file to get some sense of each item. Most are self explanary.
+ 2. Change the config_file in the main script (line 31 of CV_XRD_DaFy.py)
+ 3. Set debugging par
+    *line 22 debug = 1 for debug mode, under which only one frame will be processed. It offers you a quick eye-check of the fit quality.
+     Based on what you see, you may need to change the items inside the config file, eg the width of cut.
+    *If you are satisfied with the fit, then set the debug to 0, which means you want to process all frames for the scan. Then you can either
+     set the live_image to 1 to show live-image during data analysis or to 0 without showing live image for fast analysis.
+ 4. Then run this script in a terminal: python CV_XRD_DaFy.py. Sit back to get a coffee while waiting.
+ 
+ 
+ 
+ How to get the prim beam center
+ From the pixel image, you read the center at [x, y]
+ Transpose the peak at [y, x]
+ Do numpy.flip(axis=1), you will get [y, x+(hor_width/2-x)*2], where hor_width is the number of total pix in horizontal direction (516 for p23 line)
+ 
+ 
+

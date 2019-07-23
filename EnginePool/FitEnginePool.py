@@ -699,6 +699,60 @@ class background_subtraction_single_img():
             for each in config.items(section):
                 setattr(self,each[0], eval(each[1]))
 
+    def update_center_pix_up_and_down(self,offset):
+        offset = int(offset)
+        offset = np.array([-offset,0])
+        self.center_pix = np.array(self.center_pix) + offset
+        return None
+
+    def update_center_pix_left_and_right(self,offset):
+        offset = int(offset)
+        offset = np.array([0,offset])
+        self.center_pix = np.array(self.center_pix) + offset
+        return None
+
+    def update_integration_window_column_width(self,offset):
+        offset = int(offset)
+        self.col_width = self.col_width + offset
+        return None
+
+    def update_integration_window_row_width(self,offset):
+        offset = int(offset)
+        self.row_width = self.row_width + offset
+        return None
+
+    def update_integration_order(self,order):
+        self.ord_cus_s = [int(order)]
+
+    def update_integration_function(self,fct):
+        self.fct = fct
+
+    def update_ss_factor(self,sf):
+        self.ss_factor = float(sf)
+
+    def update_var_for_tweak(self,str_parser):
+        cmds_list = str_parser.split(',')
+        lib_arg = {'ud':self.update_center_pix_up_and_down,\
+                   'lr':self.update_center_pix_left_and_right,\
+                   'cw':self.update_integration_window_column_width,\
+                   'rw':self.update_integration_window_row_width,\
+                   'od':self.update_integration_order,\
+                   'sf':self.update_ss_factor,\
+                   'ft':self.update_integration_function}
+        if cmds_list == ['qw']:
+            return 'qw'
+        elif cmds_list == ['rm']:
+            return 'rm'
+        elif cmds_list == ['r']:
+            return 'repeat_last'
+        else:
+            for each in cmds_list:
+                if each[0:2] in lib_arg:
+                    lib_arg[each[0:2]](each[2:])
+                else:
+                    pass
+            return 'tweak'
+
     def integrate_one_image(self,fig, img, data, plot_live = False, check = False, check_level = 0.00001):
         self.img = img
         center_pix=self.center_pix

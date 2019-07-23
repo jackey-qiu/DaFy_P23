@@ -20,7 +20,7 @@ from GrainAnalysisEnginePool import cal_strain_and_grain
 from VisualizationEnginePool import show_3_plots, plot_after_fit
 from DataFilterPool import create_mask_bkg, extract_subset_of_zap_scan
 import numpy as np
-from util.UtilityFunctions import nexus_image_loader,get_UB,gen_find,edf_image_loader, update_data, tiff_image_loader
+from util.UtilityFunctions import nexus_image_loader,get_UB,gen_find,edf_image_loader, update_data, pop_last_item, tiff_image_loader
 from scipy.interpolate import griddata
 import scipy.optimize as opt
 from scipy.ndimage import gaussian_filter
@@ -57,7 +57,7 @@ tweak_mode = False
 #'bkg_sub' config is the config file for background substraction
 
 conf_file_names = {'XRD':'config_p23_i20180678.ini',\
-                   'ploter':'CV_XRD_plot_i20180678_Jul22_2019.ini'}
+                   'ploter':'CV_XRD_plot_i20180678_Jul23_2019.ini'}
 conf_file = os.path.join(DaFy_path, 'config', conf_file_names['XRD'])
 conf_file_plot = os.path.join(DaFy_path, 'config', conf_file_names['ploter'])
 config = configparser.ConfigParser()
@@ -174,6 +174,7 @@ for scan_no in scan_nos:
     t1 = time.time()
     if debug:
         frame_number_ranges = [debug_img]
+    process_through = False
 
     for frame_number in frame_number_ranges:
         if rank == 0:
@@ -195,7 +196,7 @@ for scan_no in scan_nos:
         elif name == 'ID03':
             motor_angles = spec.extract_motor_angle(scan_no, frame_number, is_zap_scan)
             
-        img = img/motor_angles['mon']/motor_angles['transm']
+        # img = img/motor_angles['mon']/motor_angles['transm']
         
         bkg_sub.update_motor_angles(motor_angles)
         #Now do backgrond subtraction for the peak
@@ -209,21 +210,72 @@ for scan_no in scan_nos:
         data = update_data(data,keys = ['potential', 'current_density','H','K','L', 'frame_number', 'phi', 'chi','mu','delta','gamma','omega_t','mon','transm'], \
                            values =[potential, current, H, K, L, frame_number,motor_angles['phi'],motor_angles['chi'],motor_angles['mu'],\
                            motor_angles['delta'],motor_angles['gamma'],motor_angles['omega_t'],motor_angles['mon'], motor_angles['transm']])
-        if bkg_sub.int_direct =='y':
-            check_result = bkg_sub.fit_background(fig_bkg_plot,img*mask, data, plot_live = plot_live, check=True,check_level = check_level)
-        elif bkg_sub.int_direct =='x':
-            check_result = bkg_sub.fit_background(fig_bkg_plot,img*mask, data, plot_live = plot_live, check=True, check_level = check_level)
-        if check_result:
-            data['peak_intensity'].append(bkg_sub.fit_results['I'])
-            data['peak_intensity_error'].append(bkg_sub.fit_results['Ierr'])
-        else:
-            pass
-        #save results for the first loop but update result in the following loop steps used in tweak mode
-        #extract potential and current density
-        fig_bkg_plot.canvas.draw()
-        fig_bkg_plot.tight_layout()
-        plt.pause(0.05)
-        plt.show()
+
+        tweak = True
+        pre_tweak_motion = ''
+        repeat_last = False
+        while tweak:
+            print(pre_tweak_motion)
+            if bkg_sub.int_direct =='y':
+                check_result = bkg_sub.fit_background(fig_bkg_plot,img*mask, data, plot_live = plot_live, check=True,check_level = check_level)
+            elif bkg_sub.int_direct =='x':
+                check_result = bkg_sub.fit_background(fig_bkg_plot,img*mask, data, plot_live = plot_live, check=True, check_level = check_level)
+            if process_through:
+                tweak = False
+                data['peak_intensity'].append(bkg_sub.fit_results['I'])
+                data['peak_intensity_error'].append(bkg_sub.fit_results['Ierr'])
+            else:
+                if not repeat_last:
+                    tweak_motion_str = raw_input(", splited stream of string\n\
+                                                  ud:up or down\n\
+                                                  lr:left or right\n\
+                                                  cw:column width\n\
+                                                  rw:row width\n\
+                                                  od:polynomial order\n\
+                                                  sf:ss_factor, smaller lower bkg\n\
+                                                  r:repeat last motion\n\
+                                                  #r:repeat motion for rest points\n\
+                                                  ft:fit function(ah, sh, stq, atq)\n\
+                                                  qw:quit and write date\n\
+                                                  rm:remove current date and quit\n\
+                                                  Your input is:") or 'qw'
+                    if tweak_motion_str =='#r':
+                        tweak_return = 'process_through'
+                    else:
+                        tweak_return = bkg_sub.update_var_for_tweak(tweak_motion_str)
+                else:
+                    tweak_return = bkg_sub.update_var_for_tweak(pre_tweak_motion)
+
+                if tweak_return == 'qw':
+                    data['peak_intensity'].append(bkg_sub.fit_results['I'])
+                    data['peak_intensity_error'].append(bkg_sub.fit_results['Ierr'])
+                    tweak = False
+                    # repeat_last = False
+                elif tweak_return == 'rm':
+                    data = pop_last_item(data,keys = ['potential', 'current_density','H','K','L', 'frame_number', 'phi', 'chi','mu','delta','gamma','omega_t','mon','transm'])
+                    tweak = False
+                    # repeat_last = False
+                elif tweak_return == 'tweak':
+                    if tweak_motion_str!='r':
+                        pre_tweak_motion = tweak_motion_str
+                    tweak = True
+                    repeat_last = False
+                elif tweak_return == 'repeat_last':
+                    repeat_last = True
+                    teak = True
+                elif tweak_return == 'process_through':
+                    data['peak_intensity'].append(bkg_sub.fit_results['I'])
+                    data['peak_intensity_error'].append(bkg_sub.fit_results['Ierr'])
+                    tweak = False
+                    process_through = True
+
+
+                #save results for the first loop but update result in the following loop steps used in tweak mode
+                #extract potential and current density
+            fig_bkg_plot.canvas.draw()
+            fig_bkg_plot.tight_layout()
+            plt.pause(0.05)
+            plt.show()
 
     if debug or len(scan_nos)==1:
         plt.ioff()

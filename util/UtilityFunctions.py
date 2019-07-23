@@ -228,6 +228,11 @@ def update_data(data,keys,values):
         data[key].append(value)
     return data
 
+def pop_last_item(data,keys):
+    for key in keys:
+        data[key].pop()
+    return data
+
 def extract_potential(pt_no = 2000, time_step = [10, 50, 10], pot_step = [0.2, 0.5, 0.8]):
     potential_container= []
     frames_per_time = float(pt_no)/sum(time_step)

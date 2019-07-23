@@ -1,0 +1,90 @@
+
+[DataBank_102_20190723-112044]
+scan_number = [102]
+HKL = (-2.0 0.0 0.2)
+rod_scan =1
+colors = ['r']
+scan_ids = ['DaFy_102']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_102_20190723-112044.npz']
+
+[DataBank_104_20190723-112400]
+scan_number = [104]
+HKL = (-2.0 0.0 1.8)
+rod_scan =1
+colors = ['r']
+scan_ids = ['DaFy_104']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_104_20190723-112400.npz']
+
+[DataBank_118_20190723-112744]
+scan_number = [118]
+HKL = (-2.0 0.0 0.2)
+rod_scan =1
+colors = ['r']
+scan_ids = ['DaFy_118']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_118_20190723-112744.npz']
+
+[DataBank_126_20190723-113343]
+scan_number = [126]
+HKL = (-2.0 -0.0 0.2)
+rod_scan =1
+colors = ['r']
+scan_ids = ['DaFy_126']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_126_20190723-113343.npz']
+
+[DataBank_133_20190723-114004]
+scan_number = [133]
+HKL = (-2.0 -0.0 0.2)
+rod_scan =1
+colors = ['r']
+scan_ids = ['DaFy_133']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_133_20190723-114004.npz']
+
+[DataBank_144_20190723-114512]
+scan_number = [144]
+HKL = (-2.0 0.0 0.2)
+rod_scan =1
+colors = ['r']
+scan_ids = ['DaFy_144']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_144_20190723-114512.npz']
+
+[DataBank_155_20190723-115053]
+scan_number = [155]
+HKL = (-2.0 0.0 0.2)
+rod_scan =1
+colors = ['r']
+scan_ids = ['DaFy_155']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_155_20190723-115053.npz']
+
+[DataBank_162_20190723-115523]
+scan_number = [162]
+HKL = (-2.0 -0.0 0.2)
+rod_scan =1
+colors = ['r']
+scan_ids = ['DaFy_162']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_162_20190723-115523.npz']
+
+[DataBank_97_20190723-122300]
+scan_number = [97]
+HKL = (-2.0 0.0 1.0)
+rod_scan =0
+colors = ['r']
+scan_ids = ['DaFy_97']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_97_20190723-122300.npz']
+
+[DataBank_104_20190723-123323]
+scan_number = [104]
+HKL = (-2.0 0.0 1.8)
+rod_scan =1
+colors = ['r']
+scan_ids = ['DaFy_104']
+data_file_header = '/home/qiu/apps/DaFy_P23/data'
+data_files= ['DataBank_104_20190723-123323.npz']

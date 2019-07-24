@@ -231,6 +231,8 @@ for scan_no in scan_nos:
                                                   lr:left or right\n\
                                                   cw:column width\n\
                                                   rw:row width\n\
+                                                  pw:peak width\n\
+                                                  ps:peak shift\n\
                                                   od:polynomial order\n\
                                                   sf:ss_factor, smaller lower bkg\n\
                                                   r:repeat last motion\n\

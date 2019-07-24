@@ -730,6 +730,12 @@ class background_subtraction_single_img():
     def update_ss_factor(self,sf):
         self.ss_factor = float(sf)
 
+    def update_peak_width(self,offset):
+        self.peak_width = self.peak_width + int(offset)
+
+    def update_peak_shift(self,offset):
+        self.peak_shift = self.peak_shift + int(offset)
+
     def update_var_for_tweak(self,str_parser):
         cmds_list = str_parser.split(',')
         lib_arg = {'ud':self.update_center_pix_up_and_down,\
@@ -738,7 +744,9 @@ class background_subtraction_single_img():
                    'rw':self.update_integration_window_row_width,\
                    'od':self.update_integration_order,\
                    'sf':self.update_ss_factor,\
-                   'ft':self.update_integration_function}
+                   'ft':self.update_integration_function,\
+                   'pw':self.update_peak_width,\
+                   'ps':self.update_peak_shift}
         if cmds_list == ['qw']:
             return 'qw'
         elif cmds_list == ['rm']:
@@ -794,6 +802,9 @@ class background_subtraction_single_img():
         # elif [x_corner,y_corner] == [1,0]:
 
         x_span,y_span=x_max-x_min,y_max-y_min
+        clip_image_center = [int(y_span/2)+self.peak_shift,int(x_span/2)+self.peak_shift]
+        peak_l = clip_image_center[int(self.int_direct=='x')]-self.peak_width
+        peak_r = clip_image_center[int(self.int_direct=='x')]+self.peak_width
         if self.x_min ==None:
             self.x_min, self.y_min, self.x_span, self.y_span = x_min, y_min, x_span, y_span
         else:
@@ -860,15 +871,15 @@ class background_subtraction_single_img():
         for s in ss:
             for ord_cus in ord_cus_s:
                 z,a,it,ord_cus,s,fct = backcor(n,y,ord_cus,s,fct)
-                I_container.append(np.sum(y[index]-z[index]))
+                I_container.append(np.sum(y[peak_l:peak_r][index]-z[peak_l:peak_r][index]))
                 # print('sensor',y[index])
                 # I_container.append(np.sum(y[index]))
-                Ibgr_container.append(abs(np.sum(z[index])))
+                Ibgr_container.append(abs(np.sum(z[peak_l:peak_r][index])))
                 FOM_container.append(_cal_FOM(y,z,peak_width=30))
                 #Ierr_container.append((I_container[-1]+FOM_container[-1])**0.5)
                 # Ierr_container.append((I_container[-1])**0.5+FOM_container[-1][1]+I_container[-1]*0.03)#possoin error + error from integration + 3% of current intensity
                 # Ierr_container.append(std_bkg/abs(I_container[-1])*std_bkg+(np.sum(y)/data['mon'][-1]/data['transm'][-1])**0.5)#possoin error + error from integration + 3% of current intensity
-                Ierr_container.append((I_container[-1])*0.01)#possoin error + error from integration + 3% of current intensity
+                Ierr_container.append((I_container[-1]/data['mon'][-1]/data['transm'][-1])**.5)#possoin error + error from integration + 3% of current intensity
                 # try:
                     # Ierr_container.append((np.sum(y)/data['mon'][-1]/data['transm'][-1])**0.5)#possoin error + error from integration + 3% of current intensity
                 # except:
@@ -905,6 +916,8 @@ class background_subtraction_single_img():
             ax_profile.plot(n[index],z[index],color="red",label="background")
             ax_profile.plot(n[index],y[index]-z[index],color="m",label="data-background")
             ax_profile.plot(n[index],[0]*len(index),color='black')
+            ax_profile.plot([peak_l,peak_l],[0,z[peak_l]],color = 'green')
+            ax_profile.plot([peak_r,peak_r],[0,z[peak_r]],color = 'green')
             ax_pot.plot(data['frame_number'],data['potential'])
             if 'L' in data:
                 L_list, I_list, I_err_list = data['L'],data['peak_intensity'], data['peak_intensity_error']
@@ -930,7 +943,7 @@ class background_subtraction_single_img():
                 pass
 
             #plt.legend()
-            print ("When s=",s_container[index_best],'pow=',ord_cus_container[index_best],"integration sum is ",np.sum(y[index]-z[index]), " counts!")
+            print ("When s=",s_container[index_best],'pow=',ord_cus_container[index_best],"integration sum is ",I_container[index_best], " counts!",'S/N ratio is {:3.2f}'.format(I_container[index_best]/Ibgr_container[index_best]+1))
         #return np.sum(y[index]-z[index]),abs(np.sum(z[index])),np.sum(y[index])**0.5+np.sum(y[index]-z[index])**0.5
         return I_container[index_best],FOM_container[index_best][1],Ierr_container[index_best],s_container[index_best],ord_cus_container[index_best],center_pix,30,r_width,c_width,check_result
 

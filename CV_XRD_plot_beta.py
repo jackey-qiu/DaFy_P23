@@ -19,6 +19,9 @@ which_scans_to_plot = [229,221,231,243]
 config_file_name = 'CV_XRD_plot_i20180835_Jul18_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 
+#do you want to set the max to 0
+ref_max_eq_0 = 0
+
 #specify this for pot step scan
 scan_time = 100 #in seconds
 
@@ -120,13 +123,13 @@ fig_ax_container = {'ip_strain':['fig1','ax1a'],\
                     'all_in_one':['fig_all','ax1_all','ax2_all','ax3_all','ax4_all','ax5_all','ax6_all']}
 
 #use this the setup globally the limits
-ax_can_ip_strain, ip_strain_min = [],0
-ax_can_oop_strain, oop_strain_min = [],0
-ax_can_ip_size, ip_size_min = [],0
-ax_can_oop_size, oop_size_min = [],0
-ax_can_current, current_min = [],0
-ax_can_intensity, intensity_min = [],0
-ax_can_set_yticks_ip_strain,ax_can_set_yticks_current, ax_can_set_yticks_oop_strain,  ax_can_set_yticks_ip_size,  ax_can_set_yticks_oop_size  = [], [], [], [], []
+ax_can_ip_strain, ip_strain_min, ip_strain_max = [],1e10, -1e10
+ax_can_oop_strain, oop_strain_min, oop_strain_max = [],1e10, -1e10
+ax_can_ip_size, ip_size_min, ip_size_max = [],1e10, -1e10
+ax_can_oop_size, oop_size_min, oop_size_max = [],1e10, -1e10
+ax_can_current, current_min, current_max = [],1e10, -1e10
+ax_can_intensity, intensity_min, intensity_max = [],1e10, -1e10
+ax_can_set_yticks_ip_strain,ax_can_set_yticks_current, ax_can_set_yticks_oop_strain,  ax_can_set_yticks_ip_size,  ax_can_set_yticks_oop_size, ax_can_set_yticks_intensity  = [], [], [], [], [], []
 
 #build figures
 for each in fig_ax_container:
@@ -244,8 +247,8 @@ for scan_id in scan_ids:
             for i in range(1,7):
                 fig_ax_container['all_in_one'][i] = fig_ax_container['all_in_one'][0].add_subplot(2,3,i)
         else:#each dataset occupy one column
-            for i in range(5):
-                fig_ax_container['all_in_one'][i+1] = fig_ax_container['all_in_one'][0].add_subplot(5,num_datasets, scan_ids.index(scan_id)+1+i*num_datasets)
+            for i in range(6):
+                fig_ax_container['all_in_one'][i+1] = fig_ax_container['all_in_one'][0].add_subplot(6,num_datasets, scan_ids.index(scan_id)+1+i*num_datasets)
             for i in range(2):
                 fig_ax_container['strain_all'][i+1] = fig_ax_container['strain_all'][0].add_subplot(2,num_datasets, scan_ids.index(scan_id)+1+i*num_datasets)
             for i in range(2):
@@ -275,6 +278,7 @@ for scan_id in scan_ids:
             ip_size_axs.append(fig_ax_container['size_all'][1])
             oop_size_axs.append(fig_ax_container['size_all'][2])
             current_axs.append(fig_ax_container['all_in_one'][1])
+            intensity_axs.append(fig_ax_container['all_in_one'][6])
         #get the first point from first pos to feed in second pos
         if pos==0:
             point_gap_ip_strain = [x[0],strain_ip_temp[0]]
@@ -297,22 +301,40 @@ for scan_id in scan_ids:
         intensity_data_all = [intensity_temp]*len(intensity_axs)
 
         #check the limits for current dataset and update it if necessary
-        def _update_min_or_not(current_min, data):
+        #here reference point is 0(max value)
+        def _update_min_or_not(current_min, current_max,data):
+            new_min, new_max = 0, 0
             data = np.array(data)
             if current_min > (data.min() - data.max()):
-                return data.min() - data.max()
+                new_min = data.min() - data.max()
             else:
-                return current_min
-
-        ip_strain_min = _update_min_or_not(ip_strain_min, strain_ip_temp)
-        oop_strain_min = _update_min_or_not(oop_strain_min, strain_oop_temp)
-        ip_size_min = _update_min_or_not(ip_size_min, size_ip_temp)
-        oop_size_min = _update_min_or_not(oop_size_min, size_oop_temp)
+                new_min = current_min
+            return new_min, new_max
+        #here we don't set the reference point (max and min is the original values)
+        def _update_min_max_or_not(current_min, current_max, data):
+            new_min, new_max = 0, 0
+            data = np.array(data)
+            if current_min > data.min():
+                new_min = data.min()
+            else:
+                new_min = current_min
+            if current_max < data.max():
+                new_max = data.max()
+            else:
+                new_max = current_max
+            return new_min, new_max
+        update_max_min = [_update_min_max_or_not,_update_min_or_not][ref_max_eq_0]
+        ip_strain_min, ip_strain_max = update_max_min(ip_strain_min,ip_strain_max, strain_ip_temp)
+        oop_strain_min, oop_strain_max = update_max_min(oop_strain_min,oop_strain_max, strain_oop_temp)
+        ip_size_min, ip_size_max = update_max_min(ip_size_min,ip_size_max, size_ip_temp)
+        oop_size_min, oop_size_max = update_max_min(oop_size_min,oop_size_max, size_oop_temp)
+        intensity_min, intensity_max = update_max_min(intensity_min,intensity_max, intensity_temp)
         #now collect all axs for different data (exclude the first ax which is the single plot)
         ax_can_ip_strain = ax_can_ip_strain + ip_strain_axs[1:]
         ax_can_oop_strain = ax_can_oop_strain + oop_strain_axs[1:]
         ax_can_ip_size = ax_can_ip_size + ip_size_axs[1:]
         ax_can_oop_size = ax_can_oop_size + oop_size_axs[1:]
+        ax_can_intensity = ax_can_intensity + intensity_axs[1:]
 
         y_labels_all =[y_labels_lib['ip_strain']]* len(ip_strain_axs)+\
                       [y_labels_lib['oop_strain']]* len(oop_strain_axs)+\
@@ -325,7 +347,7 @@ for scan_id in scan_ids:
             #you need this to match the size of data other than strain and size
             if len(x)!=len(data):
                 x = x[0:-1]
-            ax.plot(x[indx1:indx2],set_max_to_0(data,[indx1,indx2]),linestyle = 'none', linewidth =1,\
+            ax.plot(x[indx1:indx2],set_max_to_0(data,[indx1,indx2],ref_max_eq_0),linestyle = 'none', linewidth =1,\
                     color = scan_info[scan_id].color, markerfacecolor = fillcolor,\
                     markeredgecolor = scan_info[scan_id].color,marker = marker, markersize=4,label = label)
             ax.set_ylabel(y_label)
@@ -347,7 +369,7 @@ for scan_id in scan_ids:
                 ax.set_ylabel(y_labels_lib['current_den'])
                 #ax.set_ylim(ylim_current_density)
         #now set some x-y lables to '' for commen data range, also set titles
-        x_ticks, x_tick_labels = find_tick_ticklables(x, num_ticks =5, endpoint = True, dec_place =1)
+        x_ticks, x_tick_labels = find_tick_ticklables(x, num_ticks =4, endpoint = True, dec_place =1)
         if num_datasets == 1:
             [fig_ax_container['all_in_one'][i].set_xlabel('') for i in [1,2,3]]
             [fig_ax_container['all_in_one'][i].set_xticks(x_ticks) for i in [4,5,6]]
@@ -359,25 +381,25 @@ for scan_id in scan_ids:
             fig_ax_container['all_in_one'][1].set_title(scan_info[scan_id].scan_label,fontsize = 10)
             fig_ax_container['size_all'][1].set_title(scan_info[scan_id].scan_label,fontsize = 10)
             fig_ax_container['strain_all'][1].set_title(scan_info[scan_id].scan_label,fontsize=10)
-            [fig_ax_container['all_in_one'][i].set_xlabel('') for i in [1,2,3,4]]
+            [fig_ax_container['all_in_one'][i].set_xlabel('') for i in [1,2,3,4,5]]
             [fig_ax_container['size_all'][i].set_xlabel('') for i in [1]]
             [fig_ax_container['strain_all'][i].set_xlabel('') for i in [1]]
             #no tick labels
-            [fig_ax_container['all_in_one'][i].set_xticklabels([]) for i in [1,2,3,4]]
+            [fig_ax_container['all_in_one'][i].set_xticklabels([]) for i in [1,2,3,4,5]]
             [fig_ax_container['size_all'][i].set_xticklabels([]) for i in [1]]
             [fig_ax_container['strain_all'][i].set_xticklabels([]) for i in [1]]
             #set the same tick labels
-            fig_ax_container['all_in_one'][5].set_xticks(x_ticks)
-            fig_ax_container['all_in_one'][5].set_xticklabels(x_tick_labels)
+            fig_ax_container['all_in_one'][6].set_xticks(x_ticks)
+            fig_ax_container['all_in_one'][6].set_xticklabels(x_tick_labels)
             fig_ax_container['size_all'][2].set_xticks(x_ticks)
             fig_ax_container['size_all'][2].set_xticklabels(x_tick_labels)
             fig_ax_container['strain_all'][2].set_xticks(x_ticks)
             fig_ax_container['strain_all'][2].set_xticklabels(x_tick_labels)
             if scan_id != scan_ids[0]:
-                [fig_ax_container['all_in_one'][i].set_ylabel('') for i in [1,2,3,4,5]]
+                [fig_ax_container['all_in_one'][i].set_ylabel('') for i in [1,2,3,4,5,6]]
                 [fig_ax_container['size_all'][i].set_ylabel('') for i in [1,2]]
                 [fig_ax_container['strain_all'][i].set_ylabel('') for i in [1,2]]
-                [fig_ax_container['all_in_one'][i].set_yticklabels([]) for i in [1,2,3,4,5]]
+                [fig_ax_container['all_in_one'][i].set_yticklabels([]) for i in [1,2,3,4,5,6]]
                 [fig_ax_container['size_all'][i].set_yticklabels([]) for i in [1,2]]
                 [fig_ax_container['strain_all'][i].set_yticklabels([]) for i in [1,2]]
             else:
@@ -386,6 +408,7 @@ for scan_id in scan_ids:
                 ax_can_set_yticks_ip_size = [fig_ax_container['all_in_one'][4], fig_ax_container['size_all'][1]]
                 ax_can_set_yticks_oop_size = [fig_ax_container['all_in_one'][5], fig_ax_container['size_all'][2]]
                 ax_can_set_yticks_current = [fig_ax_container['all_in_one'][1]]
+                ax_can_set_yticks_intensity = [fig_ax_container['all_in_one'][6]]
 
     #save ascii files
     header = '%s #%d CV with XRD\r\nPotential / V, Current Density / mA/cm^2, Strain ip / %%, Strain oop / %%, d ip / nm, d oop / nm, Intensity (area ip)'%(beamtime, scan_no)
@@ -395,33 +418,45 @@ for scan_id in scan_ids:
 
 #now let us set the limits
 offset_scale = 0.1
-[each.set_ylim((ip_strain_min+ip_strain_min*offset_scale,-ip_strain_min*offset_scale)) for each in ax_can_ip_strain]
-[each.set_ylim((oop_strain_min+oop_strain_min*offset_scale,-oop_strain_min*offset_scale)) for each in ax_can_oop_strain]
-[each.set_ylim((ip_size_min+ip_size_min*offset_scale,-ip_size_min*offset_scale)) for each in ax_can_ip_size]
-[each.set_ylim((oop_size_min+oop_size_min*offset_scale,-oop_size_min*offset_scale)) for each in ax_can_oop_size]
+[each.set_ylim((ip_strain_min-(ip_strain_max-ip_strain_min)*offset_scale,ip_strain_max+(ip_strain_max-ip_strain_min)*offset_scale)) for each in ax_can_ip_strain]
+[each.set_ylim((oop_strain_min-(oop_strain_max-oop_strain_min)*offset_scale,oop_strain_max+(oop_strain_max-oop_strain_min)*offset_scale)) for each in ax_can_oop_strain]
+[each.set_ylim((ip_size_min-(ip_size_max-ip_size_min)*offset_scale,ip_size_max+(ip_size_max-ip_size_min)*offset_scale)) for each in ax_can_ip_size]
+[each.set_ylim((oop_size_min-(oop_size_max-oop_size_min)*offset_scale,oop_size_max+(oop_size_max-oop_size_min)*offset_scale)) for each in ax_can_oop_size]
+[each.set_ylim((intensity_min-(intensity_max-intensity_min)*offset_scale,intensity_max+(intensity_max-intensity_min)*offset_scale)) for each in ax_can_intensity]
+# [each.set_ylim((ip_strain_min-(ip_strain_max-ip_strain_min)*offset_scale,ip_strain_max+(ip_strain_max-ip_strain_min)*offset_scale)) for each in ax_can_ip_strain]
+# [each.set_ylim((oop_strain_min+oop_strain_min*offset_scale,-oop_strain_min*offset_scale)) for each in ax_can_oop_strain]
+# [each.set_ylim((ip_size_min+ip_size_min*offset_scale,-ip_size_min*offset_scale)) for each in ax_can_ip_size]
+# [each.set_ylim((oop_size_min+oop_size_min*offset_scale,-oop_size_min*offset_scale)) for each in ax_can_oop_size]
+# [each.set_ylim((intensity_min+intensity_min*offset_scale,-intensity_min*offset_scale)) for each in ax_can_intensity]
 #for each in ax_can_set_yticks_current:
 #    y_ticks, y_tick_labels = find_tick_ticklables(ylim_current_density, num_ticks =6, endpoint = False, dec_place =0)
 #    each.set_yticks(y_ticks)
 #    each.set_yticklabels(['']+y_tick_labels[1:])
 
 for each in ax_can_set_yticks_ip_strain:
-    y_ticks, y_tick_labels = find_tick_ticklables([ip_strain_min+ip_strain_min*offset_scale,-ip_strain_min*offset_scale], num_ticks =5, endpoint = False, dec_place =3)
+    # y_ticks, y_tick_labels = find_tick_ticklables([ip_strain_min+ip_strain_min*offset_scale,-ip_strain_min*offset_scale], num_ticks =5, endpoint = False, dec_place =3)
+    y_ticks, y_tick_labels = find_tick_ticklables([ip_strain_min-(ip_strain_max-ip_strain_min)*offset_scale,ip_strain_max+(ip_strain_max-ip_strain_min)*offset_scale], num_ticks =5, endpoint = False, dec_place =3)
     each.set_yticks(y_ticks)
     each.set_yticklabels(y_tick_labels)
     # print(ip_strain_min,y_ticks,y_tick_labels)
 
 for each in ax_can_set_yticks_oop_strain:
-    y_ticks, y_tick_labels = find_tick_ticklables([oop_strain_min+oop_strain_min*offset_scale,-oop_strain_min*offset_scale], num_ticks =5, endpoint = False, dec_place =3)
+    y_ticks, y_tick_labels = find_tick_ticklables([oop_strain_min-(oop_strain_max-oop_strain_min)*offset_scale,oop_strain_max+(oop_strain_max-oop_strain_min)*offset_scale], num_ticks =5, endpoint = False, dec_place =3)
     each.set_yticks(y_ticks)
     each.set_yticklabels(y_tick_labels)
 
 for each in ax_can_set_yticks_ip_size:
-    y_ticks, y_tick_labels = find_tick_ticklables([ip_size_min+ip_size_min*offset_scale,-ip_size_min*offset_scale], num_ticks =5, endpoint = False, dec_place =2)
+    y_ticks, y_tick_labels = find_tick_ticklables([ip_size_min-(ip_size_max-ip_size_min)*offset_scale,ip_size_max+(ip_size_max-ip_size_min)*offset_scale], num_ticks =5, endpoint = False, dec_place =2)
     each.set_yticks(y_ticks)
     each.set_yticklabels(y_tick_labels)
 
 for each in ax_can_set_yticks_oop_size:
-    y_ticks, y_tick_labels = find_tick_ticklables([oop_size_min+oop_size_min*offset_scale,-oop_size_min*offset_scale], num_ticks =5, endpoint = False, dec_place =2)
+    y_ticks, y_tick_labels = find_tick_ticklables([oop_size_min-(oop_size_max-oop_size_min)*offset_scale,oop_size_max+(oop_size_max-oop_size_min)*offset_scale], num_ticks =5, endpoint = False, dec_place =2)
+    each.set_yticks(y_ticks)
+    each.set_yticklabels(y_tick_labels)
+
+for each in ax_can_set_yticks_intensity:
+    y_ticks, y_tick_labels = find_tick_ticklables([intensity_min-(intensity_max-intensity_min)*offset_scale,intensity_max+(intensity_max-intensity_min)*offset_scale], num_ticks =5, endpoint = False, dec_place =2)
     each.set_yticks(y_ticks)
     each.set_yticklabels(y_tick_labels)
 #tight layout for figures

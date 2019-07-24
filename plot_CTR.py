@@ -16,7 +16,7 @@ from util.PlotSetup import *
 # which_scans_to_plot = [102,104,118,126,133]
 # which_scans_to_plot = [109,111,120,129,135]
 # which_scans_to_plot = [114,123,131,137]
-which_scans_to_plot = [102,104,144]
+which_scans_to_plot = [109,111,129,135]
 # which_scans_to_plot = [109,111,147]
 # which_scans_to_plot = [144,155,162]
 # which_scans_to_plot = [147,156,164]
@@ -69,7 +69,7 @@ for val in global_vals:
     globals()[val]=[globals()[val][i] for i in plot_item_index]
 
 labels = ["-0.6 V","-0.6 V","-0.8 V","-1 V","-1.7 V","-1.6V"]
-colors = ["r","b","g","blue","m",'k']
+colors = ["r","r","g","blue","m",'k']
 
 fig = plt.figure(figsize=(6,4))
 ax = fig.add_subplot(111)
@@ -106,5 +106,5 @@ plt.title(hkl_title)
 # if rod_scan[0]:
     # plt.legend()
 # fig.savefig('./plots/ctr_i20180678/20L.png',dpi=300, bbox_inches='tight')
-fig.savefig('20L.png',dpi=300, bbox_inches='tight')
+fig.savefig('{}.png'.format(hkl_title),dpi=300, bbox_inches='tight')
 plt.show()

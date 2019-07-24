@@ -174,8 +174,11 @@ def select_cycle(pot_result_couple, bin_level = 1, bin_mode = 'select', return_c
     else:
         return [0, int((index_of_valley_pot[return_cycle+1]-index_of_valley_pot[return_cycle])/2),-2],pot_partial, result_partial
 
-def set_max_to_0(data_list,slice_index):
-    return np.array(data_list)[slice_index[0]:slice_index[1]]-np.array(data_list).max()
+def set_max_to_0(data_list,slice_index,ref_at_0 = 1):
+    if ref_at_0:
+        return np.array(data_list)[slice_index[0]:slice_index[1]]-np.array(data_list).max()
+    else:
+        return np.array(data_list)[slice_index[0]:slice_index[1]]
 
 def extract_ids_file(file_path,which_cycle=3):
     data = []

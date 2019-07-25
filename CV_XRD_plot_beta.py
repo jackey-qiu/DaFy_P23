@@ -20,7 +20,7 @@ config_file_name = 'CV_XRD_plot_i20180835_Jul18_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 
 #do you want to set the max to 0
-ref_max_eq_0 = 0
+ref_max_eq_0 = {'strain':1,'size':0,'intensity':0}
 
 #specify this for pot step scan
 scan_time = 100 #in seconds
@@ -323,12 +323,12 @@ for scan_id in scan_ids:
             else:
                 new_max = current_max
             return new_min, new_max
-        update_max_min = [_update_min_max_or_not,_update_min_or_not][ref_max_eq_0]
-        ip_strain_min, ip_strain_max = update_max_min(ip_strain_min,ip_strain_max, strain_ip_temp)
-        oop_strain_min, oop_strain_max = update_max_min(oop_strain_min,oop_strain_max, strain_oop_temp)
-        ip_size_min, ip_size_max = update_max_min(ip_size_min,ip_size_max, size_ip_temp)
-        oop_size_min, oop_size_max = update_max_min(oop_size_min,oop_size_max, size_oop_temp)
-        intensity_min, intensity_max = update_max_min(intensity_min,intensity_max, intensity_temp)
+        update_max_min = [_update_min_max_or_not,_update_min_or_not]
+        ip_strain_min, ip_strain_max = update_max_min[ref_max_eq_0['strain']](ip_strain_min,ip_strain_max, strain_ip_temp)
+        oop_strain_min, oop_strain_max = update_max_min[ref_max_eq_0['strain']](oop_strain_min,oop_strain_max, strain_oop_temp)
+        ip_size_min, ip_size_max = update_max_min[ref_max_eq_0['size']](ip_size_min,ip_size_max, size_ip_temp)
+        oop_size_min, oop_size_max = update_max_min[ref_max_eq_0['size']](oop_size_min,oop_size_max, size_oop_temp)
+        intensity_min, intensity_max = update_max_min[ref_max_eq_0['intensity']](intensity_min,intensity_max, intensity_temp)
         #now collect all axs for different data (exclude the first ax which is the single plot)
         ax_can_ip_strain = ax_can_ip_strain + ip_strain_axs[1:]
         ax_can_oop_strain = ax_can_oop_strain + oop_strain_axs[1:]
@@ -342,20 +342,21 @@ for scan_id in scan_ids:
                       [y_labels_lib['oop_size']]* len(oop_size_axs)+\
                       [y_labels_lib['intensity']]* len(intensity_axs)
 
-        def plot_on_ax(ax,x,data,y_label):
+        def plot_on_ax(ax,x,data,y_label,ref_max):
             # print(ax)
             #you need this to match the size of data other than strain and size
             if len(x)!=len(data):
                 x = x[0:-1]
-            ax.plot(x[indx1:indx2],set_max_to_0(data,[indx1,indx2],ref_max_eq_0),linestyle = 'none', linewidth =1,\
+            ax.plot(x[indx1:indx2],set_max_to_0(data,[indx1,indx2],ref_max),linestyle = 'none', linewidth =1,\
                     color = scan_info[scan_id].color, markerfacecolor = fillcolor,\
                     markeredgecolor = scan_info[scan_id].color,marker = marker, markersize=4,label = label)
             ax.set_ylabel(y_label)
             return None
-        for ax, data, y_label in zip(ip_strain_axs+oop_strain_axs+ip_size_axs+oop_size_axs+intensity_axs,\
+        for ax, data, y_label,ref in zip(ip_strain_axs+oop_strain_axs+ip_size_axs+oop_size_axs+intensity_axs,\
                             ip_strain_data_all+oop_strain_data_all+ip_size_data_all+oop_size_data_all+intensity_data_all,\
-                            y_labels_all):
-            plot_on_ax(ax,x,data,y_label)
+                            y_labels_all,[ref_max_eq_0['strain']]*(len(ip_strain_axs)*2)+\
+                            [ref_max_eq_0['size']]*(len(ip_strain_axs)*2)+[ref_max_eq_0['intensity']]*(len(ip_strain_axs)*1)):
+            plot_on_ax(ax,x,data,y_label,ref)
             ax.set_xlabel(x_label)
         #now plot current density
         if pos==0:
@@ -363,7 +364,7 @@ for scan_id in scan_ids:
                 colors_lib = {0:'sienna',1:'red',2:'green',3:'blue',4:'m',5:'black'}
                 #ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*1000*8*50, '-',\
                 #        color=scan_info[scan_id].color,linewidth=2,label=scan_info[scan_id].scan_label)
-                ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*(-8)*50, '-',\
+                ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*(-8)*50, 'x',\
                         color=scan_info[scan_id].color,linewidth=2,label=scan_info[scan_id].scan_label)
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_labels_lib['current_den'])

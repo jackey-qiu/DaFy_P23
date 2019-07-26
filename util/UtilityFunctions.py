@@ -18,6 +18,33 @@ from random import randint
 from itertools import count
 izip = zip
 
+def extract_global_vars_from_string(keys_in_order=[],job=[]):
+    return_lib = {}
+    for key in keys_in_order:
+        return_lib[key] = []
+    for each in job:
+        items = each.rstrip().rsplit()
+        for i in range(len(items)):
+            try:
+                item = eval(items[i])
+            except:
+                item = items[i]
+            return_lib[keys_in_order[i]].append(item)
+    return return_lib
+
+#how many frames to be processed?
+def find_boundary(n_process,n_jobs,rank):
+    step_len=int(n_jobs/n_process)
+    remainder=int(n_jobs%n_process)
+    left,right=0,0
+    if rank<=remainder-1:
+        left=rank*(step_len+1)
+        right=(rank+1)*(step_len+1)-1
+    elif rank>remainder-1:
+        left=remainder*(step_len+1)+(rank-remainder)*step_len
+        right=remainder*(step_len+1)+(rank-remainder+1)*step_len-1
+    return left,right
+
 def remove_abnormality(mon, left_offset,right_offset):
     mon = np.array(mon)
     max_index = np.argmax(mon)

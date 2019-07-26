@@ -17,10 +17,11 @@ from util.PlotSetup import *
 which_scans_to_plot = [229,221,231,243]
 # which_scans_to_plot = [229,236,244]
 config_file_name = 'CV_XRD_plot_i20180835_Jul18_2019.ini'
+config_file_name = 'CV_XRD_plot_i20180835_Jul26_testMPI_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 
 #do you want to set the max to 0
-ref_max_eq_0 = {'strain':1,'size':0,'intensity':0}
+ref_max_eq_0 = {'strain':0,'size':0,'intensity':0}
 
 #specify this for pot step scan
 scan_time = 100 #in seconds

@@ -49,7 +49,7 @@ data_keys=['potential','potential_cal','current_density','peak_intensity','Time'
 [Scan_setup]
 debug = 0
 debug_img = 9
-live_image = 0
+live_image = 1
 exclude_images = []
 scan_nos = [221]
 ids_files =['039.ids']

@@ -805,6 +805,7 @@ class background_subtraction_single_img():
         clip_image_center = [int(y_span/2)+self.peak_shift,int(x_span/2)+self.peak_shift]
         peak_l = max([clip_image_center[int(self.int_direct=='x')]-self.peak_width,0])#peak_l>0
         peak_r = clip_image_center[int(self.int_direct=='x')]+self.peak_width
+        print(peak_l,peak_r)
         if self.x_min ==None:
             self.x_min, self.y_min, self.x_span, self.y_span = x_min, y_min, x_span, y_span
         else:

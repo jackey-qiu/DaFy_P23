@@ -26,8 +26,9 @@ which_scans_to_plot = [129,156,164]
 # which_scans_to_plot = [147,156,164]
 # which_scans_to_plot = [158,165]
 # which_scans_to_plot = [126,162]
-which_scans_to_plot = [584]
-# which_scans_to_plot = [78]
+which_scans_to_plot = [126,133,144]
+which_scans_to_plot = [129,135,147]
+which_scans_to_plot = [78]
 # which_scans_to_plot = [141]
 # which_scans_to_plot = [580]
 # which_scans_to_plot = [584]
@@ -35,6 +36,7 @@ which_scans_to_plot = [584]
 # which_scans_to_plot = [109,111,129,135,147,164,156]
 config_file_name = 'CV_XRD_plot_i20180678_Jul23_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
+double_ax = False
 
 #do you want to bin your datapoints
 #debug is required to set bin_level>1
@@ -84,8 +86,9 @@ ax = fig.add_subplot(111)
 ax.set_yscale("log")
 
 if not rod_scan[0]:
-    ax_2=ax.twinx()
-    ax_2.set_ylabel('potential(V)',color = 'blue')
+    if double_ax:
+        ax_2=ax.twinx()
+        ax_2.set_ylabel('potential(V)',color = 'blue')
     ax.set_ylabel('I(a.u.)')
 else:
     ax.set_ylabel('I(a.u.)')
@@ -103,22 +106,27 @@ for i in range(len(data_files)):
         ax.errorbar(L,I,yerr=Ierr,xerr=None,fmt=".-",color = colors[i], label = scan_ids[i]+'{:3.1f} V'.format(data['potential'][0]))
         plt.legend()
     else:
-        ax.errorbar(range(len(I)),I,yerr=Ierr,xerr=None,fmt=".-",color = colors[i], label = scan_ids[i]+'{:3.1f} V'.format(data['potential'][0]))
+        if double_ax:
+            ax.errorbar(range(len(I)),I,yerr=Ierr,xerr=None,fmt=".-",color = colors[i], label = scan_ids[i]+'{:3.1f} V'.format(data['potential'][0]))
+        else:
+            ax.errorbar(potential,I,yerr=Ierr,xerr=None,fmt=".-",color = colors[i], label = scan_ids[i]+'{:3.1f} V'.format(data['potential'][0]))
         x_ticks = np.linspace(0,len(potential),5,endpoint = True)
         x_ticks = [int(tick) for tick in x_ticks]
         x_ticks[-1] = x_ticks[-1]-1
         # ax.set_xticks(x_ticks)
         # ax.set_xticklabels(['{}[{}V]'.format(tick,np.round(potential[tick],2))for tick in x_ticks])
-        ax_2.plot(potential,color ='blue')
+        if double_ax:
+            ax_2.plot(potential,color ='blue')
 hkl_title = '{:3.1f}_{:3.1f}_L'.format(H[0],K[0])
 # ax.set_ylim(I.min(),10)
 # ax.set_ylim(0.0001,100)
 if rod_scan[0]:
     ax.set_xlabel('L')
 else:
-    # ax.set_xlabel('time[potential/AgCl]')
-    ax.set_xlabel('time')
-    ax.set_xlabel('NP')
+    if double_ax:
+        ax.set_xlabel('NP')
+    else:
+        ax.set_xlabel('potential(V Ag/AgCl)')
 if not rod_scan[0]:
     hkl_title = 'XRV@hkl=({:3.1f},{:3.1f},{:3.1f})'.format(H[0],K[0],L[0])
     ax.set_ylim(I.min(),I.max())

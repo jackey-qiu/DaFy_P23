@@ -57,7 +57,7 @@ tweak_mode = False
 #'bkg_sub' config is the config file for background substraction
 
 conf_file_names = {'XRD':'config_p23_i20180678.ini',\
-                   'ploter':'CV_XRD_plot_i20180678_Jul23_2019.ini'}
+                   'ploter':'CV_XRD_plot_i20180678_Jul29_2019.ini'}
 conf_file = os.path.join(DaFy_path, 'config', conf_file_names['XRD'])
 conf_file_plot = os.path.join(DaFy_path, 'config', conf_file_names['ploter'])
 config = configparser.ConfigParser()

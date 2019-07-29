@@ -1,6 +1,6 @@
 import sys
 import matplotlib
-matplotlib.use("tkAgg")
+# matplotlib.use("tkAgg")
 from numpy import dtype
 sys.path.append('./XRD_tools/')
 import numpy as np

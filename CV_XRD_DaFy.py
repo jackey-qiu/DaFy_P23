@@ -5,7 +5,7 @@ sys.path.append(os.path.join(DaFy_path,'EnginePool'))
 sys.path.append(os.path.join(DaFy_path,'FilterPool'))
 sys.path.append(os.path.join(DaFy_path,'util'))
 import matplotlib
-matplotlib.use("TkAgg")
+# matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import time,ntpath, subprocess
 try:
@@ -20,8 +20,7 @@ from GrainAnalysisEnginePool import cal_strain_and_grain
 from VisualizationEnginePool import show_all_plots, plot_after_fit
 from DataFilterPool import create_mask
 import numpy as np
-from util.UtilityFunctions import remove_abnormality,nexus_image_loader,get_UB,gen_find,edf_image_loader, check_abnormality
-# from util.UtilityFunctions import nexus_image_loader,get_UB,gen_find,edf_image_loader, check_abnormality
+from util.UtilityFunctions import remove_abnormality,nexus_image_loader,get_UB,gen_find,edf_image_loader, check_abnormality,find_boundary,extract_global_vars_from_string
 from scipy.interpolate import griddata
 import scipy.optimize as opt
 from scipy.ndimage import gaussian_filter
@@ -57,22 +56,43 @@ tweak_mode = False
 #'ploter' config is the file which will be written with config info for later plotting step
 
 conf_file_names = {'CV_XRD':'config_p23_template.ini',\
-                   'ploter':'CV_XRD_plot_i20180835_Jul18_2019.ini'}
+                   'ploter':'CV_XRD_plot_i20180835_Jul26_testMPI_2019.ini',\
+                   'mpi':'mpi_conf_file.ini'}
 
 conf_file = os.path.join(DaFy_path, 'config', conf_file_names['CV_XRD'])
 conf_file_plot = os.path.join(DaFy_path, 'config', conf_file_names['ploter'])
+conf_file_mpi = os.path.join(DaFy_path, 'config', conf_file_names['mpi'])
+
 config = configparser.ConfigParser()
 config.read(conf_file)
 for section in config.sections():
     for each in config.items(section):
         globals()[each[0]] = eval(each[1])
 
-if tweak_mode:
+if tweak_mode and not mpi_run:
     live_image = True
 
 if mpi_run:
+    jobs = []
+    with open(conf_file_mpi,'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            if line[0]!='#':
+                jobs.append(line)
+    job_boundary = find_boundary(size_cluster, len(jobs),rank)
+    job_partial = [jobs[i] for i in range(job_boundary[0], job_boundary[1]+1)]
+    global_var_lib = extract_global_vars_from_string(keys_in_order = \
+                    ['scan_number','ids_files','ph','hkl','frame_prefix',\
+                     'cen_full_image','film_material_cif', 'film_hkl_normal',\
+                     'film_hkl_x','ub'],job=job_partial)
+    scan_nos = global_var_lib['scan_number']
     tweak_mode, live_image, debug = False, False, False
 for scan_no in scan_nos:
+    if mpi_run:
+        which_one = scan_nos.index(scan_no)
+        for each_key in global_var_lib:
+            if each_key!='scan_number':
+                globals()[each_key] = global_var_lib[each_key][which_one]
     if rank == 0:
         print('---------------Working on scan_{} dataset now!-------------'.format(scan_no))
     if name == "P23":
@@ -169,14 +189,7 @@ for scan_no in scan_nos:
     bounds_oop[0][0],bounds_oop[1][0] = q_oop[cen[1],0]-0.25, q_oop[cen[1],0]+0.25
 
     #get grid_indices for gridded q#
-    if size_cluster >1:
-        if rank == 0:
-            grid_indices = griddata((q_ip.ravel(), q_oop.ravel()), np.arange(size[0]*size[1]).ravel(), (grid_q_ip, grid_q_oop), method='nearest')
-        else:
-            grid_indices = None
-        grid_indices = comm.bcast(grid_indices, root = 0)
-    else:
-        grid_indices = griddata((q_ip.ravel(), q_oop.ravel()), np.arange(size[0]*size[1]).ravel(), (grid_q_ip, grid_q_oop), method='nearest')
+    grid_indices = griddata((q_ip.ravel(), q_oop.ravel()), np.arange(size[0]*size[1]).ravel(), (grid_q_ip, grid_q_oop), method='nearest')
 
     ##step 4: set mask and init peak fitting engine##
     mask = create_mask(img = grid_intensity_init,img_q_par = grid_q_oop, img_q_ver = grid_q_ip,\
@@ -204,26 +217,7 @@ for scan_no in scan_nos:
         plt.ion()
         fig_3_plot = plt.figure(figsize=(14,10))
 
-    #how many frames to be processed?
-    def find_boundary(n_process,n_jobs,rank):
-        step_len=int(n_jobs/n_process)
-        remainder=int(n_jobs%n_process)
-        left,right=0,0
-        if rank<=remainder-1:
-            left=rank*(step_len+1)
-            right=(rank+1)*(step_len+1)-1
-        elif rank>remainder-1:
-            left=remainder*(step_len+1)+(rank-remainder)*step_len
-            right=remainder*(step_len+1)+(rank-remainder+1)*step_len-1
-        return left,right
-
     print('{} images in total!'.format(img_loader.total_frame_number))
-
-    if size_cluster == 1:
-        frame_number_ranges = list(range(img_loader.total_frame_number))
-    else:
-        lf, rg = find_boundary(size_cluster, img_loader.total_frame_number,rank)
-        frame_number_ranges = range(lf, rg)
 
     #now let's get rid of data points during peak jump area
     if check_abnormality:
@@ -243,13 +237,10 @@ for scan_no in scan_nos:
 
     ##Step 5: loop through all frames##
     frame_to_be_rechecked = []
-    if size_cluster > 1:
-        comm.Barrier()
     t1 = time.time()
 
     pot_profile = img_loader.extract_pot_profile()
-    pot_profile_cal = fit_pot_profile(list(range(len(pot_profile))),pot_profile)
-
+    pot_profile_cal = fit_pot_profile(list(range(len(pot_profile))),pot_profile, show_fig = live_image)
 
     for frame_number in frame_number_ranges:
         if rank == 0:
@@ -308,17 +299,6 @@ for scan_no in scan_nos:
         data = cal_strain_and_grain(data,HKL = hkl[scan_nos.index(scan_no)], lattice = lattice_skin)
 
         data['mask_cv_xrd'].append(1)
-        # if sum(data['mask_cv_xrd'])>20:
-            # check_result =  check_abnormality(data['ip_strain'],data['mask_cv_xrd'],data['potential'],2)&\
-                            # check_abnormality(data['oop_strain'],data['mask_cv_xrd'],data['potential'],2)&\
-                            # check_abnormality(data['ip_grain_size'],data['mask_cv_xrd'],data['potential'],2)&\
-                            # check_abnormality(data['oop_grain_size'],data['mask_cv_xrd'],data['potential'],2)
-        # if check_result:
-            # data['mask_cv_xrd'][-1]=1
-        # else:
-            # data['mask_cv_xrd'][-1]=0
-        # print(check_result)
-        #peak intensity
         bkg_sub.update_motor_angles(motor_angles)
         if bkg_sub.int_direct =='y':
             check_result_bkg = bkg_sub.fit_background(None,img*mask, data, plot_live = False, check=True,check_level = check_level)
@@ -331,19 +311,7 @@ for scan_no in scan_nos:
         data['peak_intensity_error'].append(bkg_sub.fit_results['Ierr'])
 
         data['mask_ctr'].append(1)
-        # if sum(data['mask_ctr'])>20:
-            # check_result_bkg = check_abnormality(data['peak_intensity'],data['mask_ctr'],3)
-        # print(check_result_bkg)
-        # if check_result_bkg:
-            # data['mask_ctr'][-1]=1
-            # data['mask_cv_xrd'][-1]=1
-        # else:
-            # data['mask_ctr'][-1]=0
-            # data['mask_cv_xrd'][-1]=0
         t1_c = time.time()
-        #save results for the first loop but update result in the following loop steps used in tweak mode
-        #save results
-        #launch tweak mode(you have 1000 times to tweak for each data point)
         if tweak_mode:
             fig_3_plot = show_all_plots(fig_3_plot,peak_fit_engine.img,peak_fit_engine.grid_q_ip,peak_fit_engine.grid_q_oop,\
                                       vmin = vmin_2d_img, vmax =vmax_2d_img, cmap = 'jet', is_zap_scan = pot_step_scan,\
@@ -371,53 +339,51 @@ for scan_no in scan_nos:
                 fig_3_plot.tight_layout()
                 plt.pause(0.05)
                 plt.show()
-                # plt.pause(10.05)
     if not mpi_run:
         plt.ioff()
         plt.show()
 
-    if size_cluster>1:
-        comm.Barrier()
-        data = comm.gather(data,root = 0)
-        if rank == 0:
-            data_list = list(data)
-            data_complete = {}
-            for each_key in data[0]:
-                data_complete[each_key]=[]
+    # if size_cluster>1:
+        # comm.Barrier()
+        # data = comm.gather(data,root = 0)
+        # if rank == 0:
+            # data_list = list(data)
+            # data_complete = {}
+            # for each_key in data[0]:
+                # data_complete[each_key]=[]
 
-            for each_data in data_list:
-                for each_key in each_data:
-                    data_complete[each_key] = list(data_complete[each_key])+list(each_data[each_key])
-            data = data_complete
+            # for each_data in data_list:
+                # for each_key in each_data:
+                    # data_complete[each_key] = list(data_complete[each_key])+list(each_data[each_key])
+            # data = data_complete
 
-    if rank == 0:
-        #Now append info to the plotting config file
-        with open(conf_file_plot, 'a+') as f:
-            f.write('\n[{}]\n'.format(scan_id))
-            f.write("scan_number = [{}]\n".format(scan_no))
-            f.write("phs = [{}]\n".format(ph[scan_nos.index(scan_no)]))
-            f.write("colors = ['r']\n")
-            f.write("xtal_lattices = ['{}']\n".format(film_material_cif.split('.')[0]))
-            f.write("scan_ids = ['DaFy_{}']\n".format(scan_no))
-            f.write("scan_labels = ['pH {}_scan{}']\n".format(ph[scan_nos.index(scan_no)],scan_no))
-            f.write("ids_file_header ='{}'\n".format(ids_file_head))
-            f.write("ids_files = ['{}']\n".format(ids_files[scan_nos.index(scan_no)]))
-            f.write("data_file_header = '{}/data'\n".format(DaFy_path))
-            f.write("data_files= ['{}.npz']\n".format(scan_id))
-            f.write("hkls = [{}]\n".format(hkl[scan_nos.index(scan_no)]))
-            f.write("scan_direction_ranges =[[0,111,-2]]\n")
-            f.write("plot_pot_steps = [{}]\n".format(int(pot_step_scan)))
-        if not debug:
-            print('Fit is completed with time elapse of {} seconds!\nCheers:)'.format(time.time()-t0))
+    #Now append info to the plotting config file
+    with open(conf_file_plot, 'a+') as f:
+        f.write('\n[{}]\n'.format(scan_id))
+        f.write("scan_number = [{}]\n".format(scan_no))
+        f.write("phs = [{}]\n".format(ph[scan_nos.index(scan_no)]))
+        f.write("colors = ['r']\n")
+        f.write("xtal_lattices = ['{}']\n".format(film_material_cif.split('.')[0]))
+        f.write("scan_ids = ['DaFy_{}']\n".format(scan_no))
+        f.write("scan_labels = ['pH {}_scan{}']\n".format(ph[scan_nos.index(scan_no)],scan_no))
+        f.write("ids_file_header ='{}'\n".format(ids_file_head))
+        f.write("ids_files = ['{}']\n".format(ids_files[scan_nos.index(scan_no)]))
+        f.write("data_file_header = '{}/data'\n".format(DaFy_path))
+        f.write("data_files= ['{}.npz']\n".format(scan_id))
+        f.write("hkls = [{}]\n".format(hkl[scan_nos.index(scan_no)]))
+        f.write("scan_direction_ranges =[[0,111,-2]]\n")
+        f.write("plot_pot_steps = [{}]\n".format(int(pot_step_scan)))
+    if not debug:
+        print('Fit is completed with time elapse of {} seconds!\nCheers:)'.format(time.time()-t0))
 
-            #save data
-            np.savez('data/%s.npz'%(scan_id),frame_number = data['frame_number'], potential=data['potential'], potential_cal = data['potential_cal'],\
-                    current_density=data['current_density'], Time=data['Time'], pcov_ip=data['pcov_ip'], pcov_oop=data['pcov_oop'],\
-                    cen_ip=data['cen_ip'], FWHM_ip=data['FWHM_ip'], amp_ip=data['amp_ip'], lorfact_ip=data['lfrac_ip'],\
-                    bg_slope_ip=data['bg_slope_ip'], bg_offset_ip=data['bg_offset_ip'], cen_oop=data['cen_oop'], \
-                    FWHM_oop=data['FWHM_oop'], amp_oop=data['amp_oop'], lorfact_oop=data['lfrac_oop'], \
-                    bg_slope_oop=data['bg_slope_oop'], bg_offset_oop=data['bg_offset_oop'],peak_intensity = data['peak_intensity'],\
-                    peak_intensity_error = data['peak_intensity_error'])
+        #save data
+        np.savez('data/%s.npz'%(scan_id),frame_number = data['frame_number'], potential=data['potential'], potential_cal = data['potential_cal'],\
+                current_density=data['current_density'], Time=data['Time'], pcov_ip=data['pcov_ip'], pcov_oop=data['pcov_oop'],\
+                cen_ip=data['cen_ip'], FWHM_ip=data['FWHM_ip'], amp_ip=data['amp_ip'], lorfact_ip=data['lfrac_ip'],\
+                bg_slope_ip=data['bg_slope_ip'], bg_offset_ip=data['bg_offset_ip'], cen_oop=data['cen_oop'], \
+                FWHM_oop=data['FWHM_oop'], amp_oop=data['amp_oop'], lorfact_oop=data['lfrac_oop'], \
+                bg_slope_oop=data['bg_slope_oop'], bg_offset_oop=data['bg_offset_oop'],peak_intensity = data['peak_intensity'],\
+                peak_intensity_error = data['peak_intensity_error'])
 
     if not live_image and not mpi_run and len(scan_nos)==1:
         fig_3_plot = plt.figure(figsize=(14,10))
@@ -432,5 +398,3 @@ for scan_no in scan_nos:
         plt.pause(0.05)
         plt.show()
         plt.pause(10.05)
-    if rank == 0:
-        print("Please recheck following frames:{}".format(frame_to_be_rechecked))

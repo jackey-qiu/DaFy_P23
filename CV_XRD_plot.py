@@ -4,7 +4,7 @@ DaFy_path = locate_path.module_path_locator()
 sys.path.append(os.path.join(DaFy_path,'util', 'XRD_tools'))
 import reciprocal_space_v3 as rsp
 import matplotlib
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 import sys,os

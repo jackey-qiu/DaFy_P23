@@ -9,7 +9,7 @@ try:
 except:
     pass
 import matplotlib
-matplotlib.use("tkAgg")
+# matplotlib.use("tkAgg")
 import matplotlib.pyplot as plt
 from util.UtilityFunctions import collect_args
 from ctr_corr import ctr_data
@@ -107,7 +107,7 @@ def triang(y,phase,length,y_offset,amplitude):
             +y_offset
     return np.abs(y_cal - y)
 
-def fit_pot_profile(x, y):
+def fit_pot_profile(x, y, show_fig = False):
     x = np.array(x)
     y = np.array(y)
     max_y, min_y = y.max(), y.min()
@@ -120,10 +120,11 @@ def fit_pot_profile(x, y):
     length = abs(np.argmin(y_partial)-np.argmax(y_partial))*2
     popt, pcov = opt.curve_fit(triang, y_partial,y_partial*0, p0=[phase,length,y_offset,ampt],bounds =([phase-10,length-10,y_offset-0.0005,ampt-0.0005],[phase+10,length+10,y_offset+0.0005,ampt+0.0005]),max_nfev = 10000)
     # print(popt)
-    plt.plot(x,y,'or')
-    plt.plot(x,triang_(y,*popt),'g-')
-    # print(sawtooth_pot(x_partial,*popt))
-    plt.show()
+    if show_fig:
+        plt.plot(x,y,'or')
+        plt.plot(x,triang_(y,*popt),'g-')
+        # print(sawtooth_pot(x_partial,*popt))
+        plt.show()
     return triang_(y,*popt)
 #engine function to subtraction background
 def backcor(n,y,ord_cus,s,fct):
@@ -872,6 +873,11 @@ class background_subtraction_single_img():
             for ord_cus in ord_cus_s:
                 z,a,it,ord_cus,s,fct = backcor(n,y,ord_cus,s,fct)
                 I_container.append(np.sum(y[peak_l:peak_r][index]-z[peak_l:peak_r][index]))
+                indexs_bkg=list(range(0,peak_l))+list(range(peak_r,len(y)))
+                if len(indexs_bkg)!=0:
+                    std_I_bkg = np.array(y[indexs_bkg]-z[indexs_bkg]).std()
+                else:
+                    std_I_bkg = 0
                 # print('sensor',y[index])
                 # I_container.append(np.sum(y[index]))
                 Ibgr_container.append(abs(np.sum(z[peak_l:peak_r][index])))
@@ -879,7 +885,7 @@ class background_subtraction_single_img():
                 #Ierr_container.append((I_container[-1]+FOM_container[-1])**0.5)
                 # Ierr_container.append((I_container[-1])**0.5+FOM_container[-1][1]+I_container[-1]*0.03)#possoin error + error from integration + 3% of current intensity
                 # Ierr_container.append(std_bkg/abs(I_container[-1])*std_bkg+(np.sum(y)/data['mon'][-1]/data['transm'][-1])**0.5)#possoin error + error from integration + 3% of current intensity
-                Ierr_container.append((I_container[-1]/data['mon'][-1]/data['transm'][-1])**.5)#possoin error + error from integration + 3% of current intensity
+                Ierr_container.append((I_container[-1]/data['mon'][-1]/data['transm'][-1])**.5+std_I_bkg*(peak_r-peak_l))#possoin error + error from integration + 3% of current intensity
                 # try:
                     # Ierr_container.append((np.sum(y)/data['mon'][-1]/data['transm'][-1])**0.5)#possoin error + error from integration + 3% of current intensity
                 # except:

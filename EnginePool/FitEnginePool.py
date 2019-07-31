@@ -761,8 +761,172 @@ class background_subtraction_single_img():
                 else:
                     pass
             return 'tweak'
+    #find the peak width automatically (col_width if direction = 'vertical'; row_width if direction = 'horizontal')
+    def find_peak_width(self, img, initial_c_width = 400, initial_r_width = 50, direction = 'vertical'):
+        
+        SN_ratio_container = []
+        SN_ratio_sub = []
+        c_width_container=[]
+        c_width_container_sub = []
+        if initial_r_width == None:
+            initial_r_width = self.row_width
+        if initial_c_width == None:
+            initial_c_width = self.col_width
 
-    def integrate_one_image(self,fig, img, data, plot_live = False, check = False, check_level = 0.00001):
+        best_c_width = None
+        original_direction = self.int_direct
+        if direction=='vertical':
+            self.int_direct = 'x'
+        elif direction == 'horizontal':
+            self.int_direct = 'y'
+
+        for i in range(1,100,2):
+            current_c_width = int(initial_c_width/i)
+            c_width_container.append(current_c_width)
+            if direction=='vertical':
+                SN_ratio_container.append(self.integrate_one_image_light_v(img,initial_r_width, current_c_width))
+            elif direction == 'horizontal':
+                SN_ratio_container.append(self.integrate_one_image_light_v(img,current_c_width,initial_c_width))
+            if i>1:
+                if np.mean(SN_ratio_container)<0.01:
+                    print('No peak found!')
+                    return best_c_width
+                if SN_ratio_container[-1]<SN_ratio_container[0]*0.9:#0.9 is an empirical value
+                    SN_ratio_sub = [SN_ratio_container[-2]]
+                    # print('i={}'.format(i))
+                    for j in range(1,11):
+                        # print('j={}'.format(j))
+                        c_width_l, c_width_r = current_c_width*2, current_c_width
+                        current_c_width_sub = int(c_width_l - (c_width_l - c_width_r)/10*j)
+                        c_width_container_sub.append(current_c_width_sub)
+                        if direction == 'vertical':
+                            current_SN = self.integrate_one_image_light_v(img,initial_r_width, current_c_width_sub)
+                        elif direction == 'horizontal':
+                            current_SN = self.integrate_one_image_light_v(img, current_c_width_sub,initial_c_width)
+                        # print('current={}, mean={}'.format(current_SN, np.mean(SN_ratio_sub)))
+                        if current_SN < SN_ratio_sub[0]*0.95:#0.95 is an empirical value
+                            best_c_width = current_c_width_sub + int((c_width_l - c_width_r)/10)
+                            break
+                        else:
+                            SN_ratio_sub.append(current_SN)
+                    break
+                else:
+                    print('i={}'.format(i))
+            else:
+                pass
+
+        print('Best {} width = {}'.format(['column','row'][int(direction =='horizontal')],best_c_width))
+        self.int_direct = original_direction
+        return best_c_width
+
+    def integrate_one_image_light_v(self, img, r_width, c_width):
+        self.img = img
+        center_pix=self.center_pix
+        # r_width=self.row_width
+        # c_width=self.col_width
+        integration_direction=self.int_direct
+        ord_cus_s=self.ord_cus_s
+        ss=self.ss
+        fct=self.fct
+        #print(r_width,c_width)
+        if center_pix[0]<c_width:
+            c_width = center_pix[0]-10
+
+        if center_pix[1]<r_width:
+            r_width = center_pix[1]-10
+        index_cutoff=np.array([[center_pix[0]-c_width,center_pix[1]-r_width],[center_pix[0]+c_width,center_pix[1]+r_width]])
+        sub_index=[np.min(index_cutoff,axis=0),np.max(index_cutoff,axis=0)]
+        #print(sub_index)
+        x_min,x_max=sub_index[0][1],sub_index[1][1]
+        y_min,y_max=sub_index[0][0],sub_index[1][0]
+        pil_y,pil_x=img.shape#shape of the pilatus image
+        #reset the boundary if the index number is beyond the pilatus shape
+        x_min,x_max,y_min,y_max=[int(x_min>0)*x_min,int(x_max>0)*x_max,int(y_min>0)*y_min,int(y_max>0)*y_max]
+        x_min,x_max,y_min,y_max=[int(x_min<pil_x)*x_min,int(x_max<pil_x)*x_max,int(y_min<pil_y)*y_min,int(y_max<pil_y)*y_max]
+
+        x_span,y_span=x_max-x_min,y_max-y_min
+        clip_image_center = [int(y_span/2)+self.peak_shift,int(x_span/2)+self.peak_shift]
+        peak_l = max([clip_image_center[int(self.int_direct=='x')]-self.peak_width,0])#peak_l>0
+        peak_r = clip_image_center[int(self.int_direct=='x')]+self.peak_width
+        if self.x_min ==None:
+            self.x_min, self.y_min, self.x_span, self.y_span = x_min, y_min, x_span, y_span
+        else:
+            pass
+        #print (y_min,y_max,x_min,x_max)
+        clip_img=img[y_min:y_max+1,x_min:x_max+1]
+        if integration_direction=="x":
+            #y=img.sum(axis=0)[:,np.newaxis][sub_index[0][1]:sub_index[1][1]]
+            y=clip_img.sum(axis=0)[:,np.newaxis]
+        elif integration_direction=="y":
+            #y=img.sum(axis=1)[:,np.newaxis][sub_index[0][0]:sub_index[1][0]]
+            y=clip_img.sum(axis=1)[:,np.newaxis]
+        #Now normalized the data
+        n=np.array(range(len(y)))
+        #by default the contamination rate is 25%
+        #the algorithm may fail if the peak cover >40% of the cut profile
+        bkg_n = int(len(y)/4)
+        y_sorted = list(copy.deepcopy(y))
+        y_sorted.sort()
+        # std_bkg =np.array(list(y[0:bkg_n])+list(y[-bkg_n:-1])).std()/(max(y)-min(y))
+        std_bkg =np.array(y_sorted[0:bkg_n*3]).std()/(max(y_sorted)-min(y_sorted))
+        if hasattr(self,'ss_factor'):
+            ss = [self.ss_factor*std_bkg]
+        else:
+            ss = [5*std_bkg]
+
+        ## Then, use BACKCOR to estimate the spectrum background
+        #  Either you know which cost-function to use as well as the polynomial order and the threshold value or not.
+
+        # If you know the parameter, use this syntax:
+        I_container=[]
+        Ibgr_container=[]
+        Ierr_container=[]
+        FOM_container=[]
+        z_container=[]
+        s_container=[]
+        ord_cus_container=[]
+        index=None
+        def _cal_FOM(y,z,peak_width):
+            ct=int(len(y)/2)
+            lf=ct-peak_width
+            rt=ct+peak_width
+            sum_temp=np.sum(np.abs(y[0:lf]-z[0:lf]))+np.sum(np.abs(y[rt:-1]-z[rt:-1]))
+            left_boundary=list(np.abs(y[rt:-1]-z[rt:-1]))
+            right_boundary=list(np.abs(y[rt:-1]-z[rt:-1]))
+            std_fom=np.array(left_boundary+right_boundary).std()
+            return sum_temp/(len(y)-peak_width*2),std_fom#averaged offset (goodness of result), standard deviation of residual (counted as error during data integration)
+            #return std_fom
+
+        def _cal_FOM_2(y,z,s):
+            y=np.array(y)
+            z=np.array(z)
+            y_scaled=(y-y.max())/(y.max()-y.min())+1#scaled to [0,1]
+            index_container=np.where(y_scaled<s)[0]
+            return np.abs(y[index_container]-z[index_container]).std()
+
+        for s in ss:
+            for ord_cus in ord_cus_s:
+                z,a,it,ord_cus,s,fct = backcor(n,y,ord_cus,s,fct)
+                I_container.append(np.sum(y[peak_l:peak_r][index]-z[peak_l:peak_r][index]))
+                indexs_bkg=list(range(0,peak_l))+list(range(peak_r,len(y)))
+                if len(indexs_bkg)!=0:
+                    std_I_bkg = np.array(y[indexs_bkg]-z[indexs_bkg]).std()
+                else:
+                    std_I_bkg = 0
+                Ibgr_container.append(abs(np.sum(z[peak_l:peak_r][index])))
+                FOM_container.append(_cal_FOM(y,z,peak_width=30))
+                Ierr_container.append((I_container[-1])**.5+std_I_bkg*(peak_r-peak_l))#possoin error + error from integration + 3% of current intensity
+
+                z_container.append(z)
+                s_container.append(s)
+                ord_cus_container.append(ord_cus)
+        index_best=np.argmin(np.array(FOM_container)[:,0])
+        #print 'std=',FOM_container[index_best]
+        #print 'all std=',FOM_container
+        index = np.argsort(n)
+        return I_container[index_best]
+
+    def integrate_one_image(self,fig, img, data, plot_live = False, check = False, check_level = 0.00001,freeze_sf=False):
         self.img = img
         center_pix=self.center_pix
         r_width=self.row_width
@@ -828,10 +992,14 @@ class background_subtraction_single_img():
         y_sorted.sort()
         # std_bkg =np.array(list(y[0:bkg_n])+list(y[-bkg_n:-1])).std()/(max(y)-min(y))
         std_bkg =np.array(y_sorted[0:bkg_n*3]).std()/(max(y_sorted)-min(y_sorted))
-        if hasattr(self,'ss_factor'):
+        # if hasattr(self,'ss_factor'):
+            # ss = [self.ss_factor*std_bkg]
+        # else:
+            # ss = [5*std_bkg]
+        if freeze_sf:
             ss = [self.ss_factor*std_bkg]
         else:
-            ss = [5*std_bkg]
+            ss = [std_bkg, 1.5*std_bkg, 2*std_bkg, 2.5*std_bkg, 3*std_bkg, 4*std_bkg]
 
         ## Then, use BACKCOR to estimate the spectrum background
         #  Either you know which cost-function to use as well as the polynomial order and the threshold value or not.
@@ -881,7 +1049,7 @@ class background_subtraction_single_img():
                 # print('sensor',y[index])
                 # I_container.append(np.sum(y[index]))
                 Ibgr_container.append(abs(np.sum(z[peak_l:peak_r][index])))
-                FOM_container.append(_cal_FOM(y,z,peak_width=30))
+                FOM_container.append(_cal_FOM(y,z,peak_width=int(len(y)/4)))
                 #Ierr_container.append((I_container[-1]+FOM_container[-1])**0.5)
                 # Ierr_container.append((I_container[-1])**0.5+FOM_container[-1][1]+I_container[-1]*0.03)#possoin error + error from integration + 3% of current intensity
                 # Ierr_container.append(std_bkg/abs(I_container[-1])*std_bkg+(np.sum(y)/data['mon'][-1]/data['transm'][-1])**0.5)#possoin error + error from integration + 3% of current intensity
@@ -965,10 +1133,10 @@ class background_subtraction_single_img():
         self.motors['chi']=self.motors['chi']+90
 
 
-    def fit_background(self,fig,img,data,plot_live=False,check=False, check_level=0.000001):
+    def fit_background(self,fig,img,data,plot_live=False,check=False, check_level=0.000001,freeze_sf = False):
         # import time
         # t1=time.time()
-        I,I_bgr,I_err,s,ord_cus,center_pix,peak_width,r_width,c_width,check_result=self.integrate_one_image(fig,img,data,plot_live=plot_live,check=check,check_level=check_level)
+        I,I_bgr,I_err,s,ord_cus,center_pix,peak_width,r_width,c_width,check_result=self.integrate_one_image(fig,img,data,plot_live=plot_live,check=check,check_level=check_level,freeze_sf = freeze_sf)
         # t2=time.time()
         #I_temp.append(I)
         # print(result_dict)

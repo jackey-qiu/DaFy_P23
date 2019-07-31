@@ -56,7 +56,7 @@ tweak_mode = False
 #'ploter' config is the file which will be written with config info for later plotting step
 
 conf_file_names = {'CV_XRD':'config_p23_template.ini',\
-                   'ploter':'CV_XRD_plot_i20180835_Jul26_testMPI_2019.ini',\
+                   'ploter':'CV_XRD_plot_i20180835_Jul31_2019.ini',\
                    'mpi':'mpi_conf_file.ini'}
 
 conf_file = os.path.join(DaFy_path, 'config', conf_file_names['CV_XRD'])
@@ -143,16 +143,16 @@ for scan_no in scan_nos:
     ###############init a fit###########
     ##step 1: load image###
     if name == 'P23':
-        img = img_loader.load_frame_new(frame_number = 0, flip = True, clip_boundary = clip_boundary_full_image)
+        img = img_loader.load_frame_new(frame_number = debug_img, flip = True, clip_boundary = clip_boundary_full_image)
         size = img.shape
     elif name == 'ID03':
-        img = img_loader.load_frame(scan_no, frame_no = 0).img
+        img = img_loader.load_frame(scan_no, frame_no = debug_img).img
         size = img.shape
     ##step 2: get motor positions##
     if name == 'P23':
-        motor_angles = img_loader.extract_motor_angles(0, constant_motors =constant_motors)
+        motor_angles = img_loader.extract_motor_angles(debug_img, constant_motors =constant_motors)
     elif name == 'ID03':
-        motor_angles = spec.extract_motor_angle(scan_no, 0, is_zap_scan)
+        motor_angles = spec.extract_motor_angle(scan_no, debug_img, is_zap_scan)
 
     ##step 3: do recip space mapping##
     #print(motor_angles)
@@ -169,10 +169,10 @@ for scan_no in scan_nos:
 
     #now clip the image and redo the recp mapping
     if name == 'P23':
-        img = img_loader.load_frame_new(frame_number = 0, flip = True, clip_boundary = clip_boundary)
+        img = img_loader.load_frame_new(frame_number = debug_img, flip = True, clip_boundary = clip_boundary)
         size = img.shape
     elif name == 'ID03':
-        img = img_loader.load_frame(scan_no, frame_no = 0).img
+        img = img_loader.load_frame(scan_no, frame_no = debug_img).img
         size = img.shape
 
     #new center index for the clip image
@@ -207,7 +207,7 @@ for scan_no in scan_nos:
                                            fit_bounds = {'hor': bounds_ip, 'ver': bounds_oop},\
                                            fit_p0 = {'hor': guess_ip, 'ver': guess_oop})
     except:
-        plt.pcolormesh(grid_q_ip, grid_q_oop, grid_intensity_init*mask,vmax=10)
+        plt.pcolormesh(grid_q_ip, grid_q_oop, grid_intensity_init*mask,vmax=100)
         plt.show()
         if rank == 0:
             print('Initialization of Peak fitting failed.\n Please check the config file (peak center and boundary).')
@@ -216,6 +216,7 @@ for scan_no in scan_nos:
     if live_image:
         plt.ion()
         fig_3_plot = plt.figure(figsize=(14,10))
+        fig_bkg_plot = plt.figure(figsize=(9,6))
 
     print('{} images in total!'.format(img_loader.total_frame_number))
 
@@ -297,13 +298,13 @@ for scan_no in scan_nos:
         data = img_loader.update_motor_angles_in_data(data)
         data = peak_fit_engine.save_data(data)
         data = cal_strain_and_grain(data,HKL = hkl[scan_nos.index(scan_no)], lattice = lattice_skin)
-
+        print(data['ip_strain'],data['oop_strain'])
         data['mask_cv_xrd'].append(1)
         bkg_sub.update_motor_angles(motor_angles)
-        if bkg_sub.int_direct =='y':
-            check_result_bkg = bkg_sub.fit_background(None,img*mask, data, plot_live = False, check=True,check_level = check_level)
-        elif bkg_sub.int_direct =='x':
-            check_result_bkg = bkg_sub.fit_background(None,img*mask, data, plot_live = False, check=True, check_level = check_level)
+        if live_image:
+            check_result_bkg = bkg_sub.fit_background([None,fig_bkg_plot][live_image],img*mask, data, plot_live = live_image, check=True,check_level = check_level,freeze_sf = True)
+        else:
+            check_result_bkg = bkg_sub.fit_background(None,img*mask, data, plot_live = live_image, check=True,check_level = check_level,freeze_sf = True)
 
         #now lets append results to data
         #peak intensity

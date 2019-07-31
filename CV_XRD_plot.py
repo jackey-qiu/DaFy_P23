@@ -17,7 +17,7 @@ from util.PlotSetup import *
 which_scans_to_plot = [229,221,231,243]
 # which_scans_to_plot = [229,236,244]
 config_file_name = 'CV_XRD_plot_i20180835_Jul18_2019.ini'
-config_file_name = 'CV_XRD_plot_i20180835_Jul26_testMPI_2019.ini'
+config_file_name = 'CV_XRD_plot_i20180835_Jul30_testMPI_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 
 #do you want to set the max to 0
@@ -89,7 +89,7 @@ plt.rcParams['ytick.major.width'] = 2
 plt.rcParams['ytick.minor.size'] = 4
 plt.rcParams['ytick.minor.width'] = 1
 plt.rcParams['mathtext.default']='regular'
-plt.style.use('seaborn-darkgrid')
+plt.style.use('ggplot')
 print(os.path.dirname(os.path.abspath(__file__)))
 overplot = 1
 plot_vs_RHE = 1

@@ -57,7 +57,7 @@ tweak_mode = False
 #'bkg_sub' config is the config file for background substraction
 
 conf_file_names = {'XRD':'config_p23_i20180678.ini',\
-                   'ploter':'CV_XRD_plot_i20180678_Jul29_2019.ini'}
+                   'ploter':'CV_XRD_plot_i20180678_Jul30_2019.ini'}
 conf_file = os.path.join(DaFy_path, 'config', conf_file_names['XRD'])
 conf_file_plot = os.path.join(DaFy_path, 'config', conf_file_names['ploter'])
 config = configparser.ConfigParser()
@@ -214,12 +214,25 @@ for scan_no in scan_nos:
         tweak = True
         pre_tweak_motion = ''
         repeat_last = False
+        ii = 0
+        if not rod_scan:
+            ii = 1
         while tweak:
             print(pre_tweak_motion)
-            if bkg_sub.int_direct =='y':
+            if update_width:
                 check_result = bkg_sub.fit_background(fig_bkg_plot,img*mask, data, plot_live = plot_live, check=True,check_level = check_level)
-            elif bkg_sub.int_direct =='x':
-                check_result = bkg_sub.fit_background(fig_bkg_plot,img*mask, data, plot_live = plot_live, check=True, check_level = check_level)
+                if ii ==0:
+                    temp_c_width= bkg_sub.find_peak_width(img*mask, initial_c_width=400, initial_r_width = None, direction = 'vertical')
+                    if temp_c_width!=None:
+                        if temp_c_width-bkg_sub.col_width>50 and frame_number_ranges.index(frame_number)>10:#bragg peak area, not very robust
+                            bkg_sub.col_width = bkg_sub.col_width
+                        else:
+                            bkg_sub.col_width = temp_c_width
+
+                    check_result = bkg_sub.fit_background(fig_bkg_plot,img*mask, data, plot_live = plot_live, check=True,check_level = check_level)
+                ii  = ii+1
+            else:
+                check_result = bkg_sub.fit_background(fig_bkg_plot,img*mask, data, plot_live = plot_live, check=True,check_level = check_level)
             if process_through:
                 tweak = False
                 data['peak_intensity'].append(bkg_sub.fit_results['I'])
@@ -272,7 +285,6 @@ for scan_no in scan_nos:
                     process_through = True
 
 
-                #save results for the first loop but update result in the following loop steps used in tweak mode
                 #extract potential and current density
             fig_bkg_plot.canvas.draw()
             fig_bkg_plot.tight_layout()

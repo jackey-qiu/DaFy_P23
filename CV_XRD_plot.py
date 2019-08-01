@@ -17,7 +17,7 @@ from util.PlotSetup import *
 which_scans_to_plot = [229,221,231,243]
 # which_scans_to_plot = [229,236,244]
 config_file_name = 'CV_XRD_plot_i20180835_Jul18_2019.ini'
-config_file_name = 'CV_XRD_plot_i20180835_Jul30_testMPI_2019.ini'
+# config_file_name = 'CV_XRD_plot_i20180835_Jul30_testMPI_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 
 #do you want to set the max to 0
@@ -106,8 +106,15 @@ for i in range(len(phs)):
 
 x_label = ['E / V$_{RHE}$','Time(s)'][bool(plot_pot_step)]
 y_lable_key = ['ip_strain','oop_strain','ip_sigma','oop_sigma','intensity','ip_size','oop_size','opt_ref','current_den']
-ylabels = [r'$\Delta\varepsilon_\parallel$  (%)', r'$\Delta\varepsilon_\perp$  (%)',r'FWHM$_\parallel$ / $\AA^{-1}$',\
-           r'FWHM$_\perp$ / $\AA^{-1}$',r'Intensity / a.u.',r'$\Delta d_\parallel$ / nm',r'$\Delta d_\perp$ / nm',r'Optical Reflectivity / %',r'j / mAcm$^{-2}$']
+ylabels = [[r'$\varepsilon_\parallel$  (%)',r'$\Delta\varepsilon_\parallel$  (%)'][ref_max_eq_0['strain']],\
+           [r'$\varepsilon_\perp$  (%)',r'$\Delta\varepsilon_\perp$  (%)'][ref_max_eq_0['strain']],\
+           r'FWHM$_\parallel$ / $\AA^{-1}$',\
+           r'FWHM$_\perp$ / $\AA^{-1}$',\
+           r'Intensity / a.u.',\
+           [r'$ d_\parallel$ / nm',r'$\Delta d_\parallel$ / nm'][ref_max_eq_0['size']],\
+           [r'$ d_\perp$ / nm',r'$\Delta d_\perp$ / nm'][ref_max_eq_0['size']],\
+           r'Optical Reflectivity / %',\
+           r'j / mAcm$^{-2}$']
 y_labels_lib = dict(zip(y_lable_key,ylabels))
 
 fig_ax_container = {'ip_strain':['fig1','ax1a'],\

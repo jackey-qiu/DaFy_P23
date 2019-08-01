@@ -62,7 +62,7 @@ def show_all_plots(fig,grid_intensity,grid_q_ip,grid_q_oop, vmin, vmax, cmap, is
 
     ax_im.set_title(title)
     # ax_im.pcolormesh(grid_q_ip, grid_q_oop, grid_intensity, vmin = vmin, vmax = vmax, cmap = cmap)
-    ax_im.pcolormesh(grid_q_ip, grid_q_oop, grid_intensity, vmin = vmin, vmax = grid_intensity.max(), cmap = cmap)
+    ax_im.pcolormesh(grid_q_ip, grid_q_oop, grid_intensity, vmin = vmin, vmax = grid_intensity.max()*.5, cmap = cmap)
     ax_im = draw_lines_on_image(ax_im, grid_q_ip, variable_list = [fit_data['ver']['x'][0].min(),fit_data['ver']['x'][0].max()],direction = 'horizontal',color = 'gray')
     ax_im = draw_lines_on_image(ax_im, grid_q_ip, variable_list = [fit_data['ver']['x'][1].min(),fit_data['ver']['x'][1].max()],direction = 'horizontal',color = 'red')
     ax_im = draw_lines_on_image(ax_im, grid_q_oop, variable_list = [fit_data['hor']['x'][0].min(),fit_data['hor']['x'][0].max()],direction = 'vertical',color = 'gray')

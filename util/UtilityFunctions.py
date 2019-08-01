@@ -9,7 +9,7 @@ from PyMca5.PyMcaIO import specfilewrapper
 # from pyspec import spec
 from PyMca5.PyMcaIO import EdfFile
 from math import sqrt
-from skimage.feature import blob_log
+# from skimage.feature import blob_log
 import matplotlib.pyplot as plt
 from numpy import linspace, loadtxt, ones, convolve
 import pandas as pd

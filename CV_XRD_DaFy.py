@@ -36,7 +36,7 @@ if (sys.version_info > (3, 0)):
 
 #timer#
 t0 = time.time()
-mpi_run = False
+mpi_run =False 
 if mpi_run:
     comm=MPI.COMM_WORLD
     size_cluster=comm.Get_size()
@@ -56,7 +56,7 @@ tweak_mode = False
 #'ploter' config is the file which will be written with config info for later plotting step
 
 conf_file_names = {'CV_XRD':'config_p23_template.ini',\
-                   'ploter':'CV_XRD_plot_i20180835_Jul31_2019.ini',\
+                   'ploter':'CV_XRD_plot_i20180835_Aug1_2019.ini',\
                    'mpi':'mpi_conf_file.ini'}
 
 conf_file = os.path.join(DaFy_path, 'config', conf_file_names['CV_XRD'])
@@ -193,7 +193,7 @@ for scan_no in scan_nos:
 
     ##step 4: set mask and init peak fitting engine##
     mask = create_mask(img = grid_intensity_init,img_q_par = grid_q_oop, img_q_ver = grid_q_ip,\
-                       threshold = 100000, compare_method = 'larger', remove_columns = remove_columns, remove_rows = remove_rows, remove_pix = remove_pix,\
+                       threshold = 9000, compare_method = 'larger', remove_columns = remove_columns, remove_rows = remove_rows, remove_pix = remove_pix,\
                        remove_q_range = {'par':remove_q_par,'ver':remove_q_ver}, \
                        remove_partial_range = {'point_couple':line_strike_segments, 'pixel_width':line_strike_width})
 
@@ -297,8 +297,10 @@ for scan_no in scan_nos:
         data['current_density'].append(current)
         data = img_loader.update_motor_angles_in_data(data)
         data = peak_fit_engine.save_data(data)
-        data = cal_strain_and_grain(data,HKL = hkl[scan_nos.index(scan_no)], lattice = lattice_skin)
-        print(data['ip_strain'],data['oop_strain'])
+        if mpi_run:
+            data = cal_strain_and_grain(data,HKL = hkl[0], lattice = lattice_skin)
+        else:
+            data = cal_strain_and_grain(data,HKL = hkl[scan_nos.index(scan_no)], lattice = lattice_skin)
         data['mask_cv_xrd'].append(1)
         bkg_sub.update_motor_angles(motor_angles)
         if live_image:

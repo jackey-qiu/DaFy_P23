@@ -42,7 +42,7 @@ def find_tick_ticklables(x, num_ticks = 5, endpoint = True, dec_place = 1):
     x_ticks = [float(each) for each in x_tick_labels]
     return x_ticks, x_tick_labels
 
-def select_cycle_new(pot_result_frame_triple, bin_mode = 'select', return_cycle = 0, n_pots_rebin = 120, tailing_cut = 50):
+def select_cycle_new(pot_result_frame_triple, bin_mode = 'select', return_cycle = 0, n_pots_rebin = 100, tailing_cut = 50):
     #bin_mode = 'average' or 'select'
     #   'average':average every bin_level data points
     #   'select': select every bin_level data point
@@ -112,7 +112,7 @@ def select_cycle_new(pot_result_frame_triple, bin_mode = 'select', return_cycle 
     return [0,int(len(pot_bin)/2), -2], np.array(pot_bin), np.array(result_bin)
 
 
-def select_cycle(pot_result_couple, bin_level = 1, bin_mode = 'select', return_cycle = 2, pot_step = 0.10, plot_mode='CV'):
+def select_cycle(pot_result_couple, bin_level = 1, bin_mode = 'select', return_cycle = 0, pot_step = 0.11, plot_mode='CV'):
     #bin_mode = 'average' or 'select'
     #   'average':average every bin_level data points
     #   'select': select every bin_level data point

@@ -121,12 +121,12 @@ for scan_no in scan_nos:
 
     ###########calculate UB matrix#####
     if name == 'P23':
-        #UB = get_UB(name)(lattice_constants,energy,or0_angles,or1_angles,or0_hkl,or1_hkl)
         if ub!=None:
             UB = ub
         else:
-            print('UB is not set!')
-            UB = [1,0,0,0,1,0,0,0,1]
+            print('UB will be calculated!')
+            UB = get_UB(name)(lattice_constants,energy,or0_angles,or1_angles,or0_hkl,or1_hkl)
+            # UB = [1,0,0,0,1,0,0,0,1]
 
     elif name == 'ID03':
         UB = get_UB(name)(spec_file, scan_no)

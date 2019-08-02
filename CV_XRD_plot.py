@@ -12,16 +12,27 @@ import configparser
 from scipy.ndimage import gaussian_filter
 from pylab import MultipleLocator, LogLocator, FormatStrFormatter
 from util.PlotSetup import *
+from scipy import stats
 
 #good data scan numbers [216,224,231,243]
 which_scans_to_plot = [229,221,231,243]
 # which_scans_to_plot = [229,236,244]
+#I20180114 data scans
+#pH dependence
+# which_scans_to_plot = [724,732,805,807]
+# which_scans_to_plot = [732,805,807]
+#potential step
+# which_scans_to_plot = [744,746,749]
 config_file_name = 'CV_XRD_plot_i20180835_Jul18_2019.ini'
+# config_file_name = 'CV_XRD_plot_I20180114_final.ini'
 # config_file_name = 'CV_XRD_plot_i20180835_Jul30_testMPI_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 
 #do you want to set the max to 0
-ref_max_eq_0 = {'strain':0,'size':0,'intensity':0}
+ref_max_eq_0 = {'strain':1,'size':1,'intensity':0}
+
+#select_cycle
+which_select_cycle = 'new'
 
 #specify this for pot step scan
 scan_time = 100 #in seconds
@@ -31,7 +42,7 @@ scan_time = 100 #in seconds
 bin_level = 1
 
 #specify current density limit, other limits are set automatically
-ylim_current_density = [-15, 15]
+ylim_current_density = [5, 20]
 #crystal reciprocal lattice instance
 
 crystals = ['Co3O4','CoHO2_9009884']
@@ -164,8 +175,14 @@ for scan_id in scan_ids:
     #data file saved from DaFy program
     data = scan_info[scan_id].data.f
     pot, current_density = data.potential, data.current_density
-    pot_cal = data.potential_cal
-    frame_number = data.frame_number
+    try:
+        pot_cal = data.potential_cal
+    except:
+        pot_cal = pot
+    try:
+        frame_number = data.frame_number
+    except:
+        frame_number = range(len(pot))
     cv_data = pot, current_density
     Time = data.Time
     if len(Time)==0:
@@ -195,10 +212,17 @@ for scan_id in scan_ids:
     # if plot_pot_step:
         # scan_direction_ranges = []
     return_cycle = 0
+    bin_mode = 'select'
     if scan_id =='DaFy_231':
         return_cycle =1
-    scan_direction_ranges, _, _ = select_cycle_new((pot_cal,pot_cal,frame_number),return_cycle=return_cycle)
-    # print(scan_direction_ranges)
+    if which_select_cycle=='old':
+        if plot_pot_step:
+            scan_direction_ranges, _, _ = select_cycle((pot_cal,pot_cal),plot_mode = 'pot_step')
+        else:
+            scan_direction_ranges, _, _ = select_cycle((pot_cal,pot_cal),plot_mode = 'CV')
+    else:
+        scan_direction_ranges, _, _ = select_cycle_new((pot_cal,pot_cal,frame_number),bin_mode=bin_mode,return_cycle=return_cycle)
+    print(scan_direction_ranges)
     #first point couple from the positive sweep to make the plot a complete circle
     current_axs = []
     point_gap_ip_strain = []
@@ -208,36 +232,61 @@ for scan_id in scan_ids:
 
     # print(scan_direction_ranges)
 
+    x_size =[]
+    y_size_hor =[]
+    y_size_ver =[]
+
+
     for pos in range(len(scan_direction_ranges)):
         if pos == len(scan_direction_ranges) -1:
             break
         elif pos == 1 and plot_pot_step:
             break
+            # indx1, indx2 = scan_direction_ranges[pos],scan_direction_ranges[pos]*2
         else:
             indx1, indx2 = scan_direction_ranges[pos:pos+2]
-            # indx2 += 1
-        # print(indx1,indx2)
+
+            indx1 += 1
         fillcolor = 'w' if pos%2 ==1 else scan_info[scan_id].color
         label = scan_info[scan_id].scan_label+[' negative scan',' positive_scan'][int(pos==0)]
         marker = 'o'
-        if plot_pot_step:
-            marker = ''
-        #strain data
-        _, pot_temp, Time_temp =  select_cycle_new((pot_cal,Time,frame_number),return_cycle=return_cycle)
-        _, pot_temp, strain_ip_temp =  select_cycle_new((pot_cal,strain_ip,frame_number),return_cycle=return_cycle)
-        _, pot_temp, sigma_strain_ip_temp =  select_cycle_new((pot_cal,sigma_strain_ip,frame_number),return_cycle=return_cycle)
-        _, pot_temp, strain_oop_temp =  select_cycle_new((pot_cal,strain_oop,frame_number),return_cycle=return_cycle)
-        _, pot_temp, sigma_strain_oop_temp =  select_cycle_new((pot_cal,sigma_strain_oop,frame_number),return_cycle=return_cycle)
+        if which_select_cycle=='old':
+            plot_mode =['CV','pot_step'][int(plot_pot_step)]
+            if plot_pot_step:
+                marker = ''
+            #strain data
+            _, pot_temp, Time_temp =  select_cycle((pot_cal,Time),plot_mode=plot_mode)
+            _, pot_temp, strain_ip_temp =  select_cycle((pot_cal,strain_ip),plot_mode=plot_mode)
+            _, pot_temp, sigma_strain_ip_temp =  select_cycle((pot_cal,sigma_strain_ip),plot_mode=plot_mode)
+            _, pot_temp, strain_oop_temp =  select_cycle((pot_cal,strain_oop),plot_mode=plot_mode)
+            _, pot_temp, sigma_strain_oop_temp =  select_cycle((pot_cal,sigma_strain_oop),plot_mode=plot_mode)
 
-        #grain size
-        _, pot_temp, FWHM_ip_temp =  select_cycle_new((pot_cal,FWHM_ip,frame_number),return_cycle=return_cycle)
-        _, pot_temp, FWHM_oop_temp =  select_cycle_new((pot_cal,FWHM_oop,frame_number),return_cycle=return_cycle)
-        size_ip_temp, size_oop_temp = 0.2*np.pi/np.array(FWHM_ip_temp), 0.2*np.pi/np.array(FWHM_oop_temp)
-        #intensity
-        _, pot_temp, intensity_temp =  select_cycle_new((pot_cal,intensity,frame_number),return_cycle=return_cycle)
-        #x: either potential or time
-        x = POT(pot_temp,plot_vs_RHE, scan_info[scan_id].pH) if not plot_pot_step else range(len(Time_temp))
+            #grain size
+            _, pot_temp, FWHM_ip_temp =  select_cycle((pot_cal,FWHM_ip),plot_mode=plot_mode)
+            _, pot_temp, FWHM_oop_temp =  select_cycle((pot_cal,FWHM_oop),plot_mode=plot_mode)
+            size_ip_temp, size_oop_temp = 0.2*np.pi/np.array(FWHM_ip_temp), 0.2*np.pi/np.array(FWHM_oop_temp)
+            #intensity
+            _, pot_temp, intensity_temp =  select_cycle((pot_cal,intensity),plot_mode=plot_mode)
+            #x: either potential or time
+            x = POT(pot_temp,plot_vs_RHE, scan_info[scan_id].pH) if not plot_pot_step else range(len(Time_temp))
+            # print(x)
+        else:
+            #strain data
+            _, pot_temp, Time_temp =  select_cycle_new((pot_cal,Time,frame_number),bin_mode=bin_mode,return_cycle=return_cycle)
+            _, pot_temp, strain_ip_temp =  select_cycle_new((pot_cal,strain_ip,frame_number),bin_mode=bin_mode,return_cycle=return_cycle)
+            _, pot_temp, sigma_strain_ip_temp =  select_cycle_new((pot_cal,sigma_strain_ip,frame_number),bin_mode=bin_mode,return_cycle=return_cycle)
+            _, pot_temp, strain_oop_temp =  select_cycle_new((pot_cal,strain_oop,frame_number),bin_mode=bin_mode,return_cycle=return_cycle)
+            _, pot_temp, sigma_strain_oop_temp =  select_cycle_new((pot_cal,sigma_strain_oop,frame_number),bin_mode=bin_mode,return_cycle=return_cycle)
 
+            #grain size
+            _, pot_temp, FWHM_ip_temp =  select_cycle_new((pot_cal,FWHM_ip,frame_number),bin_mode=bin_mode,return_cycle=return_cycle)
+            _, pot_temp, FWHM_oop_temp =  select_cycle_new((pot_cal,FWHM_oop,frame_number),bin_mode=bin_mode,return_cycle=return_cycle)
+            size_ip_temp, size_oop_temp = 0.2*np.pi/np.array(FWHM_ip_temp), 0.2*np.pi/np.array(FWHM_oop_temp)
+            #intensity
+            _, pot_temp, intensity_temp =  select_cycle_new((pot_cal,intensity,frame_number),bin_mode=bin_mode,return_cycle=return_cycle)
+            #x: either potential or time
+            x = POT(pot_temp,plot_vs_RHE, scan_info[scan_id].pH) if not plot_pot_step else range(len(Time_temp))
+            # print(x)
         #init the axis handle
         if type(fig_ax_container['ip_strain'][1])==str:
             fig_ax_container['ip_strain'][1] = fig_ax_container['ip_strain'][0].add_subplot(111)
@@ -288,26 +337,29 @@ for scan_id in scan_ids:
             current_axs.append(fig_ax_container['all_in_one'][1])
             intensity_axs.append(fig_ax_container['all_in_one'][6])
         #get the first point from first pos to feed in second pos
-        if pos==0:
-            point_gap_ip_strain = [x[0],strain_ip_temp[0]]
-            point_gap_oop_strain = [x[0],strain_oop_temp[0]]
-            point_gap_ip_size = [x[0],size_ip_temp[0]]
-            point_gap_oop_size = [x[0],size_oop_temp[0]]
-        else:
-        #update the data in second pos
-            strain_ip_temp = np.append(strain_ip_temp,point_gap_ip_strain[1])
-            strain_oop_temp = np.append(strain_oop_temp,point_gap_oop_strain[1])
-
-            size_ip_temp = np.append(size_ip_temp,point_gap_ip_size[1])
-            size_oop_temp = np.append(size_oop_temp,point_gap_oop_size[1])
-            x = np.append(x,point_gap_ip_strain[0])
+        # if pos==0:
+           #point_gap_ip_strain = [x[0],strain_ip_temp[0]]
+           #point_gap_oop_strain = [x[0],strain_oop_temp[0]]
+           #point_gap_ip_size = [x[0],size_ip_temp[0]]
+           #point_gap_oop_size = [x[0],size_oop_temp[0]]
+        #else:
+        ##update the data in second pos
+           #strain_ip_temp = np.append(strain_ip_temp,point_gap_ip_strain[1])
+           #strain_oop_temp = np.append(strain_oop_temp,point_gap_oop_strain[1])
+           #size_ip_temp = np.append(size_ip_temp,point_gap_ip_size[1])
+           #size_oop_temp = np.append(size_oop_temp,point_gap_oop_size[1])
+           #x = np.append(x,point_gap_ip_strain[0])
+        # print(x[indx1],x[indx2-1])
 
         ip_strain_data_all = [strain_ip_temp]*len(ip_strain_axs)
         oop_strain_data_all = [strain_oop_temp]*len(oop_strain_axs)
         ip_size_data_all = [size_ip_temp]*len(ip_size_axs)
         oop_size_data_all = [size_oop_temp]*len(oop_size_axs)
         intensity_data_all = [intensity_temp]*len(intensity_axs)
-
+        
+        y_size_hor = y_size_hor + list(size_ip_temp[indx1:indx2])
+        y_size_ver = y_size_ver + list(size_oop_temp[indx1:indx2])
+        x_size = x_size +list(x[indx1:indx2])
         #check the limits for current dataset and update it if necessary
         #here reference point is 0(max value)
         def _update_min_or_not(current_min, current_max,data):
@@ -350,33 +402,44 @@ for scan_id in scan_ids:
                       [y_labels_lib['oop_size']]* len(oop_size_axs)+\
                       [y_labels_lib['intensity']]* len(intensity_axs)
 
-        def plot_on_ax(ax,x,data,y_label,ref_max):
+        def plot_on_ax(ax,x,data,y_label,ref_max,fit=False):
             # print(ax)
             #you need this to match the size of data other than strain and size
             if len(x)!=len(data):
                 x = x[0:-1]
-            ax.plot(x[indx1:indx2],set_max_to_0(data,[indx1,indx2],ref_max),linestyle = 'none', linewidth =1,\
+            ax.plot(x[indx1:indx2],set_max_to_0(data,[indx1,indx2],ref_max),linestyle = '-', linewidth =1,\
                     color = scan_info[scan_id].color, markerfacecolor = fillcolor,\
                     markeredgecolor = scan_info[scan_id].color,marker = marker, markersize=4,label = label)
+            if fit:
+                fit_index = np.logical_and(x[indx1:indx2]>0.2, x[indx1:indx2]<2.6)
+                slope,intercept,*others =stats.linregress(x[indx1:indx2][fit_index],set_max_to_0(data,[indx1,indx2],ref_max)[fit_index])
+                ax.plot(x[indx1:indx2],np.array(x[indx1:indx2])*slope+intercept,color = scan_info[scan_id].color)
+                # print(slope)
             ax.set_ylabel(y_label)
             return None
-        for ax, data, y_label,ref in zip(ip_strain_axs+oop_strain_axs+ip_size_axs+oop_size_axs+intensity_axs,\
+        for ax, data, y_label,ref, fit in zip(ip_strain_axs+oop_strain_axs+ip_size_axs+oop_size_axs+intensity_axs,\
                             ip_strain_data_all+oop_strain_data_all+ip_size_data_all+oop_size_data_all+intensity_data_all,\
-                            y_labels_all,[ref_max_eq_0['strain']]*(len(ip_strain_axs)*2)+\
-                            [ref_max_eq_0['size']]*(len(ip_strain_axs)*2)+[ref_max_eq_0['intensity']]*(len(ip_strain_axs)*1)):
-            plot_on_ax(ax,x,data,y_label,ref)
+                            y_labels_all,\
+                            [ref_max_eq_0['strain']]*(len(ip_strain_axs)*2)+[ref_max_eq_0['size']]*(len(ip_strain_axs)*2)+[ref_max_eq_0['intensity']]*(len(ip_strain_axs)*1),\
+                            [0]*(len(ip_strain_axs)*2)+[0]*(len(ip_strain_axs)*2)+[0]*(len(ip_strain_axs)*1)):
+            plot_on_ax(ax,x,data,y_label,ref,fit)
             ax.set_xlabel(x_label)
+        
         #now plot current density
         if pos==0:
             for ax in current_axs:
                 colors_lib = {0:'sienna',1:'red',2:'green',3:'blue',4:'m',5:'black'}
                 #ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*1000*8*50, '-',\
                 #        color=scan_info[scan_id].color,linewidth=2,label=scan_info[scan_id].scan_label)
-                ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*(-8)*50, 'x',\
-                        color=scan_info[scan_id].color,linewidth=2,label=scan_info[scan_id].scan_label)
+                if plot_pot_step:
+                    ax.plot(range(len(cv_data[0])), cv_data[1]*(-8)*50, '-',\
+                            color=scan_info[scan_id].color,linewidth=2,label=scan_info[scan_id].scan_label)
+                else:
+                    ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*(-8)*50, '.',\
+                            color=scan_info[scan_id].color,linewidth=2,label=scan_info[scan_id].scan_label)
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_labels_lib['current_den'])
-                #ax.set_ylim(ylim_current_density)
+                # ax.set_ylim(ylim_current_density)
         #now set some x-y lables to '' for commen data range, also set titles
         x_ticks, x_tick_labels = find_tick_ticklables(x, num_ticks =4, endpoint = True, dec_place =1)
         if num_datasets == 1:
@@ -425,6 +488,12 @@ for scan_id in scan_ids:
     filename = 'data/ascii/%s_%d_CV_XRD.dat'%(beamtime, scan_no)
     np.savetxt(filename, X, newline='\r\n', header=header)
 
+    # print(len(x_size),len(y_size_hor))
+    x_size,y_size_hor,y_size_ver=np.array(x_size),np.array(y_size_hor),np.array(y_size_ver)
+    fit_index = np.logical_and(x_size>1.2, x_size<2.6)
+    slope_hor,intercept_hor,*others =stats.linregress(x_size[fit_index],y_size_hor[fit_index])
+    slope_ver,intercept_ver,*others =stats.linregress(x_size[fit_index],y_size_ver[fit_index])
+    print('slope_hor={},slope_ver={}'.format(slope_hor,slope_ver))
 #now let us set the limits
 offset_scale = 0.1
 [each.set_ylim((ip_strain_min-(ip_strain_max-ip_strain_min)*offset_scale,ip_strain_max+(ip_strain_max-ip_strain_min)*offset_scale)) for each in ax_can_ip_strain]

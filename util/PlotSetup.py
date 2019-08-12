@@ -1,4 +1,6 @@
 import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
 
 class ScanInfo():
 
@@ -200,6 +202,50 @@ def extract_ids_file(file_path,which_cycle=3):
             else:
                 pass
     return np.array(data)[:,0], np.array(data)[:,1]
+
+#data format based on Fouad's potentiostat
+def extract_cv_data(file_path='/home/qiu/apps/048_S221_CV', which_cycle=1):
+    #return:pot(V), current (mA)
+    skiprows = 0
+    with open(file_path,'r') as f:
+        for each in f.readlines():
+            if each.startswith('Time(s)'):
+                skiprows+=1
+                break
+            else:
+                skiprows+=1
+    data = np.loadtxt(file_path,skiprows = skiprows)
+    #nodes index saving all the valley pot positions
+    nodes =[0]
+    for i in range(len(data[:,1])):
+        if i!=0 and i!=len(data[:,1])-1:
+            if data[i,1]<data[i+1,1] and data[i,1]<data[i-1,1]:
+                nodes.append(i)
+    nodes.append(len(data[:,1]))
+    if which_cycle>len(nodes):
+        print('Cycle number lager than the total cycles! Use the first cycle instead!')
+        return data[nodes[1]:nodes[2],1],data[nodes[1]:nodes[2],2]
+    else:
+        return data[nodes[which_cycle]:nodes[which_cycle+1],1],data[nodes[which_cycle]:nodes[which_cycle+1],2]
+
+
+def ir_drop_analysis(pot, current,pot_first, half = 1):
+    #half:1 or 2 (which half of the CV profile)
+    #pot_first: index of the first potential for linear fit
+    #return: resistance R
+    if half==1:
+        pot_fit = pot[0:int(len(pot)/2)]
+        current_fit = current[0:int(len(pot)/2)]
+    else:
+        pot_fit = pot[int(len(pot)/2):len(pot)][::-1]
+        current_fit = current[int(len(pot)/2):len(pot)][::-1]
+    indx1,indx2 = [np.argmin(abs(np.array(pot_fit)-pot_first)),len(pot_fit)]
+    slope,intercept,*others =stats.linregress(current_fit[indx1:indx2],pot_fit[indx1:indx2])
+    print('R=',slope)
+    plt.plot(pot,np.log10(current))
+    plt.plot(current*slope+intercept,np.log10(current))
+    plt.show()
+
 
 def strain_ip(q_ip, HKL, lattice):
     q_bulk = lattice.q(HKL)

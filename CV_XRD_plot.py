@@ -13,6 +13,7 @@ from scipy.ndimage import gaussian_filter
 from pylab import MultipleLocator, LogLocator, FormatStrFormatter
 from util.PlotSetup import *
 from scipy import stats
+from collections import namedtuple
 
 #good data scan numbers [216,224,231,243]
 which_scans_to_plot = [229,221,231,243]
@@ -29,7 +30,12 @@ config_file_name = 'CV_XRD_plot_i20180835_Jul18_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 
 #do you want to set the max to 0
-ref_max_eq_0 = {'strain':1,'size':1,'intensity':0}
+ref_max_eq_0 = {'strain':1,'size':1,'intensity':1}
+
+#ir drop correction(check the func of ir_drop_analysis in PlotSetup.py
+IR = {'DaFy_231':0., 'DaFy_243':0.,'DaFy_221':0.,'DaFy_229':0.}
+cv_scale_factor = 25#scaling factor to double layer region, change accordingly
+cv_spike_cut = 0.07#smallest spike you want to filter out from CV profile, do this in a trail_and_error way
 
 #select_cycle
 which_select_cycle = 'new'
@@ -42,7 +48,7 @@ scan_time = 100 #in seconds
 bin_level = 1
 
 #specify current density limit, other limits are set automatically
-ylim_current_density = [5, 20]
+ylim_current_density = [-2., 4.2]
 #crystal reciprocal lattice instance
 
 crystals = ['Co3O4','CoHO2_9009884']
@@ -173,8 +179,15 @@ for scan_id in scan_ids:
     #get high resolution cv data from ids file
     #cv_data = extract_ids_file(scan_info[scan_id].ids_filename)
     #data file saved from DaFy program
-    data = scan_info[scan_id].data.f
+    R = IR[scan_id]
+    try:#different format if the data is manually filtered afterwards
+        data = scan_info[scan_id].data.f.data.tolist()
+        data = namedtuple('Struct',data.keys())(*data.values())
+    except:
+        data = scan_info[scan_id].data.f
+    # print(list(data.keys))
     pot, current_density = data.potential, data.current_density
+    pot = pot-abs(current_density)*R
     try:
         pot_cal = data.potential_cal
     except:
@@ -183,7 +196,12 @@ for scan_id in scan_ids:
         frame_number = data.frame_number
     except:
         frame_number = range(len(pot))
-    cv_data = pot, current_density
+    # cv_data = pot, current_density
+    if scan_id == 'DaFy_221':
+        cv_data = list(extract_cv_data(scan_info[scan_id].ids_filename,1))
+    else:
+        cv_data = list(extract_cv_data(scan_info[scan_id].ids_filename,2))
+    cv_data[0] = cv_data[0]-abs(cv_data[1])*R
     Time = data.Time
     if len(Time)==0:
         Time = np.array(range(len(pot)))*float(scan_time/len(pot))
@@ -432,14 +450,31 @@ for scan_id in scan_ids:
                 #ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*1000*8*50, '-',\
                 #        color=scan_info[scan_id].color,linewidth=2,label=scan_info[scan_id].scan_label)
                 if plot_pot_step:
-                    ax.plot(range(len(cv_data[0])), cv_data[1]*(-8)*50, '-',\
+                    ax.plot(range(len(cv_data[0])), cv_data[1]*(-8), '-',\
                             color=scan_info[scan_id].color,linewidth=2,label=scan_info[scan_id].scan_label)
                 else:
-                    ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*(-8)*50, '.',\
-                            color=scan_info[scan_id].color,linewidth=2,label=scan_info[scan_id].scan_label)
+                    #first remove some spikes 
+                    filter_index =np.where(abs(np.diff(cv_data[1]*8*cv_scale_factor))<cv_spike_cut)[0]
+                    filter_index = filter_index+1#index offset by 1
+                    pot_filtered = cv_data[0][(filter_index,)]
+                    current_filtered = cv_data[1][(filter_index,)]
+                    #do this for another twice
+                    for ii in range(2):
+                        filter_index =np.where(abs(np.diff(current_filtered*8*cv_scale_factor))<cv_spike_cut)[0]
+                        filter_index = filter_index+1
+                        pot_filtered = pot_filtered[(filter_index,)]
+                        current_filtered = current_filtered[(filter_index,)]
+
+                    # current_filtered = cv_data[1][np.where(abs(np.diff(cv_data[1]*8*25))<0.080)]
+                    # ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*(8)*25, linestyle='-',marker=None,\
+                            # color=scan_info[scan_id].color,linewidth=1,label=scan_info[scan_id].scan_label)
+                    ax.plot(POT(pot_filtered, plot_vs_RHE, scan_info[scan_id].pH), current_filtered*(8)*cv_scale_factor, linestyle='-',marker=None,\
+                            color=scan_info[scan_id].color,linewidth=1,label=scan_info[scan_id].scan_label)
+                    ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), (cv_data[1]*8), ':',\
+                            color=scan_info[scan_id].color,linewidth=1,label=scan_info[scan_id].scan_label)
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_labels_lib['current_den'])
-                # ax.set_ylim(ylim_current_density)
+                ax.set_ylim(ylim_current_density)
         #now set some x-y lables to '' for commen data range, also set titles
         x_ticks, x_tick_labels = find_tick_ticklables(x, num_ticks =4, endpoint = True, dec_place =1)
         if num_datasets == 1:

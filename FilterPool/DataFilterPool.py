@@ -1,6 +1,8 @@
 import sys
 import numpy as np
-
+import matplotlib.pyplot as plt
+if (sys.version_info > (3, 0)):
+    raw_input = input
 def cut_profile_from_2D_img(img, cut_range, cut_direction, sum_result=True):
     if cut_direction=='horizontal':
         if sum_result:
@@ -156,5 +158,65 @@ def create_mask_bkg(img, threshold = 10000, compare_method ='larger',remove_colu
             mask[tuple(each)] = 0
     return mask
 
+#data format based on Fouad's potentiostat
+def extract_cv_data(file_path='/home/qiu/apps/048_S221_CV', which_cycle=1):
+    #return:pot(V), current (mA)
+    skiprows = 0
+    with open(file_path,'r') as f:
+        for each in f.readlines():
+            if each.startswith('Time(s)'):
+                skiprows+=1
+                break
+            else:
+                skiprows+=1
+    data = np.loadtxt(file_path,skiprows = skiprows)
+    #nodes index saving all the valley pot positions
+    nodes =[0]
+    for i in range(len(data[:,1])):
+        if i!=0 and i!=len(data[:,1])-1:
+            if data[i,1]<data[i+1,1] and data[i,1]<data[i-1,1]:
+                nodes.append(i)
+    nodes.append(len(data[:,1]))
+    if which_cycle>len(nodes):
+        print('Cycle number lager than the total cycles! Use the first cycle instead!')
+        return data[nodes[1]:nodes[2],1],data[nodes[1]:nodes[2],2]
+    else:
+        return data[nodes[which_cycle]:nodes[which_cycle+1],1],data[nodes[which_cycle]:nodes[which_cycle+1],2]
 
-
+def data_point_picker(data_file = '/home/qiu/apps/DaFy_P23/data/DataBank_231_20190718-153651.npz',x_key='potential', y_key='cen_ip'):
+    plt.ion()
+    fig = plt.figure()
+    data = np.load(data_file)
+    print(list(data.keys()))
+    x = data[x_key]
+    y = data[y_key]
+    index_keep =[]
+    index_remove = []
+    data_new = {}
+    for i in range(len(x)):
+        fig.clear()
+        plt.plot(x,y,':',color = 'blue')
+        plt.scatter(x[i],y[i],color ='r')
+        data_quality = raw_input('Is this point a good point?(y/n/q);q means quit the loop. Your input is:') or 'y'
+        if data_quality == 'n':
+            index_remove.append(i)
+        elif data_quality == 'q':
+            break
+        else:
+            pass
+        plt.tight_layout()
+        plt.pause(0.05)
+        plt.show()
+    index_keep = [i for i in range(len(x)) if i not in index_remove]
+    plt.ioff()
+    fig.clear()
+    print('After outliner points being removed:')
+    plt.plot(x[index_keep],y[index_keep])
+    plt.show()
+    for key in data:
+        try:
+            data_new[key] = data[key][index_keep]
+        except:
+            data_new[key] = data[key]
+    np.savez(data_file.replace('.npz','_filtered.npz'), data = data_new)
+data_point_picker()

@@ -37,6 +37,8 @@ IR = {'DaFy_231':0., 'DaFy_243':0.,'DaFy_221':0.,'DaFy_229':0.}
 cv_scale_factor = 25#scaling factor to double layer region, change accordingly
 cv_spike_cut = 0.07#smallest spike you want to filter out from CV profile, do this in a trail_and_error way
 
+plot_intensity = False
+
 #select_cycle
 which_select_cycle = 'new'
 
@@ -145,7 +147,7 @@ fig_ax_container = {'ip_strain':['fig1','ax1a'],\
                     'current_den':['fig9','ax9a'],\
                     'strain_all':['fig_ALL_strain','ax_fig_ALL_strain_ip','ax_fig_ALL_strain_oop'],\
                     'size_all':['fig_ALL_size','ax_fig_ALL_size_ip','ax_fig_ALL_size_oop'],\
-                    'all_in_one':['fig_all','ax1_all','ax2_all','ax3_all','ax4_all','ax5_all','ax6_all']}
+                    'all_in_one':['fig_all','ax1_all','ax2_all','ax3_all','ax4_all','ax5_all','ax6_all'][0:6+int(plot_intensity)]}
 
 #use this the setup globally the limits
 ax_can_ip_strain, ip_strain_min, ip_strain_max = [],1e10, -1e10
@@ -232,7 +234,7 @@ for scan_id in scan_ids:
     return_cycle = 0
     bin_mode = 'select'
     if scan_id =='DaFy_231':
-        return_cycle =1
+        return_cycle =0
     if which_select_cycle=='old':
         if plot_pot_step:
             scan_direction_ranges, _, _ = select_cycle((pot_cal,pot_cal),plot_mode = 'pot_step')
@@ -322,8 +324,8 @@ for scan_id in scan_ids:
             for i in range(1,7):
                 fig_ax_container['all_in_one'][i] = fig_ax_container['all_in_one'][0].add_subplot(2,3,i)
         else:#each dataset occupy one column
-            for i in range(6):
-                fig_ax_container['all_in_one'][i+1] = fig_ax_container['all_in_one'][0].add_subplot(6,num_datasets, scan_ids.index(scan_id)+1+i*num_datasets)
+            for i in range(5+int(plot_intensity)):
+                fig_ax_container['all_in_one'][i+1] = fig_ax_container['all_in_one'][0].add_subplot(5+int(plot_intensity),num_datasets, scan_ids.index(scan_id)+1+i*num_datasets)
             for i in range(2):
                 fig_ax_container['strain_all'][i+1] = fig_ax_container['strain_all'][0].add_subplot(2,num_datasets, scan_ids.index(scan_id)+1+i*num_datasets)
             for i in range(2):
@@ -353,7 +355,8 @@ for scan_id in scan_ids:
             ip_size_axs.append(fig_ax_container['size_all'][1])
             oop_size_axs.append(fig_ax_container['size_all'][2])
             current_axs.append(fig_ax_container['all_in_one'][1])
-            intensity_axs.append(fig_ax_container['all_in_one'][6])
+            if plot_intensity:
+                intensity_axs.append(fig_ax_container['all_in_one'][6])
         #get the first point from first pos to feed in second pos
         # if pos==0:
            #point_gap_ip_strain = [x[0],strain_ip_temp[0]]
@@ -373,6 +376,7 @@ for scan_id in scan_ids:
         oop_strain_data_all = [strain_oop_temp]*len(oop_strain_axs)
         ip_size_data_all = [size_ip_temp]*len(ip_size_axs)
         oop_size_data_all = [size_oop_temp]*len(oop_size_axs)
+        # if plot_intensity:
         intensity_data_all = [intensity_temp]*len(intensity_axs)
         
         y_size_hor = y_size_hor + list(size_ip_temp[indx1:indx2])
@@ -465,13 +469,11 @@ for scan_id in scan_ids:
                         pot_filtered = pot_filtered[(filter_index,)]
                         current_filtered = current_filtered[(filter_index,)]
 
-                    # current_filtered = cv_data[1][np.where(abs(np.diff(cv_data[1]*8*25))<0.080)]
-                    # ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), cv_data[1]*(8)*25, linestyle='-',marker=None,\
-                            # color=scan_info[scan_id].color,linewidth=1,label=scan_info[scan_id].scan_label)
                     ax.plot(POT(pot_filtered, plot_vs_RHE, scan_info[scan_id].pH), current_filtered*(8)*cv_scale_factor, linestyle='-',marker=None,\
                             color=scan_info[scan_id].color,linewidth=1,label=scan_info[scan_id].scan_label)
                     ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), (cv_data[1]*8), ':',\
                             color=scan_info[scan_id].color,linewidth=1,label=scan_info[scan_id].scan_label)
+                    ax.text(1.2,ylim_current_density[1]/2,'x{}'.format(cv_scale_factor),color=scan_info[scan_id].color)
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(y_labels_lib['current_den'])
                 ax.set_ylim(ylim_current_density)
@@ -488,25 +490,25 @@ for scan_id in scan_ids:
             fig_ax_container['all_in_one'][1].set_title(scan_info[scan_id].scan_label,fontsize = 10)
             fig_ax_container['size_all'][1].set_title(scan_info[scan_id].scan_label,fontsize = 10)
             fig_ax_container['strain_all'][1].set_title(scan_info[scan_id].scan_label,fontsize=10)
-            [fig_ax_container['all_in_one'][i].set_xlabel('') for i in [1,2,3,4,5]]
+            [fig_ax_container['all_in_one'][i].set_xlabel('') for i in [1,2,3,4,5][0:4+int(plot_intensity)]]
             [fig_ax_container['size_all'][i].set_xlabel('') for i in [1]]
             [fig_ax_container['strain_all'][i].set_xlabel('') for i in [1]]
             #no tick labels
-            [fig_ax_container['all_in_one'][i].set_xticklabels([]) for i in [1,2,3,4,5]]
+            [fig_ax_container['all_in_one'][i].set_xticklabels([]) for i in [1,2,3,4,5][0:4+int(plot_intensity)]]
             [fig_ax_container['size_all'][i].set_xticklabels([]) for i in [1]]
             [fig_ax_container['strain_all'][i].set_xticklabels([]) for i in [1]]
             #set the same tick labels
-            fig_ax_container['all_in_one'][6].set_xticks(x_ticks)
-            fig_ax_container['all_in_one'][6].set_xticklabels(x_tick_labels)
+            fig_ax_container['all_in_one'][5+int(plot_intensity)].set_xticks(x_ticks)
+            fig_ax_container['all_in_one'][5+int(plot_intensity)].set_xticklabels(x_tick_labels)
             fig_ax_container['size_all'][2].set_xticks(x_ticks)
             fig_ax_container['size_all'][2].set_xticklabels(x_tick_labels)
             fig_ax_container['strain_all'][2].set_xticks(x_ticks)
             fig_ax_container['strain_all'][2].set_xticklabels(x_tick_labels)
             if scan_id != scan_ids[0]:
-                [fig_ax_container['all_in_one'][i].set_ylabel('') for i in [1,2,3,4,5,6]]
+                [fig_ax_container['all_in_one'][i].set_ylabel('') for i in [1,2,3,4,5,6][0:5+int(plot_intensity)]]
                 [fig_ax_container['size_all'][i].set_ylabel('') for i in [1,2]]
                 [fig_ax_container['strain_all'][i].set_ylabel('') for i in [1,2]]
-                [fig_ax_container['all_in_one'][i].set_yticklabels([]) for i in [1,2,3,4,5,6]]
+                [fig_ax_container['all_in_one'][i].set_yticklabels([]) for i in [1,2,3,4,5,6][0:5+int(plot_intensity)]]
                 [fig_ax_container['size_all'][i].set_yticklabels([]) for i in [1,2]]
                 [fig_ax_container['strain_all'][i].set_yticklabels([]) for i in [1,2]]
             else:
@@ -515,7 +517,8 @@ for scan_id in scan_ids:
                 ax_can_set_yticks_ip_size = [fig_ax_container['all_in_one'][4], fig_ax_container['size_all'][1]]
                 ax_can_set_yticks_oop_size = [fig_ax_container['all_in_one'][5], fig_ax_container['size_all'][2]]
                 ax_can_set_yticks_current = [fig_ax_container['all_in_one'][1]]
-                ax_can_set_yticks_intensity = [fig_ax_container['all_in_one'][6]]
+                if plot_intensity:
+                    ax_can_set_yticks_intensity = [fig_ax_container['all_in_one'][6]]
 
     #save ascii files
     header = '%s #%d CV with XRD\r\nPotential / V, Current Density / mA/cm^2, Strain ip / %%, Strain oop / %%, d ip / nm, d oop / nm, Intensity (area ip)'%(beamtime, scan_no)
@@ -528,7 +531,7 @@ for scan_id in scan_ids:
     fit_index = np.logical_and(x_size>1.2, x_size<2.6)
     slope_hor,intercept_hor,*others =stats.linregress(x_size[fit_index],y_size_hor[fit_index])
     slope_ver,intercept_ver,*others =stats.linregress(x_size[fit_index],y_size_ver[fit_index])
-    print('slope_hor={},slope_ver={}'.format(slope_hor,slope_ver))
+    print('{},size analysis results:slope_hor={},slope_ver={}'.format(scan_id,slope_hor,slope_ver))
 #now let us set the limits
 offset_scale = 0.1
 [each.set_ylim((ip_strain_min-(ip_strain_max-ip_strain_min)*offset_scale,ip_strain_max+(ip_strain_max-ip_strain_min)*offset_scale)) for each in ax_can_ip_strain]

@@ -468,7 +468,7 @@ for scan_id in scan_ids:
                         filter_index = filter_index+1
                         pot_filtered = pot_filtered[(filter_index,)]
                         current_filtered = current_filtered[(filter_index,)]
-
+                    pot_filtered = pot_filtered - current_filtered * R
                     ax.plot(POT(pot_filtered, plot_vs_RHE, scan_info[scan_id].pH), current_filtered*(8)*cv_scale_factor, linestyle='-',marker=None,\
                             color=scan_info[scan_id].color,linewidth=1,label=scan_info[scan_id].scan_label)
                     ax.plot(POT(cv_data[0], plot_vs_RHE, scan_info[scan_id].pH), (cv_data[1]*8), ':',\

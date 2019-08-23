@@ -219,4 +219,4 @@ def data_point_picker(data_file = '/home/qiu/apps/DaFy_P23/data/DataBank_231_201
         except:
             data_new[key] = data[key]
     np.savez(data_file.replace('.npz','_filtered.npz'), data = data_new)
-data_point_picker()
+#data_point_picker()

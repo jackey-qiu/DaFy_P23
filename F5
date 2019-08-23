@@ -16,9 +16,8 @@ from scipy import stats
 from collections import namedtuple
 
 #good data scan numbers [216,224,231,243]
-# which_scans_to_plot = [229,221,231,243]
-#which_scans_to_plot = [221,229,231,236,243,244]
-which_scans_to_plot = [229,236,244]
+which_scans_to_plot = [229,221,231,243]
+# which_scans_to_plot = [229,236,244]
 #I20180114 data scans
 #pH dependence
 # which_scans_to_plot = [724,732,805,807]
@@ -38,7 +37,7 @@ ids_file_path_default = os.path.join(DaFy_path,'data','ids')
 use_default_ids_path = True
 
 #do you want to set the max to 0
-ref_max_eq_0 = {'strain':0,'size':0,'intensity':1}
+ref_max_eq_0 = {'strain':1,'size':1,'intensity':1}
 
 #ir drop correction(check the func of ir_drop_analysis in PlotSetup.py
 IR = {'DaFy_231':0., 'DaFy_243':0.,'DaFy_221':0.,'DaFy_229':0.}
@@ -174,10 +173,6 @@ ax_can_current, current_min, current_max = [],1e10, -1e10
 ax_can_intensity, intensity_min, intensity_max = [],1e10, -1e10
 ax_can_set_yticks_ip_strain,ax_can_set_yticks_current, ax_can_set_yticks_oop_strain,  ax_can_set_yticks_ip_size,  ax_can_set_yticks_oop_size, ax_can_set_yticks_intensity  = [], [], [], [], [], []
 
-#containers
-size_container={}
-strain_container={}
-
 #build figures
 for each in fig_ax_container:
     if each in ['strain_all','size_all']:
@@ -198,12 +193,10 @@ num_datasets = len(scan_ids)
 
 for scan_id in scan_ids:
     scan_no = int(scan_id.split('_')[-1])
-    size_container[scan_no], strain_container[scan_no] = {},{}
     #get high resolution cv data from ids file
     #cv_data = extract_ids_file(scan_info[scan_id].ids_filename)
     #data file saved from DaFy program
-    #R = IR[scan_id]
-    R = 0
+    R = IR[scan_id]
     try:#different format if the data is manually filtered afterwards
         data = scan_info[scan_id].data.f.data.tolist()
         data = namedtuple('Struct',data.keys())(*data.values())
@@ -411,13 +404,6 @@ for scan_id in scan_ids:
             y_strain_hor = y_strain_hor + list(strain_ip_temp[indx1:indx2])
             y_strain_ver = y_strain_ver + list(strain_oop_temp[indx1:indx2])
             x_strain = x_strain +list(x[indx1:indx2])
-        if pos==0:
-            strain_container[scan_no]["ip"]= [np.mean(strain_ip_temp[0:4]),np.mean(strain_ip_temp[-5:-1])]
-            strain_container[scan_no]["oop"]= [np.mean(strain_oop_temp[0:4]),np.mean(strain_oop_temp[-5:-1])]
-            size_container[scan_no]["ip"]= [np.mean(size_ip_temp[0:10]),np.mean(size_ip_temp[-10:-1])]
-            size_container[scan_no]["oop"]= [np.mean(size_oop_temp[0:10]),np.mean(size_oop_temp[-10:-1])]
-
-
         #check the limits for current dataset and update it if necessary
         #here reference point is 0(max value)
         def _update_min_or_not(current_min, current_max,data):
@@ -567,7 +553,6 @@ for scan_id in scan_ids:
     fit_index = np.logical_and(x_size>1.1, x_size<1.5)
     slope_hor,intercept_hor,*others,std_hor =stats.linregress(x_size[fit_index],y_size_hor[fit_index])
     slope_ver,intercept_ver,*others, std_ver =stats.linregress(x_size[fit_index],y_size_ver[fit_index])
-    # size_container[scan_no]["ip"], size_container[scan_no]["oop"] = [slope_hor, intercept_hor, std_hor], [slope_ver, intercept_ver, std_ver]
     print('{},size analysis results:slope_hor={}({}),slope_ver={}({})'.format(scan_id,slope_hor,std_hor,slope_ver,std_ver))
 
      # print(len(x_size),len(y_size_hor))
@@ -622,71 +607,8 @@ for each in ax_can_set_yticks_intensity:
 #tight layout for figures
 if len(scan_ids)==1:
     fig_ax_container['all_in_one'][0].tight_layout()
-if len(which_scans_to_plot)>1:
-    f=lambda x:abs(x[0]-x[1])
-    f2 = lambda x,y:x*y[0]+y[1]
-    scatter_plot_x = list(range(1,len(which_scans_to_plot)+1))
-    scatter_plot_x_pair = [[x,x] for x in scatter_plot_x]
-    fig_seq = plt.figure(figsize=(8,6))
-    ax_strain_seq = fig_seq.add_subplot(221)
-    ax_strain_ver_seq = fig_seq.add_subplot(223)
-    ax_size_seq = fig_seq.add_subplot(222)
-    ax_size_ver_seq = fig_seq.add_subplot(224)
-    strain_seq_ip = np.array([strain_container[scan_no]["ip"] for scan_no in which_scans_to_plot])
-    d_strain_seq_ip = np.array([f(strain_container[scan_no]["ip"]) for scan_no in which_scans_to_plot])
-    strain_seq_oop = np.array([strain_container[scan_no]["oop"] for scan_no in which_scans_to_plot])
-    d_strain_seq_oop = np.array([f(strain_container[scan_no]["oop"]) for scan_no in which_scans_to_plot])
 
-    size_seq_ip = np.array([size_container[scan_no]["ip"] for scan_no in which_scans_to_plot])
-    d_size_seq_ip = np.array([f(size_container[scan_no]["ip"]) for scan_no in which_scans_to_plot])
-    size_seq_oop = np.array([size_container[scan_no]["oop"] for scan_no in which_scans_to_plot])
-    d_size_seq_oop = np.array([f(size_container[scan_no]["oop"]) for scan_no in which_scans_to_plot])
 
-    ax_strain_seq.scatter(np.array(scatter_plot_x_pair).T,strain_seq_ip.T,color=np.array([['blue','r']]*len(which_scans_to_plot)).flatten())
-    ax_strain_seq.plot(np.array(scatter_plot_x_pair),strain_seq_ip,ls='-',color='green')
-    ax_strain_seq.bar(scatter_plot_x[0::2],d_strain_seq_ip[0::2]*-1,color='blue')
-    ax_strain_seq.bar(scatter_plot_x[1::2],d_strain_seq_ip[1::2]*-1,color='red')
-    ax_strain_seq.set_xticks(scatter_plot_x)
-    ax_strain_seq.set_xticklabels([""]*len(which_scans_to_plot))
-    ax_strain_seq.set_ylabel(ylabels[0])
-
-    if np.abs(size_seq_ip).max()<np.abs(d_size_seq_ip).max()*5:
-        size_seq_offset = 0
-    else:
-        size_seq_offset = np.abs(size_seq_ip).max() - np.abs(d_size_seq_ip).max()*2
-    ax_size_seq.scatter(np.array(scatter_plot_x_pair).T,size_seq_ip.T-size_seq_offset,color=np.array([['blue','r']]*len(which_scans_to_plot)).flatten())
-    ax_size_seq.plot(np.array(scatter_plot_x_pair),size_seq_ip-size_seq_offset,ls='-',color='green')
-    ax_size_seq.bar(scatter_plot_x[0::2],d_size_seq_ip[0::2]*-1,color='blue')
-    ax_size_seq.bar(scatter_plot_x[1::2],d_size_seq_ip[1::2]*-1,color='red')
-
-    ax_size_seq.set_ylabel(ylabels[5]+' offset by '+str(round(size_seq_offset,1)))
-    ax_size_seq.set_xticks(scatter_plot_x)
-    ax_size_seq.set_xticklabels([""]*len(which_scans_to_plot))
-
-    ax_strain_ver_seq.scatter(np.array(scatter_plot_x_pair).T,strain_seq_oop.T,color=np.array([['blue','r']]*len(which_scans_to_plot)).flatten())
-    ax_strain_ver_seq.plot(np.array(scatter_plot_x_pair),strain_seq_oop,ls='-',color='green')
-    ax_strain_ver_seq.bar(scatter_plot_x[0::2],d_strain_seq_oop[0::2]*-1,color='blue')
-    ax_strain_ver_seq.bar(scatter_plot_x[1::2],d_strain_seq_oop[1::2]*-1,color='red')
-
-    ax_strain_ver_seq.set_xticks(scatter_plot_x)
-    ax_strain_ver_seq.set_xticklabels(phs)
-    ax_strain_ver_seq.set_ylabel(ylabels[1])
-    ax_strain_ver_seq.set_xlabel("pH")
-
-    if np.abs(size_seq_oop).max()<np.abs(d_size_seq_oop).max()*5:
-        size_seq_oop_offset = 0
-    else:
-        size_seq_oop_offset = np.abs(size_seq_oop).max() - np.abs(d_size_seq_oop).max()*2
-    ax_size_ver_seq.scatter(np.array(scatter_plot_x_pair).T,size_seq_oop.T-size_seq_oop_offset,color=np.array([['blue','r']]*len(which_scans_to_plot)).flatten())
-    ax_size_ver_seq.plot(np.array(scatter_plot_x_pair),size_seq_oop-size_seq_oop_offset,ls='-',color='green')
-    ax_size_ver_seq.bar(scatter_plot_x[0::2],d_size_seq_oop[1::2]*-1,color='blue')
-    ax_size_ver_seq.bar(scatter_plot_x[1::2],d_size_seq_oop[1::2]*-1,color='red')
-
-    ax_size_ver_seq.set_xticks(scatter_plot_x)
-    ax_size_ver_seq.set_xticklabels(phs)
-    ax_size_ver_seq.set_ylabel(ylabels[6]+' offset by '+str(round(size_seq_oop_offset,1)))
-    ax_size_ver_seq.set_xlabel("pH")
-    fig_seq.tight_layout()
 #save figures
 if len(scan_ids) > 1:
     path = 'plots/many/'
@@ -705,10 +627,6 @@ fig_ax_container['current_den'][0].savefig(path+'Pot_CurrentDensity.png', dpi=30
 fig_ax_container['all_in_one'][0].savefig(path+'Pot_all_together.png', dpi=300, bbox_inches='tight')
 fig_ax_container['strain_all'][0].savefig(path+'Pot_all_strain_together.png', dpi=300, bbox_inches='tight')
 fig_ax_container['size_all'][0].savefig(path+'Pot_all_size_together.png', dpi=300, bbox_inches='tight')
-try:
-    fig_seq.savefig(path+'com_sequence.png',dpi=300,bbox_inches='tight')
-except:
-    pass
 plt.legend()
 plt.show()
 

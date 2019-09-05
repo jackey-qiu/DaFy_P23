@@ -56,7 +56,7 @@ tweak_mode = False
 #'ploter' config is the file which will be written with config info for later plotting step
 #'bkg_sub' config is the config file for background substraction
 
-conf_file_names = {'XRD':'config_p23_i20180678.ini',\
+conf_file_names = {'XRD':'config_p23_ctr.ini',\
                    'ploter':'CV_XRD_plot_i20180678_Jul30_2019.ini'}
 conf_file = os.path.join(DaFy_path, 'config', conf_file_names['XRD'])
 conf_file_plot = os.path.join(DaFy_path, 'config', conf_file_names['ploter'])
@@ -82,8 +82,6 @@ for scan_no in scan_nos:
     elif name in ['13IDC','ID03']:
         spec_file = spec_file
         img_path = img_path
-    #reciprocal space instance of skin_layer#
-    # lattice_skin = rsp.lattice.from_cif(os.path.join(DaFy_path, 'util','cif',"{}".format(film_material_cif)), HKL_normal=[1,1,1],HKL_para_x=[1,1,-2], offset_angle=0)
 
     ###########data container########
     data = {}
@@ -92,7 +90,7 @@ for scan_no in scan_nos:
     if 'peak_intensity' not in data.keys():
         data['peak_intensity'] = []
     #id for data saving
-    scan_id =  'DataBank_{}_{}'.format(scan_no,time.strftime("%Y%m%d-%H%M%S"))
+    scan_id =  'DataBank_CTR_{}_scan{}_{}'.format(beamtime,scan_no,time.strftime("%Y%m%d-%H%M%S"))
 
     ###########spec file reader#######
     if name == 'P23':
@@ -110,7 +108,6 @@ for scan_no in scan_nos:
         img_loader = edf_image_loader(spec_file, img_path, is_zap_scan)
     elif name == '13IDC':
         img_loader = tiff_image_loader(spec_file,img_path)
-    ############init Recip mapping instance##########
 
     ###############init a fit###########
     ##step 1: load image###
@@ -137,9 +134,6 @@ for scan_no in scan_nos:
     # geo_info = spec.extract_header_info(scan_no)
     # bkg_sub.update_geom(geo_info)
     bkg_sub.update_motor_angles(motor_angles)
-
-    ##step 3: do recip space mapping##
-    #get grid_indices for gridded q#
 
     ##step 4: set mask and init peak fitting engine##
     mask = create_mask_bkg(img = img,\
@@ -188,15 +182,12 @@ for scan_no in scan_nos:
         t2_a = time.time()
         if name == 'ID03':
             img = img.img
-        #recip mapping
+
         #launch peak fitting
         if name == 'P23':
-            #motor_angles = spec.extract_motor_angle(motor_angles, scan_no, frame_number, updated_angles =['mu','delta','gamma','omega_t'])
             motor_angles = img_loader.extract_motor_angles(frame_number, constant_motors =constant_motors)
         elif name == 'ID03':
             motor_angles = spec.extract_motor_angle(scan_no, frame_number, is_zap_scan)
-            
-        # img = img/motor_angles['mon']/motor_angles['transm']
         
         bkg_sub.update_motor_angles(motor_angles)
         #Now do backgrond subtraction for the peak
@@ -283,7 +274,6 @@ for scan_no in scan_nos:
                     data['peak_intensity_error'].append(bkg_sub.fit_results['Ierr'])
                     tweak = False
                     process_through = True
-
 
                 #extract potential and current density
             fig_bkg_plot.canvas.draw()

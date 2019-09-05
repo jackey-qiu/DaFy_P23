@@ -38,6 +38,9 @@ config_file_name = 'CV_XRD_plot_i20180678_Jul23_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 double_ax = False
 
+data_path_default = os.path.join(DaFy_path,'data')
+use_default_data_path = True
+
 #do you want to bin your datapoints
 #debug is required to set bin_level>1
 bin_level = 1
@@ -66,7 +69,11 @@ for section in config.sections()[::-1]:
             del which_scans_to_plot[which_scans_to_plot.index(scan_number_temp[0])]
             for each_global_val in global_vals:
                 if each_global_val == 'data_files':
-                    globals()['data_files'].append(os.path.join(eval(config.get(section,'data_file_header')),\
+                    if use_default_data_path:
+                        globals()['data_files'].append(os.path.join(data_path_default,\
+                                                                eval(config.get(section,'data_files'))[0]))
+                    else:
+                        globals()['data_files'].append(os.path.join(eval(config.get(section,'data_file_header')),\
                                                                 eval(config.get(section,'data_files'))[0]))
                 elif each_global_val == 'rod_scan':
                     globals()['rod_scan'].append(bool(eval(config.get(section,'rod_scan'))))

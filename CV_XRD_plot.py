@@ -18,15 +18,15 @@ from collections import namedtuple
 #good data scan numbers [216,224,231,243]
 # which_scans_to_plot = [229,221,231,243]
 #which_scans_to_plot = [221,229,231,236,243,244]
-which_scans_to_plot = [229,236,244]
+which_scans_to_plot = [230,231,235]
 #I20180114 data scans
 #pH dependence
 # which_scans_to_plot = [724,732,805,807]
 # which_scans_to_plot = [732,805,807]
 #potential step
 # which_scans_to_plot = [744,746,749]
-config_file_name = 'CV_XRD_plot_i20180835_Jul18_2019.ini'
-# config_file_name = 'CV_XRD_plot_I20180114_final.ini'
+# config_file_name = 'CV_XRD_plot_i20180835_Jul18_2019.ini'
+config_file_name = 'CV_XRD_plot_i20180835_Sep05_2019.ini'
 # config_file_name = 'CV_XRD_plot_i20180835_Jul30_testMPI_2019.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 #use default data path?
@@ -35,17 +35,17 @@ use_default_data_path = True
 
 #use default ids file path?
 ids_file_path_default = os.path.join(DaFy_path,'data','ids')
-use_default_ids_path = True
+use_default_ids_path = False
 
 #do you want to set the max to 0
-ref_max_eq_0 = {'strain':0,'size':0,'intensity':1}
+ref_max_eq_0 = {'strain':1,'size':1,'intensity':1}
 
 #ir drop correction(check the func of ir_drop_analysis in PlotSetup.py
 IR = {'DaFy_231':0., 'DaFy_243':0.,'DaFy_221':0.,'DaFy_229':0.}
 cv_scale_factor = 25#scaling factor to double layer region, change accordingly
 cv_spike_cut = 0.07#smallest spike you want to filter out from CV profile, do this in a trail_and_error way
 
-plot_intensity = False
+plot_intensity = True
 
 #select_cycle
 which_select_cycle = 'new'
@@ -224,7 +224,8 @@ for scan_id in scan_ids:
     if scan_id == 'DaFy_221':
         cv_data = list(extract_cv_data(scan_info[scan_id].ids_filename,1))
     else:
-        cv_data = list(extract_cv_data(scan_info[scan_id].ids_filename,2))
+        #print(scan_info[scan_id].ids_filename)
+        cv_data = list(extract_cv_data(scan_info[scan_id].ids_filename,1))
     cv_data[0] = cv_data[0]-abs(cv_data[1])*R
     Time = data.Time
     if len(Time)==0:

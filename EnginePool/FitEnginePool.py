@@ -113,7 +113,7 @@ def fit_pot_profile(x, y, show_fig = False):
     max_y, min_y = y.max(), y.min()
     y_offset = (max_y+min_y)/2
     ampt = (max_y-min_y)
-    # print(ampt,y_offset) 
+    # print(ampt,y_offset)
     y_partial = y[0:200]
     x_partial = x[0:200]
     phase = np.argmin(y_partial)
@@ -181,31 +181,24 @@ def backcor(n,y,ord_cus,s,fct):
     return z,a,it,ord_cus,s,fct
 
 class XRD_Peak_Fitting(object):
-    def __init__(self, img, mask, q_ip, q_oop, cut_offset={'hor':[50,10],'ver':[50,10]}, data_range_offset = {'hor':[100,50],'ver':[100,50]},peak_center= None,prim_beam_pot=None,pot_step_scan = False, model=model,fit_p0=[], fit_bounds={'hor':[],'ver':[]}):
+    def __init__(self, img, cen, kwarg, model = model):
         self.img = img
-        self.mask = mask
+        #self.mask = mask
+        self.peak_center = cen
+        self.previous_peak_center = cen
+        self.prim_beam_pot = cen
         self.model = model
         self.first_frame = True
-        self.q_ip = q_ip #note this is gridded q
-        self.q_oop = q_oop# note this is gridded q
-        #self.prim_beam_pot = [np.argmin(abs(np.array(q_ooop[:,0])-1.975)),np.argmin(abs(np.array(q_ip[0,:])-1.8))]
-        #print(self.prim_beam_pot)
-        #print("oop",q_oop[self.prim_beam_pot[0],self.prim_beam_pot[1]])
-        #print("ip",q_ip[self.prim_beam_pot[0],self.prim_beam_pot[1]])
-        self.cut_offset = cut_offset
-        self.data_range_offset = data_range_offset
-        self.peak_center = peak_center
-        self.prim_beam_pot = prim_beam_pot
-        self.pot_step_scan = pot_step_scan
-        self.previous_peak_center = peak_center
+        self.q_ip = None #note this is gridded q
+        self.q_oop = None# note this is gridded q
+        for key in kwarg:
+            setattr(self, key, kwarg[key])
         self.fit_data = {'hor':{'x':[],'y':[]},'ver':{'x':[],'y':[]}}
         self.fit_results = {'hor':[],'ver':[]}
         self.fit_results_plot = {'hor':[],'ver':[]}
-        self.fit_p0 = fit_p0
-        self.fit_p0_2 = fit_p0
-        self.fit_bounds = fit_bounds
         self.peak_intensity = 0
-        self.fit()
+        self.fit_status = False
+        #self.fit()
 
     @property
     def grid_q_ip(self):
@@ -234,11 +227,26 @@ class XRD_Peak_Fitting(object):
         # ver = int(self.fit_p0['ver'][1]*2/abs(self.q_oop[0,1]-self.q_oop[1,1]))
         return {'hor':hor,'ver':ver}
 
-    def reset_fit(self,img, use_first_fit_for_pos=True, check = False, level = 0.05, **kwarg):
+    def reset_fit(self,img, check = False, level = 0.05, **kwarg):
         self.first_frame = False
         self.img = img
-        check_result = self.fit(use_first_fit_for_pos, check, level)
+        check_result = self.fit(check, level)
         return check_result
+
+    def initiat_p0_and_bounds(self):
+        try:
+            ip_q_cen= self.q_ip[0,self.peak_center[1]]
+            oop_q_cen=self.q_oop[self.peak_center[0],0]
+            self.fit_bounds['hor'][0][0] = ip_q_cen - 0.2
+            self.fit_bounds['hor'][1][0] = ip_q_cen + 0.2
+            self.fit_bounds['ver'][0][0] = oop_q_cen - 0.2
+            self.fit_bounds['ver'][1][0] = oop_q_cen + 0.2
+            self.fit_p0['hor'][0] = ip_q_cen
+            self.fit_p0['ver'][0] = oop_q_cen
+            self.fit_p0_2['hor'][0] = ip_q_cen
+            self.fit_p0_2['ver'][0] = oop_q_cen
+        except:
+            pass
 
     def update_bounds(self, cen_oop, cen_ip):
         if cen_oop>self.fit_bounds['ver'][1][0]:
@@ -269,7 +277,7 @@ class XRD_Peak_Fitting(object):
         f = lambda x, y: [max([x-y,0]), x+y]
         # print(center_index)
         try:
-            if center_index ==None: 
+            if center_index ==None:
                 center_index = [int(each/2) for each in size]
             else:
                 pass
@@ -284,7 +292,7 @@ class XRD_Peak_Fitting(object):
 
     def fit_tweak(self, fig_handle, plot_fun, plot_lib):
         data = copy.deepcopy(plot_lib['data'])
-        self.img[self.mask ==0]=0
+        #self.img[self.mask ==0]=0
         fit_p0 = self.fit_p0_2
         center_index = copy.deepcopy(self.peak_center)
         cut_offset_temp =dict([(key,value[1]) for key, value in self.cut_offset.items()])
@@ -370,8 +378,8 @@ class XRD_Peak_Fitting(object):
         return data
 
 
-    def fit(self, use_first_fit_for_pos = True, check=True, level = 0.05, **kwarg):
-        self.img[self.mask ==0]=0
+    def fit(self, check=True, level = 0.05, **kwarg):
+        #self.img[self.mask ==0]=0
         self.fit_data = {'hor':{'x':[],'y':[]},'ver':{'x':[],'y':[]}}
         fit_ip_0, fom_ip_0 = None, None
         fit_oop_0, fom_oop_0 = None, None
@@ -392,7 +400,8 @@ class XRD_Peak_Fitting(object):
                 cut_offset_temp =dict([(key,value[i]) for key, value in self.cut_offset.items()])
                 data_range_offset_temp =dict([(key,value[i]) for key, value in self.data_range_offset.items()])
                 cut = self.cut_profile_from_2D_img_around_center(self.img,cut_offset_temp,data_range_offset_temp, center_index[i], sum_result = True)
-                cut_mask = self.cut_profile_from_2D_img_around_center(self.mask,cut_offset_temp,data_range_offset_temp, center_index[i], sum_result = False)
+                #cut_mask = self.cut_profile_from_2D_img_around_center(self.mask,cut_offset_temp,data_range_offset_temp, center_index[i], sum_result = False)
+                cut_mask = {'hor':1,'ver':1}
                 cut_ip_q = self.cut_profile_from_2D_img_around_center(self.q_ip,cut_offset_temp, data_range_offset_temp, center_index[i], sum_result = False)['hor']
                 cut_oop_q = self.cut_profile_from_2D_img_around_center(self.q_oop,cut_offset_temp, data_range_offset_temp, center_index[i], sum_result = False)['ver']
                 #normalize the dead pixel contribution
@@ -404,9 +413,16 @@ class XRD_Peak_Fitting(object):
                 if self.first_frame and i==0:
                     self.fit_p0['ver'][0] = self.q_oop[self.peak_center[0],0]
                     self.fit_p0['hor'][0] = self.q_ip[0,self.peak_center[1]]
-                                    
-                fit_ip,fom_ip = opt.curve_fit(f=self.model, xdata=cut_ip_q[index_used['hor']], ydata=cut['hor'][index_used['hor']], p0 = fit_p0[i]['hor'], bounds = self.fit_bounds['hor'], max_nfev = 10000)
-                fit_oop,fom_oop = opt.curve_fit(f=self.model, xdata=cut_oop_q[index_used['ver']], ydata=cut['ver'][index_used['ver']], p0 = fit_p0[i]['ver'], bounds = self.fit_bounds['ver'], max_nfev = 10000)
+                try:
+                    fit_ip,fom_ip = opt.curve_fit(f=self.model, xdata=cut_ip_q[index_used['hor']], ydata=cut['hor'][index_used['hor']], p0 = fit_p0[i]['hor'], bounds = self.fit_bounds['hor'], max_nfev = 10000)
+                    fit_oop,fom_oop = opt.curve_fit(f=self.model, xdata=cut_oop_q[index_used['ver']], ydata=cut['ver'][index_used['ver']], p0 = fit_p0[i]['ver'], bounds = self.fit_bounds['ver'], max_nfev = 10000)
+                    self.fit_status = True
+                except:
+                    self.fit_status = False
+                    fit_ip, fom_ip = [0,0,0,0,0,0],[0]
+                    fit_oop, fom_oop = [0,0,0,0,0,0],[0]
+                    print('Peak fit failed!')
+                    #break
                 # print('updata fit_data now!',i,min(cut_ip_q[index_used['hor']]),min(cut['hor'][index_used['hor']]),min(cut_oop_q[index_used['ver']]),min(cut['ver'][index_used['ver']]))
                 if i==0 or (i==1 and j==1):
                     self.fit_data['hor']['x'].append(cut_ip_q[index_used['hor']])
@@ -420,9 +436,9 @@ class XRD_Peak_Fitting(object):
                 if i==0 or (i==1 and j==0):
                     self.peak_center = peak_center_
                 elif (i==1 and j==1):#in second where run j=1 and j=0, the peakcenter should be very close to each other, if not peak is not located correctly! Note 10 pixel away is only arbitrary value, which may be changed accordingly!
-                    if (not self.pot_step_scan) and np.abs(np.array(self.previous_peak_center)-np.array(peak_center_)).sum()>2 and (not self.first_frame):
+                    if (not self.pot_step_scan) and np.abs(np.array(self.previous_peak_center)-np.array(peak_center_)).sum()>4 and (not self.first_frame):
                         center_far_off_test = False
-                        print('Two successive fit results is far off!! CHECK!!')
+                        print('Two successive fit results is far off!! CHECK frame!!')
                         print('current peak center:{},previous peak center:{}'.format(peak_center_,self.previous_peak_center))
                     else:#CV scan without large offset of peak center or pot_step_scan
                         self.peak_center = peak_center_
@@ -441,7 +457,7 @@ class XRD_Peak_Fitting(object):
         # self.update_bounds(fit_oop[0],fit_ip[0])
         self.fit_results_plot['hor'] = [copy.deepcopy(fit_ip), copy.deepcopy(fom_ip)]
         self.fit_results_plot['ver'] = [copy.deepcopy(fit_oop), copy.deepcopy(fom_oop)]
-        if use_first_fit_for_pos and peak_locating_step:
+        if self.use_first_fit_for_pos and peak_locating_step:
             fit_ip[0], fom_ip[0] = fit_ip_0[0], fom_ip_0[0]
             fit_oop[0], fom_oop[0] = fit_oop_0[0], fom_oop_0[0]
         def _check(old, new, level = level):
@@ -521,22 +537,28 @@ class XRD_Peak_Fitting(object):
         return data
 
 class Reciprocal_Space_Mapping():
-    def __init__(self, img, E_keV=19.5, cen=(234,745), pixelsize=(0.055,0.055), sdd=714, UB=[],motor_angles=None, boost_mapping = False):
+    def __init__(self, img, cen, kwarg):
+        #E_keV=19.5, cen=(234,745), pixelsize=(0.055,0.055), sdd=714, UB=[],motor_angles=None, boost_mapping = False
         self.img = img
         self.intensity = None
-        self.E_keV = E_keV
-        self.wavelength = 12.39854*self.E_keV
-        self.k0 = 2.*np.pi/self.wavelength
+        #self.E_keV = E_keV
+
         self.cen = cen
-        self.pixelsize = pixelsize
-        self.sdd = sdd
-        self.UB=UB
-        self.motor_angles = motor_angles
+        #self.pixelsize = pixelsize
+        #self.sdd = sdd
+        #self.UB=UB
+        #self.motor_angles = motor_angles
         self.q=None
+        self.grid_indices = None
         self.grid_intensity = None
-        self.boost_mapping = boost_mapping
+        for key in kwarg:
+            setattr(self, key, kwarg[key])
+        self.wavelength = 12.39854*self.e_kev
+        self.k0 = 2.*np.pi/self.wavelength
+        #self.boost_mapping = boost_mapping
         # self.prepare_frame()
         # self.get_grid_q()
+
     def update_img(self, img,UB=None, motor_angles=None,update_q = True):
         self.img = img
         if UB!=None:
@@ -546,6 +568,8 @@ class Reciprocal_Space_Mapping():
         self.prepare_frame()
         if update_q:
             self.get_grid_q()
+        else:
+            self.grid_intensity = self.intensity.ravel()[self.grid_indices].reshape(self.intensity.shape)
 
     def prepare_frame(self, norm_mon=True, norm_transm=True,trans='attenpos',mon='avg_beamcurrent'):
         transm_= 1
@@ -564,10 +588,10 @@ class Reciprocal_Space_Mapping():
         intensity = self.img
         #detector dimension is (516,1556)
         #You may need to put a negative sign in front, check the rotation sense of delta and gamma motors at P23
-        delta_range = np.arctan((np.arange(intensity.shape[1])-self.cen[0])*self.pixelsize[0]/self.sdd)*180/ np.pi + del_
+        delta_range = np.arctan((np.arange(intensity.shape[1])-self.cen[1])*self.pixelsize[0]/self.sdd)*180/ np.pi + del_
         #the minus sign here because the column index increase towards bottom, then 0 index(top most) will give a negative gam offset
         #a minus sign in front correct this.
-        gamma_range =-np.arctan((np.arange(intensity.shape[0])-self.cen[1])*self.pixelsize[1]/self.sdd)*180/ np.pi + gam_
+        gamma_range =-np.arctan((np.arange(intensity.shape[0])-self.cen[0])*self.pixelsize[1]/self.sdd)*180/ np.pi + gam_
         #polarisation correction
         # TODO: what is this doing?
         delta_grid , gamma_grid= np.meshgrid(delta_range,gamma_range)
@@ -594,8 +618,8 @@ class Reciprocal_Space_Mapping():
         for each in ['gamma_range','delta_range', 'th_', 'mu_', 'chi_', 'phi_']:
             globals()[each]=self.vlieg_angles[each]
         d = SixCircle.SixCircle()
-        d.setEnergy(self.E_keV)
-        d.setUB(self.UB)
+        d.setEnergy(self.e_kev)
+        d.setUB(self.ub)
         Q = d.getQSurface(theta=th_, chi=chi_, phi=phi_, mu=mu_, delta=delta_range, gamma=gamma_range, gamma_first=False)
         shape =  gamma_range.size,delta_range.size
         qx = Q[0,:].reshape(shape)
@@ -666,6 +690,10 @@ class Reciprocal_Space_Mapping():
         self.q={'qx':qx,'qy':qy,'qz':qz,\
                 'q_par':q_para, 'q_perp':qz,\
                 'grid_q_par':grid_q_para,'grid_q_perp':grid_q_perp}
+        if self.grid_indices is None:
+            self.grid_indices = griddata((q_para.ravel(), qz.ravel()), np.arange(self.intensity.size).ravel(), (grid_q_para, grid_q_perp), method='nearest')
+        else:
+            pass
 
     def show_image(self):
         grid_q_para, grid_q_perp, grid_intensity = self.get_grid_q_in_out_plane(self.scan_no, self.frame_no,self.frame_prefix)
@@ -679,10 +707,11 @@ class Reciprocal_Space_Mapping():
 
 
 class background_subtraction_single_img():
-    def __init__(self,config_file = '../config/config_bkg_sub.ini',sections = ['Integration_setup','Correction_pars','Spec_info']):
+    def __init__(self,cen, config_file = '../config/config_bkg_sub.ini',sections = ['Integration_setup','Correction_pars','Spec_info']):
         self.config_file = config_file
         self.config_file_parser(config_file, sections)
         self.img = None
+        self.center_pix = cen
         self.opt_values = {'cen':None, 'peak_width':None, 'row_width': None, 'col_width': None,\
                            'fit_threshold': None, 'int_power': None, \
                            'int_dir':None, 'cost_fun': None}
@@ -692,6 +721,7 @@ class background_subtraction_single_img():
         self.y_min = None
         self.x_span = None
         self.y_span = None
+        self.fit_status = False
 
     def config_file_parser(self, config_file, sections):
         config = configparser.ConfigParser()
@@ -763,7 +793,7 @@ class background_subtraction_single_img():
             return 'tweak'
     #find the peak width automatically (col_width if direction = 'vertical'; row_width if direction = 'horizontal')
     def find_peak_width(self, img, initial_c_width = 400, initial_r_width = 50, direction = 'vertical'):
-        
+
         SN_ratio_container = []
         SN_ratio_sub = []
         c_width_container=[]
@@ -926,7 +956,7 @@ class background_subtraction_single_img():
         index = np.argsort(n)
         return I_container[index_best]
 
-    def integrate_one_image(self,fig, img, data, plot_live = False, check = False, check_level = 0.00001,freeze_sf=False):
+    def integrate_one_image(self,fig, img, data=None, plot_live = False, freeze_sf=False):
         self.img = img
         center_pix=self.center_pix
         r_width=self.row_width
@@ -961,7 +991,7 @@ class background_subtraction_single_img():
             # elif i in [2,3] and compare_results[i]:
                 # y_corner = i
         # if [x_corner,y_corner] == [0,1]:
-            
+
         # elif [x_corner,y_corner] == [1,1]:
         # elif [x_corner,y_corner] == [0,0]:
         # elif [x_corner,y_corner] == [1,0]:
@@ -970,10 +1000,7 @@ class background_subtraction_single_img():
         clip_image_center = [int(y_span/2)+self.peak_shift,int(x_span/2)+self.peak_shift]
         peak_l = max([clip_image_center[int(self.int_direct=='x')]-self.peak_width,0])#peak_l>0
         peak_r = clip_image_center[int(self.int_direct=='x')]+self.peak_width
-        if self.x_min ==None:
-            self.x_min, self.y_min, self.x_span, self.y_span = x_min, y_min, x_span, y_span
-        else:
-            pass
+        self.x_min, self.y_min, self.x_max, self.y_max, self.x_span, self.y_span = x_min, y_min, x_max, y_max, x_span, y_span
         #print (y_min,y_max,x_min,x_max)
         clip_img=img[y_min:y_max+1,x_min:x_max+1]
         if integration_direction=="x":
@@ -983,7 +1010,7 @@ class background_subtraction_single_img():
             #y=img.sum(axis=1)[:,np.newaxis][sub_index[0][0]:sub_index[1][0]]
             y=clip_img.sum(axis=1)[:,np.newaxis]
         #Now normalized the data
-        y = y/data['mon'][-1]/data['transm'][-1]
+        #y = y/data['mon'][-1]/data['transm'][-1]
         n=np.array(range(len(y)))
         #by default the contamination rate is 25%
         #the algorithm may fail if the peak cover >40% of the cut profile
@@ -1053,7 +1080,9 @@ class background_subtraction_single_img():
                 #Ierr_container.append((I_container[-1]+FOM_container[-1])**0.5)
                 # Ierr_container.append((I_container[-1])**0.5+FOM_container[-1][1]+I_container[-1]*0.03)#possoin error + error from integration + 3% of current intensity
                 # Ierr_container.append(std_bkg/abs(I_container[-1])*std_bkg+(np.sum(y)/data['mon'][-1]/data['transm'][-1])**0.5)#possoin error + error from integration + 3% of current intensity
-                Ierr_container.append((I_container[-1]/data['mon'][-1]/data['transm'][-1])**.5+std_I_bkg*(peak_r-peak_l))#possoin error + error from integration + 3% of current intensity
+                #Ierr_container.append((I_container[-1])**.5+std_I_bkg*(peak_r-peak_l))#possoin error + error from integration + 3% of current intensity
+                Ierr_container.append((I_container[-1])**.5)#possoin error + error from integration + 3% of current intensity
+
                 # try:
                     # Ierr_container.append((np.sum(y)/data['mon'][-1]/data['transm'][-1])**0.5)#possoin error + error from integration + 3% of current intensity
                 # except:
@@ -1075,49 +1104,7 @@ class background_subtraction_single_img():
         self.fit_data['x'] = n[index]
         self.fit_data['y_total'] = y[index]
         self.fit_data['y_bkg'] = z[index]
-        if plot_live:
-            fig.clear()
-            ax_img = fig.add_subplot(121)
-            ax_profile = fig.add_subplot(322)
-            ax_ctr = fig.add_subplot(324)
-            ax_pot = fig.add_subplot(326)
-            z=z_container[index_best]
-            # ax_img.imshow(img,cmap ='jet',vmax = clip_img.max())
-            ax_img.imshow(img,cmap ='jet',vmax = img[y_min:y_min+y_span,x_min:x_min+x_span].max(),aspect='equal')
-            rect = patches.Rectangle((x_min,y_min),x_span,y_span,linewidth=1,edgecolor='r',facecolor='none')
-            ax_img.add_patch(rect)
-            ax_profile.plot(n[index],y[index],color='blue',label="data")
-            ax_profile.plot(n[index],z[index],color="red",label="background")
-            ax_profile.plot(n[index],y[index]-z[index],color="m",label="data-background")
-            ax_profile.plot(n[index],[0]*len(index),color='black')
-            ax_profile.plot([peak_l,peak_l],[0,z[peak_l]],color = 'green')
-            ax_profile.plot([peak_r,peak_r],[0,z[peak_r]],color = 'green')
-            ax_pot.plot(data['frame_number'],data['potential'])
-            if 'L' in data:
-                L_list, I_list, I_err_list = data['L'],data['peak_intensity'], data['peak_intensity_error']
-                if not self.rod_scan:
-                    L_list = data['frame_number']
-                I_list = list(np.append(I_list,[I_container[index_best]]))
-                I_err_list = list(np.append(I_err_list,[Ierr_container[index_best]]))
-                # ax_ctr.plot(L_list, np.array(I_list)/np.array(data['transmission']),label='CTR profile')
-                if check_result:
-                    ax_ctr.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='ro:',markersize=4, label='CTR profile')
-                else:
-                    L_list.pop()
-                    I_list.pop()
-                    I_err_list.pop()
-                    for key in data:
-                        if key not in ['peak_intensity','peak_intensity_error','L']:
-                            data[key].pop()
-                    print('poping now')
-                    ax_ctr.errorbar(L_list, np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='ro:',markersize=4, label='CTR profile')
-                ax_ctr.set_yscale('log',nonposy='clip')
-                # ax_ctr.plot(L_list,np.array(data['transmission']))
-            else:
-                pass
-
-            #plt.legend()
-            print ("When s=",s_container[index_best],'pow=',ord_cus_container[index_best],"integration sum is ",I_container[index_best], " counts!",'S/N ratio is {:3.2f}'.format(I_container[index_best]/Ibgr_container[index_best]+1))
+        # print ("When s=",s_container[index_best],'pow=',ord_cus_container[index_best],"integration sum is ",I_container[index_best], " counts!",'S/N ratio is {:3.2f}'.format(I_container[index_best]/Ibgr_container[index_best]+1))
         #return np.sum(y[index]-z[index]),abs(np.sum(z[index])),np.sum(y[index])**0.5+np.sum(y[index]-z[index])**0.5
         return I_container[index_best],FOM_container[index_best][1],Ierr_container[index_best],s_container[index_best],ord_cus_container[index_best],center_pix,30,r_width,c_width,check_result
 
@@ -1133,10 +1120,15 @@ class background_subtraction_single_img():
         self.motors['chi']=self.motors['chi']+90
 
 
-    def fit_background(self,fig,img,data,plot_live=False,check=False, check_level=0.000001,freeze_sf = False):
+    def fit_background(self,fig,img,data=None,plot_live=False,freeze_sf = False):
         # import time
         # t1=time.time()
-        I,I_bgr,I_err,s,ord_cus,center_pix,peak_width,r_width,c_width,check_result=self.integrate_one_image(fig,img,data,plot_live=plot_live,check=check,check_level=check_level,freeze_sf = freeze_sf)
+        I,I_bgr,I_err,s,ord_cus,center_pix,peak_width,r_width,c_width,check_result=self.integrate_one_image(fig,img,data,plot_live=plot_live,freeze_sf = freeze_sf)
+        try:
+            I,I_bgr,I_err,s,ord_cus,center_pix,peak_width,r_width,c_width,check_result=self.integrate_one_image(fig,img,data,plot_live=plot_live,freeze_sf = freeze_sf)
+            self.fit_status = True
+        except:
+            self.fit_status = False
         # t2=time.time()
         #I_temp.append(I)
         # print(result_dict)

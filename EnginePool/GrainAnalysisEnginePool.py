@@ -35,10 +35,10 @@ def grain_size_calculator(FWHM):
     return 0.2*np.pi/np.array(FWHM)
 
 def cal_strain_and_grain(data, HKL, lattice, key_map = {'ip_pos':'cen_ip','oop_pos':'cen_oop','ip_FWHM':'FWHM_ip','oop_FWHM':'FWHM_oop'}):
-    data['ip_strain'] = strain_ip(data[key_map['ip_pos']],HKL, lattice)
-    data['oop_strain'] = strain_oop(data[key_map['oop_pos']],HKL, lattice)
-    data['ip_grain_size'] = grain_size_calculator(data[key_map['ip_FWHM']])
-    data['oop_grain_size'] = grain_size_calculator(data[key_map['oop_FWHM']])
+    data['strain_ip'] = list(strain_ip(data[key_map['ip_pos']],HKL, lattice))
+    data['strain_oop'] = list(strain_oop(data[key_map['oop_pos']],HKL, lattice))
+    data['grain_size_ip'] = list(grain_size_calculator(data[key_map['ip_FWHM']]))
+    data['grain_size_oop'] = list(grain_size_calculator(data[key_map['oop_FWHM']]))
     return data
 
 

@@ -2,8 +2,8 @@ import numpy as np
 from Reciprocal_space_tools.HKLVlieg import Crystal, printPos, UBCalculator, VliegAngles, printPos_prim, vliegDiffracAngles
 from nexusformat.nexus import *
 import h5py
-import fnmatch, os
-import re,os
+import fnmatch
+import re,os,sys
 from scipy import misc
 from PyMca5.PyMcaIO import specfilewrapper
 # from pyspec import spec
@@ -14,9 +14,79 @@ import matplotlib.pyplot as plt
 from numpy import linspace, loadtxt, ones, convolve
 import pandas as pd
 import collections
+import time
 from random import randint
 from itertools import count
+try:
+    import ConfigParser as configparser
+except:
+    import configparser
 izip = zip
+import inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+DaFy_Path = os.path.dirname(currentdir)
+sys.path.append(os.path.join(DaFy_Path,'EnginePool'))
+import FitEnginePool
+
+#define generator funcs to hold scans and images
+def scan_generator(scans):
+    for scan in scans:
+        yield scan
+
+def image_generator(scans,img_loader,rsp_instance,peak_fitting_instance,mask_creator):
+    for scan in scans:
+        img_loader.update_scan_info(scan)
+        current_image_no = 0
+        for image in img_loader.load_frame(frame_number=0, flip=True):
+            rsp_instance.update_img(image,motor_angles = img_loader.motor_angles, update_q = current_image_no == 0)
+            if current_image_no == 0:
+                peak_fitting_instance.q_ip = rsp_instance.q['grid_q_par']
+                peak_fitting_instance.q_oop = rsp_instance.q['grid_q_perp']
+                peak_fitting_instance.initiat_p0_and_bounds()
+            yield mask_creator.create_mask_new(img = rsp_instance.grid_intensity, img_q_ver = rsp_instance.q['grid_q_perp'],
+                                  img_q_par = rsp_instance.q['grid_q_par'], mon = img_loader.motor_angles['mon']*img_loader.motor_angles['transm'])
+            current_image_no +=1
+
+def image_generator_bkg(scans,img_loader,mask_creator):
+    for scan in scans:
+        img_loader.update_scan_info(scan)
+        current_image_no = 0
+        for image in img_loader.load_frame(frame_number=0, flip=True):
+            yield mask_creator.create_mask_new(img = image, img_q_ver = image,
+                                  img_q_par = image, mon = img_loader.motor_angles['mon']*img_loader.motor_angles['transm'])
+            current_image_no +=1
+
+def extract_vars_from_config(config_file, section_var):
+    config = configparser.ConfigParser()
+    config.read(config_file)
+    kwarg = {}
+    for each in config.items(section_var):
+        kwarg[each[0]] = eval(each[1])
+    return kwarg
+
+def get_console_size():
+    if sys.platform == 'win32':
+        from ctypes import windll, create_string_buffer
+        # stdin handle is -10
+        # stdout handle is -11
+        # stderr handle is -12
+
+        h = windll.kernel32.GetStdHandle(-12)
+        csbi = create_string_buffer(22)
+        res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
+
+        if res:
+            import struct
+            (bufx, bufy, curx, cury, wattr,
+            left, top, right, bottom, maxx, maxy) = struct.unpack("hhhhHhhhhhh", csbi.raw)
+            sizex = right - left + 1
+            sizey = bottom - top + 1
+        else:
+            sizex, sizey = 80, 25 # can't determine actual size - return default values
+    else:
+        sizex, sizey = os.popen('stty size','r').read().split()[::-1]
+
+    return sizex, sizey
 
 def extract_global_vars_from_string(keys_in_order=[],job=[]):
     return_lib = {}
@@ -51,7 +121,11 @@ def remove_abnormality(mon, left_offset,right_offset):
     print('kick of data points from {} to {}'.format(max_index-left_offset, max_index+right_offset))
     return [i for i in range(len(mon)) if (i<(max_index - left_offset) or i>(max_index+right_offset))]
 
-
+def remove_abnormality_2(mon, left_offset,right_offset):
+    mon = np.array(mon)
+    max_index = np.argmax(mon)
+    print('kick of data points from {} to {}'.format(max_index-left_offset, max_index+right_offset))
+    return max([0,max_index - left_offset]), min([max_index+right_offset,len(mon)])
 
 # 3. Lets define some use-case specific UDF(User Defined Functions)
 
@@ -437,15 +511,42 @@ class nexus_image_loader_diffabs(object):
         return dead_pix_container
 
 class nexus_image_loader(object):
-    def __init__(self,fio_path='/home/qiu/data/beamtime/P23_11_18_I20180114/raw/startup/FirstTest_00666.fio',nexus_path='/home/qiu/data/beamtime/P23_11_18_I20180114/raw/FirstTest_00666/lmbd',frame_prefix='FirstTest', scan_number = 126):
-        self.fio_path=fio_path
-        self.nexus_path=nexus_path
-        self.frame_prefix=frame_prefix
+    def __init__(self,clip_boundary,kwarg):
+        # self.nexus_path=nexus_path
+        # self.frame_prefix=frame_prefix
+        self.scan_number = None
+        self.frame_number = None
+        self.potential = None
+        self.current = None
+        self.hkl = None
+        self.clip_boundary = clip_boundary
+        self.potential_profile_cal = None
+        self.potential_profile = None
+        self.potential_cal = None
+        for key in kwarg:
+            setattr(self, key, kwarg[key])
+        # self.constant_motors = constant_motors
         #load nexus data only once here
-        img_name='{}_{:0>5}.nxs'.format(frame_prefix,scan_number)
+        #img_name='{}_{:0>5}.nxs'.format(frame_prefix,scan_number)
+        #img_path=os.path.join(self.nexus_path,img_name)
+        #self.nexus_data = nxload(img_path)
+        #self.get_frame_number()
+
+    def update_scan_info(self,scan_number):
+        self.scan_number = scan_number
+        print('\nRunning scan {} now...'.format(scan_number))
+        img_name='{}_{:0>5}.nxs'.format(self.frame_prefix,scan_number)
+        img_name_1='{}_{:0>5}_00000.nxs'.format(self.frame_prefix,scan_number)
         img_path=os.path.join(self.nexus_path,img_name)
+        img_path_1=os.path.join(self.nexus_path,img_name.replace(".nxs",""),'lmbd',img_name_1)
         self.nexus_data = nxload(img_path)
+        self.nexus_data_1 = nxload(img_path_1)
         self.get_frame_number()
+        self.extract_pot_profile()
+        if self.check_abnormality:
+            self.abnormal_range = remove_abnormality_2(mon = self.extract_beam_mon_ct(),left_offset = self.left_offset, right_offset = self.right_offset)
+        else:
+            self.abnormal_range = [-10,-1]
 
     def get_frame_number(self):
         #total_img_number = len(os.listdir(self.nexus_path))
@@ -463,7 +564,7 @@ class nexus_image_loader(object):
         self.total_frame_number = total_img_number
         return total_img_number
 
-    def load_frame(self,scan_number,frame_number,flip=True):
+    def load_frame_old(self,scan_number,frame_number,flip=True):
         try:
             #if one frame one nxs file
             img_name='{}_{:0>5}_{:0>5}.nxs'.format(self.frame_prefix,scan_number,frame_number)
@@ -492,23 +593,42 @@ class nexus_image_loader(object):
             img = np.flip(img.T,1)
         img = img[clip_boundary['ver'][0]:clip_boundary['ver'][1],clip_boundary['hor'][0]:clip_boundary['hor'][1]]
         return img
-            
+
+    def load_frame(self,frame_number,flip=True):
+        #if one frame one nxs file
+        #img_name='{}_{:0>5}.nxs'.format(self.frame_prefix,scan_number)
+        #img_path=os.path.join(self.nexus_path,img_name)
+        #data=nxload(img_path)
+        #img=np.array(data.entry.instrument.detector.data.nxdata[0])
+        while frame_number < self.total_frame_number:
+            img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(frame_number)
+            self.extract_motor_angles(frame_number)
+            self.extract_pot_current(frame_number)
+            self.extract_HKL(frame_number)
+            self.frame_number = frame_number
+            if flip:
+                img = np.flip(img.T,1)
+            img = img[self.clip_boundary['ver'][0]:self.clip_boundary['ver'][1],
+                      self.clip_boundary['hor'][0]:self.clip_boundary['hor'][1]]
+            #normalized the intensity by the monitor and trams counters
+            yield img/self.motor_angles['mon']/self.motor_angles['transm']
+            frame_number +=1
+
     def extract_beam_mon_ct(self,mon_path = 'scan/data/eh_c01'):
         return np.array(self.nexus_data['scan/data/eh_c01'])
 
-
-    def extract_motor_angles(self, frame_number, constant_motors ={'omega_t':0.5, 'phi':0, 'chi':90}):
+    def extract_motor_angles(self, frame_number):
         #img_name='{}_{:0>5}.nxs'.format(self.frame_prefix,scan_number)
         #img_path=os.path.join(self.nexus_path,img_name)
         #data=nxload(img_path)
         motors={}
         motor_names = ['phi', 'chi', 'delta', 'gamma', 'mu', 'omega_t']
-        for motor in constant_motors:
-            motors[motor] = constant_motors[motor]
+        for motor in self.constant_motors:
+            motors[motor] = self.constant_motors[motor]
         for motor in motor_names:
             if motor not in motors.keys():
                 fetch_path = 'scan/data/{}'.format(motor)
-                motors[motor] = np.array(self.nexus_data[fetch_path])[frame_number] 
+                motors[motor] = np.array(self.nexus_data[fetch_path])[frame_number]
         motors['mon'] = np.array(self.nexus_data['scan/data/eh_c01'])[frame_number]
         try:
             motors['transm']=1./np.array(self.nexus_data['scan/data/atten'])[frame_number]
@@ -516,8 +636,10 @@ class nexus_image_loader(object):
             motors['transm']=np.array(self.nexus_data['scan/data/lmbd_countsroi1'])[frame_number]/np.array(self.nexus_data['scan/data/lmbd_countsroi1_atten'])[frame_number]
 
         self.motor_angles = motors
+        #self.motor_angles['transm'] = 1
+        #self.motor_angles['mon'] =1
         return motors
-        
+
     def update_motor_angles_in_data(self,data):
         for motor in self.motor_angles:
             data[motor].append(self.motor_angles[motor])
@@ -526,18 +648,29 @@ class nexus_image_loader(object):
     def extract_pot_current(self, frame_number):
         pot = np.array(self.nexus_data['scan/data/voltage2'])[frame_number]
         cur = np.array(self.nexus_data['scan/data/voltage1'])[frame_number]
+        self.potential = pot
+        self.current = cur
+        try:
+            self.potential_cal = self.potential_profile_cal[frame_number]
+        except:
+            self.potential_cal = pot
+            print('Use real potential for the potential_cal')
         return pot, cur
 
     def extract_pot_profile(self):
-        return np.array(self.nexus_data['scan/data/voltage2'])
-        
+        pot_profile = np.array(self.nexus_data['scan/data/voltage2'])
+        self.potential_profile = pot_profile
+        self.potential_profile_cal = FitEnginePool.fit_pot_profile(list(range(len(pot_profile))),pot_profile, show_fig = False)
+        return pot_profile
+
     def extract_HKL(self, frame_number):
         H = np.array(self.nexus_data['scan/data/diffractometer_h'])[frame_number]
         K = np.array(self.nexus_data['scan/data/diffractometer_k'])[frame_number]
         L = np.array(self.nexus_data['scan/data/diffractometer_l'])[frame_number]
+        self.hkl =(H,K,L)
         #cur = np.array(self.nexus_data['scan/data/voltage1'])[frame_number]
         return H, K, L
-        
+
     def load_frame_from_path(self,img_path,frame_number = 0,flip=True):
         try:
             #if one frame one nxs file

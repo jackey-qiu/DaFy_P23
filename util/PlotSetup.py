@@ -114,6 +114,103 @@ def select_cycle_new(pot_result_frame_triple, bin_mode = 'select', return_cycle 
                 pass
     return [0,int(len(pot_bin)/2), -2], np.array(pot_bin), np.array(result_bin)
 
+def select_cycle_new2(pot_result_frame_mask_four, bin_mode = 'select', return_cycle = 0, n_pots_rebin = None, tailing_cut = 3):
+    #bin_mode = 'average' or 'select'
+    #   'average':average every bin_level data points
+    #   'select': select every bin_level data point
+    #plot_mode = 'CV' or 'pot_step'
+    #   'CV': plot CV data
+    #   'pot_step': plot potential step data
+    #   'return_cycle' will be automatically set based on mask at bin_mode = 'select'
+    pot_bin, result_bin = [], []
+    pot, result, frame_numbers, mask = pot_result_frame_mask_four
+    pot_offset = pot.max()-pot.min()
+    total_cycle = int(round(len(pot)/(abs(pot_offset/(pot[1]-pot[0]))*2)))
+    best_cycle = 0
+    contamination_level = []
+    for each_cycle in range(total_cycle):
+        number_points_in_normal_range = 0
+        points_per_cycle = int(len(pot)/total_cycle)
+        index_of_current_cycle = np.array(range(points_per_cycle))+points_per_cycle*each_cycle
+        for i in index_of_current_cycle:
+            if mask[i]:
+                number_points_in_normal_range+=1
+            else:
+                pass
+        contamination_level.append(1-number_points_in_normal_range/float(points_per_cycle))
+    best_cycle = contamination_level.index(min(contamination_level))
+    #print('best_cycle is ',best_cycle,contamination_level)
+    return_cycle = best_cycle
+            
+    pot, result, frame_numbers, mask = pot[tailing_cut:len(pot)-tailing_cut], result[tailing_cut:len(result)-tailing_cut], frame_numbers[tailing_cut:len(frame_numbers)-tailing_cut],mask[tailing_cut:len(frame_numbers)-tailing_cut]
+    pot = np.around(pot,decimals=6)
+    
+    if n_pots_rebin == None:
+        pot_keys_number = int(abs(pot_offset/(pot[1]-pot[0])))*2
+    else:
+        if n_pots_rebin > abs(list(pot).index(pot.min()) - list(pot).index(pot.max())):
+            pot_keys_number = abs(list(pot).index(pot.min()) - list(pot).index(pot.max()))
+        else:
+            pot_keys_number = n_pots_rebin
+    #print(pot_keys_number)
+    pot_keys = np.array([i*abs(pot[0]-pot[1])+pot.min() for i in range(pot_keys_number)])
+    result_lib ={}
+    for key in pot_keys:
+        result_lib[(key,0)] = []
+        result_lib[(key,1)] = []
+    for i in range(len(pot)):
+        current_pot = pot[i]
+        up_or_down = 0
+        if i ==0:
+            up_or_down = int(pot[i+1]>pot[i])
+        elif i == len(pot)-1:
+            up_or_down = int(pot[i-1]<pot[i])
+        else:
+            if pot[i]>pot[i+1] and (frame_numbers[i+1]-frame_numbers[i])==1:
+                up_or_down = 0
+            elif pot[i]>pot[i-1] and  (frame_numbers[i]-frame_numbers[i-1])==1:
+                up_or_down = 1
+            else:
+                up_or_down = 0
+        current_key = (pot_keys[np.argmin(np.abs(pot_keys - current_pot))],up_or_down)
+        if mask[i]:
+            result_lib[current_key].append(result[i])
+        else:
+            pass
+
+    if bin_mode == 'select':
+        for key in pot_keys:
+            if result_lib[(key,0)]!=[]:
+                try:
+                    result_bin.append(result_lib[(key,0)][return_cycle])
+                except:
+                    result_bin.append(result_lib[(key,0)][0])
+                pot_bin.append(key)
+            else:
+                pass
+        for key in pot_keys:
+            if result_lib[(key,1)]!=[]:
+                try:
+                    result_bin.append(result_lib[(key,1)][return_cycle])
+                except:
+                    result_bin.append(result_lib[(key,1)][0])
+                pot_bin.append(key)
+            else:
+                pass
+    elif bin_mode == 'average':
+        for key in pot_keys:
+            if result_lib[(key,0)]!=[]:
+                result_bin.append(np.mean(result_lib[(key,0)]))
+                pot_bin.append(key)
+            else:
+                pass
+        for key in pot_keys:
+            if result_lib[(key,1)]!=[]:
+                result_bin.append(np.mean(result_lib[(key,1)]))
+                pot_bin.append(key)
+            else:
+                pass
+    return [0,int(len(pot_bin)/2), -2], np.array(pot_bin), np.array(result_bin)
 
 def select_cycle(pot_result_couple, bin_level = 1, bin_mode = 'select', return_cycle = 0, pot_step = 0.11, plot_mode='CV'):
     #bin_mode = 'average' or 'select'

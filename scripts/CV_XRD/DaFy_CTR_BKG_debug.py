@@ -100,7 +100,7 @@ def run():
         i = i+1
         #make nice looking status bar
         finish_percent = (i+1)/float(img_loader.total_frame_number)
-        column_size = get_console_size()[0]-22
+        column_size = int(get_console_size()[0])-22
         left_abnormal = int((img_loader.abnormal_range[0]+1)/float(img_loader.total_frame_number)*column_size+8)
         right_abnormal = int((img_loader.abnormal_range[1]+1)/float(img_loader.total_frame_number)*column_size+8)
         output_text =list('{}{}{}{}{}'.format('BEGIN(0)','='*int(finish_percent*column_size),'==>',' '*int((1-finish_percent)*column_size),'>|END('+str(img_loader.total_frame_number)+')'))
@@ -148,12 +148,13 @@ def run():
             elif tweak_return == 'repeat_last':
                 repeat_last = True
             if tweak_return != 'repeat_last':
-                #all parameters are updated in previous step, so you just 'qw' to repeat. 
+                #all parameters are updated in previous step, so you just 'qw' to repeat.
                 pre_tweak_motion = tweak_motion_str
             else:
-                pre_tweak_motion = pre_tweak_motion
+                _ = integration_object.update_var_for_tweak(pre_tweak_motion)
             if tweak_return == 'process_through':
                 process_through = True
+                repeat_last = False
             return integration_object, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through
 
         pre_tweak_motion = 'qw'
@@ -162,28 +163,30 @@ def run():
             tweak = True
         else:
             tweak = False
-      
+
         while tweak:
             if not process_through:
                 print('pre_tweak_motion:',pre_tweak_motion)
                 fig = plot_bkg_fit(fig, data, bkg_sub)
                 plt.pause(.05)
                 if repeat_last:
-                    tweak_return = bkg_sub.update_var_for_tweak(pre_tweak_motion)
+                    tweak_motion_str = make_tweak_string()
+                    all_return = tweak_integration(bkg_sub,tweak_motion_str,pre_tweak_motion)
+                    bkg_sub, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through = all_return
                 else:
                     tweak_motion_str = make_tweak_string()
                     print('tweak_motion_str:',tweak_motion_str)
                     all_return = tweak_integration(bkg_sub,tweak_motion_str,pre_tweak_motion)
-                    bkg_sub, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through = all_return 
+                    bkg_sub, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through = all_return
                     print('pre_tweak_motion:',pre_tweak_motion)
                 check_result = bkg_sub.fit_background(None,img, data, freeze_sf = True)
-                data = update_data_bkg(data, bkg_sub) 
+                data = update_data_bkg(data, bkg_sub)
                 fig = plot_bkg_fit(fig, data, bkg_sub)
                 plt.pause(.05)
             else:
                 tweak = False
-            if tweak_return == 'rm':
-                data = pop_last_item(data)
+            # if tweak_return == 'rm':
+                # data = pop_last_item(data)
 
             if update_width:
                 check_result = bkg_sub.fit_background(fig, img, data, plot_live = True, freeze_sf = True)
@@ -196,7 +199,7 @@ def run():
                             bkg_sub.col_width = temp_c_width
                     check_result = bkg_sub.fit_background(fig, img, data, plot_live = True, freeze_sf = True)
                 ii  = ii+1
-    
+
     fig = plt.figure(figsize=(9,6))
     fig = plot_bkg_fit(fig, data, bkg_sub)
     plt.pause(9.05)

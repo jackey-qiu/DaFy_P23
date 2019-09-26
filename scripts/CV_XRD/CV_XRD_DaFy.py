@@ -110,7 +110,6 @@ def run():
                 pass
         print(''.join(output_text),end="\r")
         time.sleep(0.003)
-        
         i=i+1
         if live_image:
             fig = show_all_plots_new(fig=fig,fit_engine_instance=peak_fitting_instance,\

@@ -784,13 +784,19 @@ class background_subtraction_single_img():
             return 'rm'
         elif cmds_list == ['r']:
             return 'repeat_last'
-        else:
+        elif cmds_list == ['#r']:
+            return 'process_through'
+        elif cmds_list[0][0:2] in lib_arg.keys():
             for each in cmds_list:
                 if each[0:2] in lib_arg:
                     lib_arg[each[0:2]](each[2:])
                 else:
                     pass
             return 'tweak'
+        else:
+            print('Warning: Motion not valid! Make another tweak!')
+            return 'tweak'
+
     #find the peak width automatically (col_width if direction = 'vertical'; row_width if direction = 'horizontal')
     def find_peak_width(self, img, initial_c_width = 400, initial_r_width = 50, direction = 'vertical'):
 

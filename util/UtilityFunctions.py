@@ -329,7 +329,9 @@ def update_data(data,keys,values):
         data[key].append(value)
     return data
 
-def pop_last_item(data,keys):
+def pop_last_item(data,keys=None):
+    if keys == None:
+        keys = data.keys()
     for key in keys:
         data[key].pop()
     return data

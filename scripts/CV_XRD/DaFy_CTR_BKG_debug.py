@@ -82,7 +82,9 @@ def run():
     _images = image_generator_bkg(_scans,img_loader,create_mask_new)
     i = 0
     scan_number = img_loader.scan_number
+
     process_through = False
+
     for img in _images:
         if img_loader.scan_number!=scan_number:
             i = 0
@@ -96,29 +98,93 @@ def run():
         # plt.pause(0.05)
         # plt.show()
         i = i+1
+        #make nice looking status bar
         finish_percent = (i+1)/float(img_loader.total_frame_number)
         column_size = get_console_size()[0]-22
-        print('{}{}{}{}{}'.format('BEGIN(0)','='*int(finish_percent*column_size),'=->',' '*int((1-finish_percent)*column_size),'>|END('+str(img_loader.total_frame_number)+')'),end="\r")
-        time.sleep(0.003)
+        left_abnormal = int((img_loader.abnormal_range[0]+1)/float(img_loader.total_frame_number)*column_size+8)
+        right_abnormal = int((img_loader.abnormal_range[1]+1)/float(img_loader.total_frame_number)*column_size+8)
+        output_text =list('{}{}{}{}{}'.format('BEGIN(0)','='*int(finish_percent*column_size),'==>',' '*int((1-finish_percent)*column_size),'>|END('+str(img_loader.total_frame_number)+')'))
+        for index_text in range(len(output_text)):
+            if output_text[index_text]!=' ' and index_text>left_abnormal and index_text<right_abnormal:
+                output_text[index_text] = 'x'
+            else:
+                pass
+        print(''.join(output_text),end="\r")
 
-        tweak = True
-        if not live_image:
-            tweak = False
-        pre_tweak_motion = 'qw'
-        repeat_last = False
+
         ii = 0
         #if not rod_scan:
         #    ii = 1
+
+        def make_tweak_string():
+            tweak_motion_str = raw_input(", splited stream of string\n\
+                                ud:up or down\n\
+                                lr:left or right\n\
+                                cw:column width\n\
+                                rw:row width\n\
+                                pw:peak width\n\
+                                ps:peak shift\n\
+                                od:polynomial order\n\
+                                sf:ss_factor, smaller lower bkg\n\
+                                r:repeat last motion\n\
+                                #r:repeat motion for rest points\n\
+                                ft:fit function(ah, sh, stq, atq)\n\
+                                qw:quit and write date\n\
+                                rm:remove current date and quit\n\
+                                Your input is:") or 'qw'
+            return tweak_motion_str
+
+        def tweak_integration(integration_object, tweak_motion_str, pre_tweak_motion):
+            repeat_last = ''
+            tweak = ''
+            process_through = False
+            tweak_return = integration_object.update_var_for_tweak(tweak_motion_str)
+            if tweak_return in ['process_through','qw','rm']:
+                tweak = False
+            else:
+                tweak = True
+            if tweak_return == 'tweak':
+                repeat_last = False
+            elif tweak_return == 'repeat_last':
+                repeat_last = True
+            if tweak_return != 'repeat_last':
+                #all parameters are updated in previous step, so you just 'qw' to repeat. 
+                pre_tweak_motion = tweak_motion_str
+            else:
+                pre_tweak_motion = pre_tweak_motion
+            if tweak_return == 'process_through':
+                process_through = True
+            return integration_object, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through
+
+        pre_tweak_motion = 'qw'
+        repeat_last = False
+        if live_image:
+            tweak = True
+        else:
+            tweak = False
+      
         while tweak:
             if not process_through:
-                print('pre_tweak_motion:\n',pre_tweak_motion)
-            # print('ss factor before:',bkg_sub.ss_factor)
-            if not process_through:
+                print('pre_tweak_motion:',pre_tweak_motion)
                 fig = plot_bkg_fit(fig, data, bkg_sub)
-                fig.canvas.draw()
-                fig.tight_layout()
-                plt.pause(0.05)
-                plt.show()
+                plt.pause(.05)
+                if repeat_last:
+                    tweak_return = bkg_sub.update_var_for_tweak(pre_tweak_motion)
+                else:
+                    tweak_motion_str = make_tweak_string()
+                    print('tweak_motion_str:',tweak_motion_str)
+                    all_return = tweak_integration(bkg_sub,tweak_motion_str,pre_tweak_motion)
+                    bkg_sub, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through = all_return 
+                    print('pre_tweak_motion:',pre_tweak_motion)
+                check_result = bkg_sub.fit_background(None,img, data, freeze_sf = True)
+                data = update_data_bkg(data, bkg_sub) 
+                fig = plot_bkg_fit(fig, data, bkg_sub)
+                plt.pause(.05)
+            else:
+                tweak = False
+            if tweak_return == 'rm':
+                data = pop_last_item(data)
+
             if update_width:
                 check_result = bkg_sub.fit_background(fig, img, data, plot_live = True, freeze_sf = True)
                 if ii ==0:
@@ -128,68 +194,13 @@ def run():
                             bkg_sub.col_width = bkg_sub.col_width
                         else:
                             bkg_sub.col_width = temp_c_width
-
                     check_result = bkg_sub.fit_background(fig, img, data, plot_live = True, freeze_sf = True)
                 ii  = ii+1
-            # else:
-                # check_result = bkg_sub.fit_background(fig,img, data, plot_live =True, freeze_sf = True)
-            if process_through:
-                tweak = False
-            else:
-                if not repeat_last:
-                    tweak_motion_str = raw_input(", splited stream of string\n\
-                                                  ud:up or down\n\
-                                                  lr:left or right\n\
-                                                  cw:column width\n\
-                                                  rw:row width\n\
-                                                  pw:peak width\n\
-                                                  ps:peak shift\n\
-                                                  od:polynomial order\n\
-                                                  sf:ss_factor, smaller lower bkg\n\
-                                                  r:repeat last motion\n\
-                                                  #r:repeat motion for rest points\n\
-                                                  ft:fit function(ah, sh, stq, atq)\n\
-                                                  qw:quit and write date\n\
-                                                  rm:remove current date and quit\n\
-                                                  Your input is:") or 'qw'
-                    if tweak_motion_str =='#r':
-                        tweak_return = 'process_through'
-                    else:
-                        tweak_return = bkg_sub.update_var_for_tweak(tweak_motion_str)
-                else:
-                    tweak_return = bkg_sub.update_var_for_tweak(pre_tweak_motion)
-
-                if tweak_return == 'qw':
-                    tweak = False
-                elif tweak_return == 'rm':
-                    data = pop_last_item(data,keys = ['potential', 'current','H','K','L', 'image_no', 'phi', 'chi','mu','delta','gamma','omega_t','mon','transm'])
-                    tweak = False
-                elif tweak_return == 'tweak':
-                    if tweak_motion_str!='r':
-                        pre_tweak_motion = tweak_motion_str
-                    tweak = True
-                    repeat_last = False
-                elif tweak_return == 'repeat_last':
-                    repeat_last = True
-                    teak = True
-                elif tweak_return == 'process_through':
-                    tweak = False
-                    process_through = True
-            # print('ss factor after:',bkg_sub.ss_factor)
-            if not process_through:
-                check_result = bkg_sub.fit_background(None,img, data, plot_live =True, freeze_sf = True)
-                data = update_data_bkg(data, bkg_sub)
-                fig = plot_bkg_fit(fig, data, bkg_sub)
-                fig.canvas.draw()
-                fig.tight_layout()
-                plt.pause(.05)
-                plt.show()
+    
     fig = plt.figure(figsize=(9,6))
     fig = plot_bkg_fit(fig, data, bkg_sub)
-    fig.canvas.draw()
-    fig.tight_layout()
     plt.pause(9.05)
-    plt.show()
+
     df = pd.DataFrame(data)
     df.to_excel('test_ctr.xlsx')
 

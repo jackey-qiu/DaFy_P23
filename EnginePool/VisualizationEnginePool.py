@@ -54,20 +54,24 @@ def plot_bkg_fit(fig,data, fit_bkg_object, over_plot = False):
         ax_ctr.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='ro:',markersize=4, label='CTR profile')
         ax_ctr.set_yscale('log',nonposy='clip')
 
-        fig2 = plt.figure(figsize=(8,7))
-        ax_final = fig2.add_subplot(211)
-        ax_final_pot = fig2.add_subplot(212)
-        ax_final_pot.plot(data['image_no'],data['potential'])
-        ax_final_pot.set_xlabel('time')
-        ax_final_pot.set_ylabel('Potential')
-        ax_final_pot.set_title('E (V)')
-        ax_final.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='rd-',markersize=4, label='CTR profile')
-        if fit_bkg_object.rod_scan:
-            ax_final.set_yscale('log',nonposy='clip')
-            ax_final.set_xlabel('L')
-        ax_final.set_ylabel('Itensity')
-        ax_final.set_title('CTR')
-        plt.tight_layout()
+        #fig2 = plt.figure(figsize=(8,7))
+        #ax_final = fig2.add_subplot(211)
+        #ax_final_pot = fig2.add_subplot(212)
+        #ax_final_pot.plot(data['image_no'],data['potential'])
+        #ax_final_pot.set_xlabel('time')
+        #ax_final_pot.set_ylabel('Potential')
+        #ax_final_pot.set_title('E (V)')
+        #ax_final.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='rd-',markersize=4, label='CTR profile')
+        #if fit_bkg_object.rod_scan:
+        #    ax_final.set_yscale('log',nonposy='clip')
+        #    ax_final.set_xlabel('L')
+        #ax_final.set_ylabel('Itensity')
+        #ax_final.set_title('CTR')
+    plt.tight_layout()
+    fig.canvas.draw()
+    fig.tight_layout()
+    plt.show()
+
     return fig
 
 def draw_lines_on_image(ax_handle,x_y_grid,variable_list,direction = 'horizontal',\

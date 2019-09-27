@@ -93,7 +93,7 @@ def run():
             scan_number = img_loader.scan_number
         data = merge_data_image_loader(data, img_loader)
         if update_width:
-            _= bkg_sub.find_peak_width(img, img_no = img_loader.frame_number, initial_c_width=400, initial_r_width = 400)
+            _ = bkg_sub.find_peak_width(img, img_no = img_loader.frame_number, initial_c_width=400, initial_r_width = 400)
         bkg_sub.fit_background(None, img, data, plot_live = True, freeze_sf = True)
         data = merge_data_bkg(data, bkg_sub)
         i = i+1
@@ -116,16 +116,9 @@ def run():
                 print('pre_tweak_motion:',pre_tweak_motion)
                 fig = plot_bkg_fit(fig, data, bkg_sub)
                 plt.pause(.05)
-                if repeat_last:
-                    tweak_motion_str = make_tweak_string()
-                    all_return = tweak_integration(bkg_sub,tweak_motion_str,pre_tweak_motion)
-                    bkg_sub, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through = all_return
-                else:
-                    tweak_motion_str = make_tweak_string()
-                    print('tweak_motion_str:',tweak_motion_str)
-                    all_return = tweak_integration(bkg_sub,tweak_motion_str,pre_tweak_motion)
-                    bkg_sub, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through = all_return
-                    print('pre_tweak_motion:',pre_tweak_motion)
+                tweak_motion_str = make_tweak_string()
+                all_return = tweak_integration(bkg_sub,tweak_motion_str,pre_tweak_motion)
+                bkg_sub, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through = all_return
                 check_result = bkg_sub.fit_background(None,img, data, freeze_sf = True)
                 data = update_data_bkg(data, bkg_sub)
                 fig = plot_bkg_fit(fig, data, bkg_sub)

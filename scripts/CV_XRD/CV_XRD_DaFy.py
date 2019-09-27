@@ -99,7 +99,7 @@ def run():
         data = cal_strain_and_grain(data,HKL = kwarg_film['film_hkl_bragg_peak'][0], lattice = lattice_skin)
         #make nice looking status bar
         finish_percent = (i+1)/float(img_loader.total_frame_number)
-        column_size = get_console_size()[0]-22
+        column_size = int(get_console_size()[0])-22
         left_abnormal = int((img_loader.abnormal_range[0]+1)/float(img_loader.total_frame_number)*column_size+8)
         right_abnormal = int((img_loader.abnormal_range[1]+1)/float(img_loader.total_frame_number)*column_size+8)
         output_text =list('{}{}{}{}{}'.format('BEGIN(0)','='*int(finish_percent*column_size),'==>',' '*int((1-finish_percent)*column_size),'>|END('+str(img_loader.total_frame_number)+')'))

@@ -14,7 +14,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.animation import FFMpegWriter
 import matplotlib.patches as patches
 
-def plot_bkg_fit(fig,data, fit_bkg_object, over_plot = False):
+def plot_bkg_fit(fig,data, fit_bkg_object, plot_final = False):
     fig.clear()
     ax_img = fig.add_subplot(121)
     ax_profile = fig.add_subplot(322)
@@ -53,20 +53,31 @@ def plot_bkg_fit(fig,data, fit_bkg_object, over_plot = False):
         # ax_ctr.plot(L_list, np.array(I_list)/np.array(data['transmission']),label='CTR profile')
         ax_ctr.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='ro:',markersize=4, label='CTR profile')
         ax_ctr.set_yscale('log',nonposy='clip')
-
-        #fig2 = plt.figure(figsize=(8,7))
-        #ax_final = fig2.add_subplot(211)
-        #ax_final_pot = fig2.add_subplot(212)
-        #ax_final_pot.plot(data['image_no'],data['potential'])
-        #ax_final_pot.set_xlabel('time')
-        #ax_final_pot.set_ylabel('Potential')
-        #ax_final_pot.set_title('E (V)')
-        #ax_final.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='rd-',markersize=4, label='CTR profile')
-        #if fit_bkg_object.rod_scan:
-        #    ax_final.set_yscale('log',nonposy='clip')
-        #    ax_final.set_xlabel('L')
-        #ax_final.set_ylabel('Itensity')
-        #ax_final.set_title('CTR')
+        if plot_final:
+            fig2 = plt.figure(figsize=(8,7))
+            ax_final = fig2.add_subplot(211)
+            ax_final_pot = fig2.add_subplot(212)
+            ax_final_pot.plot(data['image_no'],data['potential'])
+            ax_final_pot.set_xlabel('time')
+            ax_final_pot.set_ylabel('Potential')
+            ax_final_pot.set_title('E (V)')
+            scan_nos = list(set(data['scan_no']))
+            colors = ['r','g','b','m','black','yellow']+['r','g','b','m','black','yellow']
+            plot_x_list,plot_y_list,plot_err_list = [],[],[]
+            for scan in scan_nos:
+                index_partial_scan = data['scan_no']==scan
+                plot_x_list.append(L_list[index_partial_scan])
+                plot_y_list.append(I_list[index_partial_scan])
+                plot_err_list.append(I_err_list[index_partial_scan])
+            #ax_final.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='rd-',markersize=4, label='CTR profile')
+            for i in range(len(scan_nos)):
+                ax_final.errorbar(plot_x_list[i], plot_y_list[i],yerr=plot_err_list[i],xerr=None,fmt='d-',color = colors[i], markersize=4, label='Scan{}'.format(scan_nos[i]))
+            if fit_bkg_object.rod_scan:
+                ax_final.set_yscale('log',nonposy='clip')
+                ax_final.set_xlabel('L')
+            ax_final.set_ylabel('Itensity')
+            ax_final.set_title('CTR')
+            ax_final.legend()
     plt.tight_layout()
     fig.canvas.draw()
     fig.tight_layout()

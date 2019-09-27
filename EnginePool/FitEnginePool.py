@@ -798,8 +798,7 @@ class background_subtraction_single_img():
             return 'tweak'
 
     #find the peak width automatically (col_width if direction = 'vertical'; row_width if direction = 'horizontal')
-    def find_peak_width(self, img, initial_c_width = 400, initial_r_width = 50, direction = 'vertical'):
-
+    def find_peak_width(self, img, img_no = 0, initial_c_width = 400, initial_r_width = 50):
         SN_ratio_container = []
         SN_ratio_sub = []
         c_width_container=[]
@@ -811,11 +810,11 @@ class background_subtraction_single_img():
 
         best_c_width = None
         original_direction = self.int_direct
-        if direction=='vertical':
-            self.int_direct = 'x'
-        elif direction == 'horizontal':
-            self.int_direct = 'y'
-
+        if self.int_direct == 'x':
+            direction ='vertical'
+        elif self.int_direct == 'y':
+            direction = 'horizontal'
+            
         for i in range(1,100,2):
             current_c_width = int(initial_c_width/i)
             c_width_container.append(current_c_width)
@@ -850,9 +849,14 @@ class background_subtraction_single_img():
                     print('i={}'.format(i))
             else:
                 pass
-
         print('Best {} width = {}'.format(['column','row'][int(direction =='horizontal')],best_c_width))
-        self.int_direct = original_direction
+
+        if best_c_width!=None:
+            if self.int_direct == 'x':
+                self.col_width = best_c_width
+            elif self.int_direct == 'y':
+                self.row_width = best_c_width
+        #self.int_direct = original_direction
         return best_c_width
 
     def integrate_one_image_light_v(self, img, r_width, c_width):

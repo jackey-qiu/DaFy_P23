@@ -27,6 +27,51 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 DaFy_Path = os.path.dirname(currentdir)
 sys.path.append(os.path.join(DaFy_Path,'EnginePool'))
 import FitEnginePool
+#make compatibility of py 2 and py 3#
+if (sys.version_info > (3, 0)):
+    raw_input = input
+
+def make_tweak_string():
+    tweak_motion_str = raw_input(", splited stream of string\n\
+                        ud:up or down\n\
+                        lr:left or right\n\
+                        cw:column width\n\
+                        rw:row width\n\
+                        pw:peak width\n\
+                        ps:peak shift\n\
+                        od:polynomial order\n\
+                        sf:ss_factor, smaller lower bkg\n\
+                        r:repeat last motion\n\
+                        #r:repeat motion for rest points\n\
+                        ft:fit function(ah, sh, stq, atq)\n\
+                        qw:quit and write date\n\
+                        rm:remove current date and quit\n\
+                        Your input is:") or 'qw'
+    return tweak_motion_str
+
+
+def tweak_integration(integration_object, tweak_motion_str, pre_tweak_motion):
+    repeat_last = ''
+    tweak = ''
+    process_through = False
+    tweak_return = integration_object.update_var_for_tweak(tweak_motion_str)
+    if tweak_return in ['process_through','qw','rm']:
+        tweak = False
+    else:
+        tweak = True
+    if tweak_return == 'tweak':
+        repeat_last = False
+    elif tweak_return == 'repeat_last':
+        repeat_last = True
+    if tweak_return != 'repeat_last':
+        #all parameters are updated in previous step, so you just 'qw' to repeat.
+        pre_tweak_motion = tweak_motion_str
+    else:
+        _ = integration_object.update_var_for_tweak(pre_tweak_motion)
+    if tweak_return == 'process_through':
+        process_through = True
+        repeat_last = False
+    return integration_object, tweak, tweak_return, repeat_last, pre_tweak_motion, process_through
 
 #define generator funcs to hold scans and images
 def scan_generator(scans):

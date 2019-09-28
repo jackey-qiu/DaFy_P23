@@ -31,6 +31,20 @@ import FitEnginePool
 if (sys.version_info > (3, 0)):
     raw_input = input
 
+def show_status_bar(img_loader, column_size_offset = 22):
+    finish_percent = (img_loader.frame_number+1)/float(img_loader.total_frame_number)
+    column_size = int(get_console_size()[0])-column_size_offset
+    left_abnormal = int((img_loader.abnormal_range[0]+1)/float(img_loader.total_frame_number)*column_size+8)
+    right_abnormal = int((img_loader.abnormal_range[1]+1)/float(img_loader.total_frame_number)*column_size+8)
+    output_text =list('{}{}{}{}{}'.format('BEGIN(0)','='*int(finish_percent*column_size),'==>',' '*int((1-finish_percent)*column_size),'>|END('+str(img_loader.total_frame_number)+')'))
+    for index_text in range(len(output_text)):
+        if output_text[index_text]!=' ' and index_text>left_abnormal and index_text<right_abnormal:
+            output_text[index_text] = 'x'
+        else:
+            pass
+    print(''.join(output_text),end="\r")
+    time.sleep(0.003)
+
 def make_tweak_string():
     tweak_motion_str = raw_input(", splited stream of string\n\
                         ud:up or down\n\

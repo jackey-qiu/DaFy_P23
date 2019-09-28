@@ -32,7 +32,7 @@ from util.UtilityFunctions import nexus_image_loader
 from util.UtilityFunctions import find_boundary
 from util.UtilityFunctions import extract_global_vars_from_string
 from util.UtilityFunctions import extract_vars_from_config
-from util.UtilityFunctions import get_console_size
+from util.UtilityFunctions import show_status_bar
 
 def run():
     #make compatibility of py 2 and py 3#
@@ -97,19 +97,10 @@ def run():
         bkg_sub_instance.fit_background(None, img, plot_live = False, freeze_sf = True)
         data = merge_data(data, img_loader, peak_fitting_instance, bkg_sub_instance, kwarg_global)
         data = cal_strain_and_grain(data,HKL = kwarg_film['film_hkl_bragg_peak'][0], lattice = lattice_skin)
+
         #make nice looking status bar
-        finish_percent = (i+1)/float(img_loader.total_frame_number)
-        column_size = int(get_console_size()[0])-22
-        left_abnormal = int((img_loader.abnormal_range[0]+1)/float(img_loader.total_frame_number)*column_size+8)
-        right_abnormal = int((img_loader.abnormal_range[1]+1)/float(img_loader.total_frame_number)*column_size+8)
-        output_text =list('{}{}{}{}{}'.format('BEGIN(0)','='*int(finish_percent*column_size),'==>',' '*int((1-finish_percent)*column_size),'>|END('+str(img_loader.total_frame_number)+')'))
-        for index_text in range(len(output_text)):
-            if output_text[index_text]!=' ' and index_text>left_abnormal and index_text<right_abnormal:
-                output_text[index_text] = 'x'
-            else:
-                pass
-        print(''.join(output_text),end="\r")
-        time.sleep(0.003)
+        show_status_bar(img_loader,column_size_offset = 22)
+
         i=i+1
         if live_image:
             fig = show_all_plots_new(fig=fig,fit_engine_instance=peak_fitting_instance,\

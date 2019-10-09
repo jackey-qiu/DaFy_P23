@@ -1,5 +1,6 @@
 import sys
 import matplotlib
+from matplotlib import gridspec
 # matplotlib.use("tkAgg")
 from numpy import dtype
 sys.path.append('./XRD_tools/')
@@ -12,7 +13,144 @@ import matplotlib.pyplot as plt
 import subprocess
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.animation import FFMpegWriter
+import pandas as pd
 import matplotlib.patches as patches
+import scipy
+
+def plot_pxrd_profile_time_scan(fig,data,image,delta_range=None,int_range=None, int_range_bkg=None,plot_final = False):
+    if not plot_final:
+        fig.clear()
+        spec = gridspec.GridSpec(ncols = 3, nrows =2)
+        ax_img = fig.add_subplot(spec[:,0])
+        ax = fig.add_subplot(spec[0,1:])
+        ax2 = fig.add_subplot(spec[1,1:])
+        ax2_2 = ax2.twinx()
+        peak_number = sum([1 for each in data if each.startswith('intensity_peak')])
+        peak_intensity_list = [data['intensity_peak{}'.format(i+1)] for i in range(peak_number)]
+        i=0
+        for each_peak in peak_intensity_list:
+            i=i+1
+            ax2.plot(data['frame_number'],each_peak,label = 'peak{}'.format(i))
+        ax2_2.plot(data['frame_number'],data['potential'], color = 'blue', label = 'potential')
+        ax.plot(delta_range,int_range_bkg)
+        ax_img.imshow(image,cmap ='jet',vmax = image.mean()*2,aspect='equal')
+        #background profile(current frame)
+        ax.plot(delta_range,np.array(int_range_bkg)+int_range)
+        max_int = max(np.array(int_range_bkg)+int_range)
+        #charateristic lines
+        ax.plot([12.83,12.83],[0,max_int],'r:',label='Cu2O(111)')
+        ax.plot([14.84,14.84],[0,max_int],color ='r',label='Cu2O(200)')
+        ax.plot([15.17,15.17],[0,max_int],'b:',label='Cu(111)')
+        ax.plot([17.53,17.53],[0,max_int],color ='b',label='Cu(200)')
+        ax.plot([13.41,13.41],[0,max_int],'m:',label='Ag(111)')
+        ax.plot([15.5,15.5],[0,max_int],color ='m',label='Ag(200)')
+
+        #plot settings
+        ax.set_xlabel('2theta angle')
+        ax2.set_xlabel('time')
+        ax.set_ylabel('Intensity')
+        ax2.set_ylabel('Peak_Intensity')
+        ax2_2.set_ylabel('potential(V)',color='blue')
+        ax2.legend()
+        ax2_2.legend()
+        ax.legend()
+        # ax.set_ylim([-0.05,0.3])
+        plt.pause(.01)
+    else:
+        fig.clear()
+        fig.set_size_inches(15,4)
+        ax2 = fig.add_subplot(111)
+        ax2_2 = ax2.twinx()
+        peak_number = sum([1 for each in data if each.startswith('intensity_peak')])
+        peak_intensity_list = [data['intensity_peak{}'.format(i+1)] for i in range(peak_number)]
+        i=0
+        for each_peak in peak_intensity_list:
+            i=i+1
+            ax2.plot(data['frame_number'],each_peak,label = 'peak{}'.format(i))
+        ax2_2.plot(data['frame_number'],data['potential'], color = 'blue')
+        ax.plot(delta_range,int_range_bkg)
+        #background profile(current frame)
+        ax.plot(delta_range,np.array(int_range_bkg)+int_range)
+        max_int = max(np.array(int_range_bkg)+int_range)
+
+        #plot settings
+        ax2.set_xlabel('time')
+        ax2.set_ylabel('Peak_Intensity')
+        ax2_2.set_ylabel('potential(V)',color='blue')
+        ax2.legend()
+        ax2_2.legend()
+        ax.legend()
+        # ax.set_ylim([-0.05,0.3])
+        plt.pause(1000.01)
+    return fig
+
+def plot_pxrd_profile(fig,data,image,delta_range=None,int_range=None, int_range_bkg=None,plot_final = False):
+    if not plot_final:
+        fig.clear()
+        spec = gridspec.GridSpec(ncols = 3, nrows =2)
+        ax_img = fig.add_subplot(spec[:,0])
+        ax = fig.add_subplot(spec[0,1:])
+        ax2 = fig.add_subplot(spec[1,1:])
+        # ax_img = fig.add_subplot(121)
+        # ax = fig.add_subplot(222)
+        # ax2 = fig.add_subplot(224)
+        ax_img.imshow(image,cmap ='jet',vmax = image.mean()*2)
+        #sort the data column by 2theta angle
+        int_intensity_pd = pd.DataFrame(data).sort_values(by = '2theta')
+        #background baseline
+        ax.plot(data['2theta'],np.zeros(len(data['2theta'])))
+        #intensity profile(combined data)
+        ax.plot(int_intensity_pd['2theta'],int_intensity_pd['intensity'],color = '0.5')
+        #intensity profile(current frame)
+        ax2.plot(delta_range,int_range_bkg)
+        #background profile(current frame)
+        ax2.plot(delta_range,np.array(int_range_bkg)+int_range)
+
+        max_int = 2*np.mean(np.array(int_range_bkg)+int_range)
+        #charateristic lines
+        ax.plot([12.83,12.83],[0,max_int],'r:',label='Cu2O(111)')
+        ax.plot([14.84,14.84],[0,max_int],color ='r',label='Cu2O(200)')
+        ax.plot([15.17,15.17],[0,max_int],'b:',label='Cu(111)')
+        ax.plot([17.53,17.53],[0,max_int],color ='b',label='Cu(200)')
+        ax.plot([13.41,13.41],[0,max_int],'m:',label='Ag(111)')
+        ax.plot([15.5,15.5],[0,max_int],color ='m',label='Ag(200)')
+
+        #plot settings
+        ax.set_xlabel('2theta angle')
+        ax2.set_xlabel('2theta angle')
+        ax.set_ylabel('Intensity')
+        ax2.set_ylabel('Intensity')
+        ax.legend()
+        # ax.set_ylim([-0.05,0.3])
+        plt.tight_layout()
+        plt.pause(.01)
+    else:
+        fig.clear()
+        fig.set_size_inches(15,4)
+        ax = fig.add_subplot(111)
+        int_intensity_pd = pd.DataFrame(data).sort_values(by = '2theta')
+        ax.scatter(int_intensity_pd['2theta'],int_intensity_pd['intensity'],marker='.',s=2,color = '0.55')
+        #smooth the intensity
+        inten_smoothed = scipy.signal.savgol_filter(int_intensity_pd['intensity'],101,3)
+
+        #charateristic lines
+        ax.plot([12.83,12.83],[0,100],'r:',label='Cu2O(111)')
+        ax.plot([14.84,14.84],[0,100],color ='r',label='Cu2O(200)')
+        ax.plot([15.17,15.17],[0,100],'b:',label='Cu(111)')
+        ax.plot([17.53,17.53],[0,100],color ='b',label='Cu(200)')
+        ax.plot([13.41,13.41],[0,100],'m:',label='Ag(111)')
+        ax.plot([15.5,15.5],[0,100],color ='m',label='Ag(200)')
+
+        #plot smoothed profile
+        ax.plot(int_intensity_pd['2theta'],inten_smoothed,color = 'green',lw=2)
+        ax.set_xlabel('2theta angle')
+        ax.set_ylabel('Intensity')
+        ax.legend()
+        plt.ylim([0,0.3])
+        plt.xlim([12,18])
+        plt.pause(1000.01)
+    return fig
+
 
 def plot_bkg_fit(fig,data, fit_bkg_object, plot_final = False):
     fig.clear()
@@ -71,7 +209,8 @@ def plot_bkg_fit(fig,data, fit_bkg_object, plot_final = False):
                 plot_err_list.append(I_err_list[index_partial_scan])
             #ax_final.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='rd-',markersize=4, label='CTR profile')
             for i in range(len(scan_nos)):
-                ax_final.errorbar(plot_x_list[i], plot_y_list[i],yerr=plot_err_list[i],xerr=None,fmt='d-',color = colors[i], markersize=4, label='Scan{}'.format(scan_nos[i]))
+                potential_label = round(data['potential'][list(data['scan_no']).index(scan_nos[i])],1)
+                ax_final.errorbar(plot_x_list[i], plot_y_list[i],yerr=plot_err_list[i],xerr=None,fmt='d-',color = colors[i], markersize=4, label='Scan{}_at {}V'.format(scan_nos[i],potential_label))
             if fit_bkg_object.rod_scan:
                 ax_final.set_yscale('log',nonposy='clip')
                 ax_final.set_xlabel('L')

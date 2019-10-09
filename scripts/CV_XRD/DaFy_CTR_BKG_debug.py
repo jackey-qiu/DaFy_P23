@@ -63,8 +63,9 @@ def run():
 
     #recal clip_boundary and cen
     clip_boundary = {"ver":[cen[0]-clip_width['ver'],cen[0]+clip_width['ver']+1],
-                     "hor":[cen[1]-clip_width['hor'],cen[1]+clip_width['hor']+1]}
+                     "hor":[cen[1]-clip_width['hor'],cen[1]+clip_width['hor']+1]}     
     cen_clip = [clip_width['ver'],clip_width['hor']]
+    
     if live_image:
         plt.ion()
         fig = plt.figure(figsize=(9,6))

@@ -2,6 +2,9 @@ import sys, os
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import scipy
+import pandas as pd
+
 if (sys.version_info > (3, 0)):
     raw_input = input
 
@@ -40,6 +43,19 @@ def strain_oop_with_uncertainty(q_oop, HKL, lattice, uncertainty_q_oop):
                           beamtime=beamtime,
                           kwarg = kwarg_data
                           )
+
+def save_data_pxrd(data, scan_number, path, time_scan = False):
+    if not time_scan:
+        int_intensity_pd = pd.DataFrame(data).sort_values(by = '2theta')
+        #smooth the intensity
+        inten_smoothed = scipy.signal.savgol_filter(int_intensity_pd['intensity'],21,2)
+        int_intensity_pd['intensity_smoothed']=inten_smoothed
+        int_intensity_pd.to_excel(os.path.join(path,'data','pxrd_ascan_scan{}.xlsx'.format(scan_number)),columns = ['2theta','intensity','intensity_smoothed'])
+        int_intensity_pd.to_csv(os.path.join(path,'data','pxrd_ascan_scan{}.csv'.format(scan_number)),columns = ['2theta','intensity','intensity_smoothed'])
+    else:
+        int_intensity_pd = pd.DataFrame(dict((key,data[key]) for key in data.keys() if key not in ['2theta','intensity'])).sort_values(by='frame_number')
+        int_intensity_pd.to_excel(os.path.join(path,'data','pxrd_time_scan_scan{}.xlsx'.format(scan_number)))
+        int_intensity_pd.to_csv(os.path.join(path,'data','pxrd_time_scan_scan{}.csv'.format(scan_number)))
 
 def make_data_config_file(DaFy_path,data_folder,data, film_material_cif, hkls,pot_step,beamline,beamtime,kwarg):
     #Now append info to the plotting config file

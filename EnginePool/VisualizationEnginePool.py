@@ -58,7 +58,7 @@ def plot_pxrd_profile_time_scan(fig,data,image,delta_range=None,int_range=None, 
         plt.pause(.01)
     else:
         fig.clear()
-        fig.set_size_inches(15,4)
+        fig.set_size_inches(7,4)
         ax2 = fig.add_subplot(111)
         ax2_2 = ax2.twinx()
         peak_number = sum([1 for each in data if each.startswith('intensity_peak')])
@@ -68,10 +68,10 @@ def plot_pxrd_profile_time_scan(fig,data,image,delta_range=None,int_range=None, 
             i=i+1
             ax2.plot(data['frame_number'],each_peak,label = 'peak{}'.format(i))
         ax2_2.plot(data['frame_number'],data['potential'], color = 'blue')
-        ax.plot(delta_range,int_range_bkg)
+        #ax.plot(delta_range,int_range_bkg)
         #background profile(current frame)
-        ax.plot(delta_range,np.array(int_range_bkg)+int_range)
-        max_int = max(np.array(int_range_bkg)+int_range)
+        #ax.plot(delta_range,np.array(int_range_bkg)+int_range)
+        #max_int = max(np.array(int_range_bkg)+int_range)
 
         #plot settings
         ax2.set_xlabel('time')
@@ -79,9 +79,9 @@ def plot_pxrd_profile_time_scan(fig,data,image,delta_range=None,int_range=None, 
         ax2_2.set_ylabel('potential(V)',color='blue')
         ax2.legend()
         ax2_2.legend()
-        ax.legend()
+        #ax.legend()
         # ax.set_ylim([-0.05,0.3])
-        plt.pause(1000.01)
+        plt.pause(10.01)
     return fig
 
 def plot_pxrd_profile(fig,data,image,delta_range=None,int_range=None, int_range_bkg=None,plot_final = False):
@@ -126,12 +126,12 @@ def plot_pxrd_profile(fig,data,image,delta_range=None,int_range=None, int_range_
         plt.pause(.01)
     else:
         fig.clear()
-        fig.set_size_inches(15,4)
+        fig.set_size_inches(7,4)
         ax = fig.add_subplot(111)
         int_intensity_pd = pd.DataFrame(data).sort_values(by = '2theta')
         ax.scatter(int_intensity_pd['2theta'],int_intensity_pd['intensity'],marker='.',s=2,color = '0.55')
         #smooth the intensity
-        inten_smoothed = scipy.signal.savgol_filter(int_intensity_pd['intensity'],101,3)
+        inten_smoothed = scipy.signal.savgol_filter(int_intensity_pd['intensity'],21,2)
 
         #charateristic lines
         ax.plot([12.83,12.83],[0,100],'r:',label='Cu2O(111)')
@@ -146,9 +146,10 @@ def plot_pxrd_profile(fig,data,image,delta_range=None,int_range=None, int_range_
         ax.set_xlabel('2theta angle')
         ax.set_ylabel('Intensity')
         ax.legend()
+        plt.tight_layout()
         plt.ylim([0,0.3])
         plt.xlim([12,18])
-        plt.pause(1000.01)
+        plt.pause(10.01)
     return fig
 
 

@@ -670,6 +670,8 @@ class nexus_image_loader(object):
         #img=np.array(data.entry.instrument.detector.data.nxdata[0])
         while frame_number < self.total_frame_number:
             img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(frame_number)
+            if img is None:
+                img = img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(frame_number-1)
             self.extract_motor_angles(frame_number)
             self.extract_pot_current(frame_number)
             self.extract_HKL(frame_number)
@@ -677,10 +679,11 @@ class nexus_image_loader(object):
             if flip:
                 img = np.flip(img.T,1)
             img = img[self.clip_boundary['ver'][0]:self.clip_boundary['ver'][1],
-                      self.clip_boundary['hor'][0]:self.clip_boundary['hor'][1]]
+                    self.clip_boundary['hor'][0]:self.clip_boundary['hor'][1]]
             #normalized the intensity by the monitor and trams counters
             yield img/self.motor_angles['mon']/self.motor_angles['transm']
             frame_number +=1
+
 
     def extract_beam_mon_ct(self,mon_path = 'scan/data/eh_c01'):
         return np.array(self.nexus_data['scan/data/eh_c01'])

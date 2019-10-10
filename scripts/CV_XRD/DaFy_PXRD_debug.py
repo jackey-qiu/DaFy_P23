@@ -25,7 +25,7 @@ import matplotlib,time
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from VisualizationEnginePool import plot_pxrd_profile,plot_pxrd_profile_time_scan
-from DataFilterPool import create_mask, merge_data_bkg, update_data_bkg, merge_data_image_loader, make_data_config_file
+from DataFilterPool import create_mask, save_data_pxrd
 from FitEnginePool import fit_pot_profile,backcor
 from util.XRD_tools import reciprocal_space_v3 as rsp
 from util.UtilityFunctions import image_generator_bkg
@@ -83,6 +83,7 @@ def run():
             if time_scan:
                 int_intensity[img_loader.scan_number]['frame_number']=[]
                 int_intensity[img_loader.scan_number]['potential']=[]
+                int_intensity[img_loader.scan_number]['current']=[]
                 for i in range(len(delta_segment_time_scan)):
                     int_intensity[img_loader.scan_number]['intensity_peak{}'.format(i+1)]=[]
 
@@ -91,16 +92,12 @@ def run():
         else:
             if img_loader.scan_number!=scan_number:
                 #save data
-                int_intensity_pd = pd.DataFrame(int_intensity[scan_number]).sort_values(by = '2theta')
-                #smooth the intensity
-                inten_smoothed = scipy.signal.savgol_filter(int_intensity_pd['intensity'],101,3)
-                int_intensity_pd['intensity_smoothed']=inten_smoothed
-                int_intensity_pd.to_excel(os.path.join(DaFy_path,'data','pxrd_scan{}.xlsx'.format(scan_number)))
+                save_data_pxrd(data=int_intensity[scan_number], scan_number=scan_number, path=DaFy_path, time_scan = time_scan)
                 fig = plot_pxrd(fig,int_intensity[scan_number],None,plot_final = True)
                 scan_number = img_loader.scan_number
 
         delta = img_loader.motor_angles['delta']
-        delta_range = list(np.round(delta + np.arctan((cen[0] - np.array(range(dim_detector[0]-ver_offset*2)))*ps/sd)/np.pi*180, 3))
+        delta_range = list(np.round(delta + np.arctan((cen[0] - np.array(range(dim_detector[0]-ver_offset*2)))*ps/sd)/np.pi*180, 2))
         if not(min(delta_range)>delta_range_plot[1] or max(delta_range)<delta_range_plot[0]):
             int_range = np.sum(img[:,:],axis = 1)
 
@@ -136,21 +133,19 @@ def run():
                     index_left = np.argmin(np.abs(np.array(delta_range)-each_segment[0]))
                     index_right = np.argmin(np.abs(np.array(delta_range)-each_segment[1]))
                     int_intensity[img_loader.scan_number]['intensity_peak{}'.format(k)].append(np.array(int_range)[min([index_left,index_right]):max([index_left,index_right])].sum())
-                int_intensity[img_loader.scan_number]['potential'].append(img_loader.current)
+                int_intensity[img_loader.scan_number]['potential'].append(img_loader.potential)
+                int_intensity[img_loader.scan_number]['current'].append(img_loader.current)
                 int_intensity[img_loader.scan_number]['frame_number'].append(img_loader.frame_number)
         #make nice looking status bar
-        show_status_bar_2(img_loader, column_size_offset = 22)
+        show_status_bar_2(img_loader, column_size_offset = 24)
         #plot after each frame
         if live_image:
             fig = plot_pxrd(fig,int_intensity[img_loader.scan_number],img,delta_range,int_range, int_range_bkg)
     #save data
-    int_intensity_pd = pd.DataFrame(int_intensity[scan_number]).sort_values(by = '2theta')
-    #smooth the intensity
-    inten_smoothed = scipy.signal.savgol_filter(int_intensity_pd['intensity'],101,3)
-    int_intensity_pd['intensity_smoothed']=inten_smoothed
-    int_intensity_pd.to_excel(os.path.join(DaFy_path,'data','pxrd_scan{}.xlsx'.format(scan_number)))
+    save_data_pxrd(data=int_intensity[scan_number], scan_number=scan_number, path=DaFy_path, time_scan = time_scan)
     #plot in the end
     fig = plot_pxrd(fig,int_intensity[scan_number],None,plot_final = True)
+    fig.savefig(os.path.join(DaFy_path,'temp','temp_scan{}.png'.format(scan_number)),dpi = 300)
 
 if __name__ == "__main__":
     run()

@@ -47,7 +47,7 @@ def run():
         raw_input = input
 
     #config files
-    conf_file_names = {'CTR':'config_p23_ctr_new.ini'}
+    conf_file_names = {'CTR':'config_p23_ctr_new_I20180678.ini'}
     conf_file = os.path.join(DaFy_path, 'config', conf_file_names['CTR'])
 
     #extract global vars from config
@@ -86,15 +86,20 @@ def run():
 
     i = 0
     scan_number = img_loader.scan_number
+    scan_numbers_all = []
     process_through = False
 
     for img in _images:
         if img_loader.scan_number!=scan_number:
             i = 0
             scan_number = img_loader.scan_number
+            scan_numbers_all.append(scan_number)
         data = merge_data_image_loader(data, img_loader)
         if update_width:
             _ = bkg_sub.find_peak_width(img, img_no = img_loader.frame_number, initial_c_width=400, initial_r_width = 400)
+        else:
+            if i == 0:
+                _ = bkg_sub.find_peak_width(img, img_no = img_loader.frame_number, initial_c_width=400, initial_r_width = 400)
         bkg_sub.fit_background(None, img, data, plot_live = True, freeze_sf = True)
         data = merge_data_bkg(data, bkg_sub)
         i = i+1
@@ -130,10 +135,17 @@ def run():
                 tweak = False
 
     df = pd.DataFrame(data)
-    df.to_excel('test_ctr.xlsx')
+    scan_labels='CTR_data_'
+    for scan in scan_numbers_all:
+        if scan == scan_numbers_all[-1]:
+            scan_labels = scan_labels + 'scan{}'.format(scan)
+        else:
+            scan_labels = scan_labels + 'scan{}_'.format(scan)
+    df.to_excel(os.path.join(DaFy_path,'data','{}.xlsx'.format(scan_labels)))
 
     fig = plt.figure(figsize=(9,6))
     fig = plot_bkg_fit(fig, df, bkg_sub, True)
+    fig.savefig(os.path.join(DaFy_path,'temp','temp_ctr{}.png'.format(scan_labels)),dpi = 300)
     plt.pause(9.05)
     return df
 

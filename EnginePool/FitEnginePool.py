@@ -812,8 +812,10 @@ class background_subtraction_single_img():
         original_direction = self.int_direct
         if self.int_direct == 'x':
             direction ='vertical'
+            initial_r_width = self.row_width
         elif self.int_direct == 'y':
             direction = 'horizontal'
+            initial_c_width = self.col_width
             
         for i in range(1,100,2):
             current_c_width = int(initial_c_width/i)
@@ -853,9 +855,9 @@ class background_subtraction_single_img():
 
         if best_c_width!=None:
             if self.int_direct == 'x':
-                self.col_width = best_c_width
+                self.col_width = best_c_width + 10#10 is arbitrary offset value
             elif self.int_direct == 'y':
-                self.row_width = best_c_width
+                self.row_width = best_c_width + 10#10 is arbitrarz offset value
         #self.int_direct = original_direction
         return best_c_width
 
@@ -876,13 +878,16 @@ class background_subtraction_single_img():
             r_width = center_pix[1]-10
         index_cutoff=np.array([[center_pix[0]-c_width,center_pix[1]-r_width],[center_pix[0]+c_width,center_pix[1]+r_width]])
         sub_index=[np.min(index_cutoff,axis=0),np.max(index_cutoff,axis=0)]
+        #print(center_pix)
         #print(sub_index)
         x_min,x_max=sub_index[0][1],sub_index[1][1]
         y_min,y_max=sub_index[0][0],sub_index[1][0]
         pil_y,pil_x=img.shape#shape of the pilatus image
+        #print(img.shape)
         #reset the boundary if the index number is beyond the pilatus shape
-        x_min,x_max,y_min,y_max=[int(x_min>0)*x_min,int(x_max>0)*x_max,int(y_min>0)*y_min,int(y_max>0)*y_max]
-        x_min,x_max,y_min,y_max=[int(x_min<pil_x)*x_min,int(x_max<pil_x)*x_max,int(y_min<pil_y)*y_min,int(y_max<pil_y)*y_max]
+        #x_min,x_max,y_min,y_max=[int(x_min>0)*x_min,int(x_max>0)*x_max,int(y_min>0)*y_min,int(y_max>0)*y_max]
+        #x_min,x_max,y_min,y_max=[int(x_min<pil_x)*x_min,int(x_max<pil_x)*x_max,int(y_min<pil_y)*y_min,int(y_max<pil_y)*y_max]
+        x_min,x_max,y_min,y_max=[int(x_min<pil_x)*x_min,[pil_x,x_max][int(x_max<pil_x)],int(y_min<pil_y)*y_min,[pil_y,y_max][int(y_max<pil_y)]]
 
         x_span,y_span=x_max-x_min,y_max-y_min
         clip_image_center = [int(y_span/2)+self.peak_shift,int(x_span/2)+self.peak_shift]
@@ -988,8 +993,9 @@ class background_subtraction_single_img():
         y_min,y_max=sub_index[0][0],sub_index[1][0]
         pil_y,pil_x=img.shape#shape of the pilatus image
         #reset the boundary if the index number is beyond the pilatus shape
-        x_min,x_max,y_min,y_max=[int(x_min>0)*x_min,int(x_max>0)*x_max,int(y_min>0)*y_min,int(y_max>0)*y_max]
-        x_min,x_max,y_min,y_max=[int(x_min<pil_x)*x_min,int(x_max<pil_x)*x_max,int(y_min<pil_y)*y_min,int(y_max<pil_y)*y_max]
+        #x_min,x_max,y_min,y_max=[int(x_min>0)*x_min,int(x_max>0)*x_max,int(y_min>0)*y_min,int(y_max>0)*y_max]
+        #x_min,x_max,y_min,y_max=[int(x_min<pil_x)*x_min,int(x_max<pil_x)*x_max,int(y_min<pil_y)*y_min,int(y_max<pil_y)*y_max]
+        x_min,x_max,y_min,y_max=[int(x_min<pil_x)*x_min,[pil_x,x_max][int(x_max<pil_x)],int(y_min<pil_y)*y_min,[pil_y,y_max][int(y_max<pil_y)]]
         # x_min_new,x_max_new,y_min_new,y_max_new=[int(x_min>0)*x_min,int(x_max>0)*x_max,int(y_min>0)*y_min,int(y_max>0)*y_max]
         # x_min_new,x_max_new,y_min_new,y_max_new=[int(x_min_new<pil_x)*x_min_new,int(x_max_new<pil_x)*x_max_new,int(y_min_new<pil_y)*y_min_new,int(y_max_new<pil_y)*y_max_new]
         # compare_results =[x_min == x_min_new, x_max == x_max_new, y_min == y_min_new, y_max == y_max_new]

@@ -18,7 +18,9 @@ from scipy import stats
 from collections import namedtuple
 
 which_scans_to_plot = [221,229,231,236,243,244]
+#which_scans_to_plot = [724,732,805,807]
 config_file_name = 'P23_I20180835_plot.ini'
+#config_file_name = 'CV_XRD_plot_I20180114_final.ini'
 config_file = os.path.join(DaFy_path, 'config', config_file_name)
 #use default data path?
 data_path_default = os.path.join(DaFy_path,'data')
@@ -202,7 +204,8 @@ for scan_id in scan_ids:
         data = scan_info[scan_id].data.f
     # print(list(data.keys))
     pot, current_density = data.potential, data.current_density
-    mask = data.mask_cv_xrd
+    if which_select_cycle == 'new':
+        mask = data.mask_cv_xrd
     pot = pot-abs(current_density)*R
     try:
         pot_cal = data.potential_cal
@@ -213,7 +216,11 @@ for scan_id in scan_ids:
     except:
         frame_number = range(len(pot))
     # cv_data = pot, current_density
-    cv_data = list(extract_cv_data(scan_info[scan_id].ids_filename,1))
+    if which_select_cycle == 'old':
+        #cv_data = pot, current_density
+        cv_data = list(extract_ids_file(scan_info[scan_id].ids_filename,1))
+    else:
+        cv_data = list(extract_cv_data(scan_info[scan_id].ids_filename,1))
     cv_data[0] = cv_data[0]-abs(cv_data[1])*R
     Time = data.Time
     if len(Time)==0:

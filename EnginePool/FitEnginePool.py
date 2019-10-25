@@ -705,17 +705,18 @@ class Reciprocal_Space_Mapping():
         plt.clim(0,90)
         plt.show()
 
-
+import copy
 class background_subtraction_single_img():
     def __init__(self,cen, config_file = '../config/config_bkg_sub.ini',sections = ['Integration_setup','Correction_pars','Spec_info']):
         self.config_file = config_file
         self.config_file_parser(config_file, sections)
         self.img = None
         self.center_pix = cen
+        self.center_pix_origin = copy.copy(cen)
         self.opt_values = {'cen':None, 'peak_width':None, 'row_width': None, 'col_width': None,\
                            'fit_threshold': None, 'int_power': None, \
                            'int_dir':None, 'cost_fun': None}
-        self.fit_results = {'F':None, 'Ferr':None, 'I':None, 'Ierr':None, 'ctot':None}
+        self.fit_results = {'F':None, 'Ferr':None, 'I':None, 'Ierr':None, 'ctot':None,'bkg':None}
         self.fit_data = {'x':[],'y_total':[],'y_bkg':[]}
         self.x_min = None
         self.y_min = None
@@ -729,27 +730,51 @@ class background_subtraction_single_img():
         for section in sections:
             for each in config.items(section):
                 setattr(self,each[0], eval(each[1]))
+        #self.center_pix_origin = self.center_pix
+        self.col_width_origin = self.col_width
+        self.row_width_origin = self.row_width
 
     def update_center_pix_up_and_down(self,offset):
         offset = int(offset)
-        offset = np.array([-offset,0])
-        self.center_pix = np.array(self.center_pix) + offset
+        #offset = np.array([-offset,0])
+        self.center_pix[0] = self.center_pix_origin[0] - offset
         return None
 
     def update_center_pix_left_and_right(self,offset):
         offset = int(offset)
-        offset = np.array([0,offset])
-        self.center_pix = np.array(self.center_pix) + offset
+        #offset = np.array([0,offset])
+        self.center_pix[1] = self.center_pix_origin[1] + offset
         return None
 
     def update_integration_window_column_width(self,offset):
         offset = int(offset)
-        self.col_width = self.col_width + offset
+        self.col_width = self.col_width_origin + offset
         return None
 
     def update_integration_window_row_width(self,offset):
         offset = int(offset)
-        self.row_width = self.row_width + offset
+        self.row_width = self.row_width_origin + offset
+        return None
+
+
+    def update_bkg_center_pix_up_and_down(self,offset):
+        offset = int(offset)
+        self.bkg_win_cen_offset_ud = self.bkg_win_cen_offset_ud + offset
+        return None
+
+    def update_bkg_center_pix_left_and_right(self,offset):
+        offset = int(offset)
+        self.bkg_win_cen_offset_lr = self.bkg_win_cen_offset_lr + offset
+        return None
+
+    def update_bkg_column_width(self,offset):
+        offset = int(offset)
+        self.bkg_col_width = self.bkg_col_width + offset
+        return None
+
+    def update_bkg_row_width(self,offset):
+        offset = int(offset)
+        self.bkg_row_width = self.bkg_row_width + offset
         return None
 
     def update_integration_order(self,order):
@@ -769,7 +794,11 @@ class background_subtraction_single_img():
 
     def update_var_for_tweak(self,str_parser):
         cmds_list = str_parser.split(',')
-        lib_arg = {'ud':self.update_center_pix_up_and_down,\
+        lib_arg = {'UD':self.update_bkg_center_pix_up_and_down,\
+                   'LR':self.update_bkg_center_pix_left_and_right,\
+                   'CW':self.update_bkg_column_width,\
+                   'RW':self.update_bkg_row_width,\
+                   'ud':self.update_center_pix_up_and_down,\
                    'lr':self.update_center_pix_left_and_right,\
                    'cw':self.update_integration_window_column_width,\
                    'rw':self.update_integration_window_row_width,\
@@ -974,6 +1003,7 @@ class background_subtraction_single_img():
     def integrate_one_image(self,fig, img, data=None, plot_live = False, freeze_sf=False):
         self.img = img
         center_pix=self.center_pix
+        #print(center_pix)
         r_width=self.row_width
         c_width=self.col_width
         integration_direction=self.int_direct
@@ -1019,6 +1049,19 @@ class background_subtraction_single_img():
         self.x_min, self.y_min, self.x_max, self.y_max, self.x_span, self.y_span = x_min, y_min, x_max, y_max, x_span, y_span
         #print (y_min,y_max,x_min,x_max)
         clip_img=img[y_min:y_max+1,x_min:x_max+1]
+        
+        clip_image_center_bkg = clip_image_center+np.array([-self.bkg_win_cen_offset_ud,self.bkg_win_cen_offset_lr])
+        y_min_bkg = clip_image_center_bkg[0]-self.bkg_col_width
+        y_max_bkg = clip_image_center_bkg[0]+self.bkg_col_width
+
+        x_min_bkg = clip_image_center_bkg[1]-self.bkg_row_width
+        x_max_bkg = clip_image_center_bkg[1]+self.bkg_row_width
+
+        x_span_bkg = x_max_bkg - x_min_bkg
+        y_span_bkg = y_max_bkg - y_min_bkg
+        self.x_min_bkg, self.y_min_bkg, self.x_max_bkg, self.y_max_bkg, self.x_span_bkg, self.y_span_bkg = x_min_bkg, y_min_bkg, x_max_bkg, y_max_bkg, x_span_bkg, y_span_bkg
+        bkg_sum = np.sum(img[y_min_bkg:y_max_bkg+1,x_min_bkg:x_max_bkg+1])
+
         if integration_direction=="x":
             #y=img.sum(axis=0)[:,np.newaxis][sub_index[0][1]:sub_index[1][1]]
             y=clip_img.sum(axis=0)[:,np.newaxis]
@@ -1122,7 +1165,7 @@ class background_subtraction_single_img():
         self.fit_data['y_bkg'] = z[index]
         # print ("When s=",s_container[index_best],'pow=',ord_cus_container[index_best],"integration sum is ",I_container[index_best], " counts!",'S/N ratio is {:3.2f}'.format(I_container[index_best]/Ibgr_container[index_best]+1))
         #return np.sum(y[index]-z[index]),abs(np.sum(z[index])),np.sum(y[index])**0.5+np.sum(y[index]-z[index])**0.5
-        return I_container[index_best],FOM_container[index_best][1],Ierr_container[index_best],s_container[index_best],ord_cus_container[index_best],center_pix,30,r_width,c_width,check_result
+        return I_container[index_best],FOM_container[index_best][1],Ierr_container[index_best],s_container[index_best],ord_cus_container[index_best],center_pix,30,r_width,c_width,bkg_sum,check_result
 
     def update_motor_angles(self, motor_lib):
         # keys_motor_new = ['gamma','delta','mu','omega_t', 'phi', 'chi']
@@ -1139,9 +1182,9 @@ class background_subtraction_single_img():
     def fit_background(self,fig,img,data=None,plot_live=False,freeze_sf = False):
         # import time
         # t1=time.time()
-        I,I_bgr,I_err,s,ord_cus,center_pix,peak_width,r_width,c_width,check_result=self.integrate_one_image(fig,img,data,plot_live=plot_live,freeze_sf = freeze_sf)
+        I,I_bgr,I_err,s,ord_cus,center_pix,peak_width,r_width,c_width,bkg_sum,check_result=self.integrate_one_image(fig,img,data,plot_live=plot_live,freeze_sf = freeze_sf)
         try:
-            I,I_bgr,I_err,s,ord_cus,center_pix,peak_width,r_width,c_width,check_result=self.integrate_one_image(fig,img,data,plot_live=plot_live,freeze_sf = freeze_sf)
+            I,I_bgr,I_err,s,ord_cus,center_pix,peak_width,r_width,c_width,bkg_sum,check_result=self.integrate_one_image(fig,img,data,plot_live=plot_live,freeze_sf = freeze_sf)
             self.fit_status = True
         except:
             self.fit_status = False
@@ -1152,6 +1195,7 @@ class background_subtraction_single_img():
         self.fit_results['Ferr']=I_err**0.5
         self.fit_results['I']=I
         self.fit_results['Ierr']=I_err#scale intensity error
+        self.fit_results['bkg']=bkg_sum
         #fit parameters values
         self.opt_values['cen'] = center_pix
         self.opt_values['peak_width'] = peak_width

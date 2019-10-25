@@ -54,7 +54,11 @@ def show_status_bar_2(img_loader, column_size_offset = 22):
 
 def make_tweak_string():
     tweak_motion_str = raw_input(", splited stream of string\n\
-                        ud:up or down\n\
+                        UD:up or down for bkg\n\
+                        LR:left or right for bkg\n\
+                        CW:column width for bkg\n\
+                        RW:row width for bkg\n\
+                        ud:up or down for bkg\n\
                         lr:left or right\n\
                         cw:column width\n\
                         rw:row width\n\

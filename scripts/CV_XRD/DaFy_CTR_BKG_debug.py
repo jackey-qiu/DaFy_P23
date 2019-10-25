@@ -47,7 +47,7 @@ def run():
         raw_input = input
 
     #config files
-    conf_file_names = {'CTR':'config_p23_ctr_new_I20180678.ini'}
+    conf_file_names = {'CTR':'config_p23_ctr_new.ini'}
     conf_file = os.path.join(DaFy_path, 'config', conf_file_names['CTR'])
 
     #extract global vars from config

@@ -152,6 +152,78 @@ def plot_pxrd_profile(fig,data,image,delta_range=None,int_range=None, int_range_
         plt.pause(10.01)
     return fig
 
+def plot_bkg_fit_gui(ax_img, ax_profile, ax_ctr, ax_pot,data, fit_bkg_object, plot_final = False):
+    ax_img.clear()
+    ax_profile.clear()
+    ax_ctr.clear()
+    ax_pot.clear()
+    z = fit_bkg_object.fit_data['y_bkg']
+    n = fit_bkg_object.fit_data['x']
+    y = fit_bkg_object.fit_data['y_total']
+    img = fit_bkg_object.img
+    x_min = fit_bkg_object.x_min
+    x_max = fit_bkg_object.x_max
+    y_min = fit_bkg_object.y_min
+    y_max = fit_bkg_object.y_max
+    y_span = fit_bkg_object.y_span
+    x_span = fit_bkg_object.x_span
+    clip_image_center = [int(y_span/2)+fit_bkg_object.peak_shift,int(x_span/2)+fit_bkg_object.peak_shift]
+    peak_l = max([clip_image_center[int(fit_bkg_object.int_direct=='x')]-fit_bkg_object.peak_width,0])#peak_l>0
+    peak_r = clip_image_center[int(fit_bkg_object.int_direct=='x')]+fit_bkg_object.peak_width
+    # ax_img.imshow(img,cmap ='jet',vmax = clip_img.max())
+    ax_img.imshow(img,cmap ='jet',vmax = img[y_min:y_min+y_span,x_min:x_min+x_span].max()*0.7,aspect='equal')
+    rect = patches.Rectangle((x_min,y_min),x_span,y_span,linewidth=1,edgecolor='r',facecolor='none')
+    rect_bkg = patches.Rectangle((fit_bkg_object.x_min_bkg,fit_bkg_object.y_min_bkg),fit_bkg_object.x_span_bkg,fit_bkg_object.y_span_bkg,linewidth=1,edgecolor='m',facecolor='none')
+    ax_img.add_patch(rect)
+    ax_img.add_patch(rect_bkg)
+    ax_profile.plot(n,y,color='blue',label="data")
+    ax_profile.plot(n,z,color="red",label="background")
+    ax_profile.plot(n,y-z,color="m",label="data-background")
+    ax_profile.plot(n,[0]*len(n),color='black')
+    ax_profile.plot([peak_l,peak_l],[0,z[peak_l]],color = 'green')
+    ax_profile.plot([peak_r,peak_r],[0,z[peak_r]],color = 'green')
+    ax_pot.plot(data['image_no'],data['potential'])
+    if 'L' in data:
+        L_list, I_list, I_err_list = data['L'],data['peak_intensity'], data['peak_intensity_error']
+        if not fit_bkg_object.rod_scan:
+            L_list = data['image_no']
+        # I_list = list(np.append(I_list,[I_container[index_best]]))
+        # I_err_list = list(np.append(I_err_list,[Ierr_container[index_best]]))
+        # ax_ctr.plot(L_list, np.array(I_list)/np.array(data['transmission']),label='CTR profile')
+        ax_ctr.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='ro:',markersize=4, label='CTR profile')
+        ax_ctr.set_yscale('log',nonposy='clip')
+        if plot_final:
+            #fig2 = plt.figure(figsize=(8,7))
+            ax_final = fig2.add_subplot(211)
+            ax_final_pot = fig2.add_subplot(212)
+            ax_final_pot.plot(data['image_no'],data['potential'])
+            ax_final_pot.set_xlabel('time')
+            ax_final_pot.set_ylabel('Potential')
+            ax_final_pot.set_title('E (V)')
+            scan_nos = list(set(data['scan_no']))
+            colors = ['r','g','b','m','black','yellow']+['r','g','b','m','black','yellow']
+            plot_x_list,plot_y_list,plot_err_list = [],[],[]
+            for scan in scan_nos:
+                index_partial_scan = data['scan_no']==scan
+                plot_x_list.append(L_list[index_partial_scan])
+                plot_y_list.append(I_list[index_partial_scan])
+                plot_err_list.append(I_err_list[index_partial_scan])
+            #ax_final.errorbar(np.array(L_list), np.array(I_list),yerr=np.array(I_err_list),xerr=None,fmt='rd-',markersize=4, label='CTR profile')
+            for i in range(len(scan_nos)):
+                potential_label = round(data['potential'][list(data['scan_no']).index(scan_nos[i])],1)
+                ax_final.errorbar(plot_x_list[i], plot_y_list[i],yerr=plot_err_list[i],xerr=None,fmt='d-',color = colors[i], markersize=4, label='Scan{}_at {}V'.format(scan_nos[i],potential_label))
+            if fit_bkg_object.rod_scan:
+                ax_final.set_yscale('log',nonposy='clip')
+                ax_final.set_xlabel('L')
+            ax_final.set_ylabel('Itensity')
+            ax_final.set_title('CTR')
+            ax_final.legend()
+    plt.tight_layout()
+    #fig.canvas.draw()
+    #fig.tight_layout()
+    #plt.show()
+
+    #return fig
 
 def plot_bkg_fit(fig,data, fit_bkg_object, plot_final = False):
     fig.clear()
@@ -175,7 +247,9 @@ def plot_bkg_fit(fig,data, fit_bkg_object, plot_final = False):
     # ax_img.imshow(img,cmap ='jet',vmax = clip_img.max())
     ax_img.imshow(img,cmap ='jet',vmax = img[y_min:y_min+y_span,x_min:x_min+x_span].max()*0.7,aspect='equal')
     rect = patches.Rectangle((x_min,y_min),x_span,y_span,linewidth=1,edgecolor='r',facecolor='none')
+    rect_bkg = patches.Rectangle((fit_bkg_object.x_min_bkg,fit_bkg_object.y_min_bkg),fit_bkg_object.x_span_bkg,fit_bkg_object.y_span_bkg,linewidth=1,edgecolor='m',facecolor='none')
     ax_img.add_patch(rect)
+    ax_img.add_patch(rect_bkg)
     ax_profile.plot(n,y,color='blue',label="data")
     ax_profile.plot(n,z,color="red",label="background")
     ax_profile.plot(n,y-z,color="m",label="data-background")

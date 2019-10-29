@@ -16,6 +16,7 @@ from matplotlib.animation import FFMpegWriter
 import pandas as pd
 import matplotlib.patches as patches
 import scipy
+import pyqtgraph as pg
 
 def plot_pxrd_profile_time_scan(fig,data,image,delta_range=None,int_range=None, int_range_bkg=None,plot_final = False):
     if not plot_final:
@@ -224,6 +225,51 @@ def plot_bkg_fit_gui(ax_img, ax_profile, ax_ctr, ax_pot,data, fit_bkg_object, pl
     #plt.show()
 
     #return fig
+def replot_bkg_profile(ax_profile, data, fit_bkg_object, plot_final = False):
+    z = fit_bkg_object.fit_data['y_bkg'][:,0]
+    n = fit_bkg_object.fit_data['x']
+    y = fit_bkg_object.fit_data['y_total'][:,0]
+    y_span = fit_bkg_object.y_span
+    x_span = fit_bkg_object.x_span
+    clip_image_center = [int(y_span/2)+fit_bkg_object.peak_shift,int(x_span/2)+fit_bkg_object.peak_shift]
+    peak_l = max([clip_image_center[int(fit_bkg_object.int_direct=='x')]-fit_bkg_object.peak_width,0])#peak_l>0
+    peak_r = clip_image_center[int(fit_bkg_object.int_direct=='x')]+fit_bkg_object.peak_width
+    #ax_profile.plot(n,y,pen='b',name="data")
+    ax_profile.plot(n,z,pen="r",name="background", clear = True)
+    #ax_profile.plot(n,y-z,pen="m",name="data-background")
+    #ax_profile.plot(n,[0]*len(n),pen='k')
+    ax_profile.plot([peak_l,peak_l],[z[peak_l],y.max()],pen = 'g')
+    ax_profile.plot([peak_r,peak_r],[z[peak_r],y.max()],pen = 'g')
+    
+
+def plot_bkg_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_pot,data, fit_bkg_object, plot_final = False):
+    z = fit_bkg_object.fit_data['y_bkg'][:,0]
+    n = fit_bkg_object.fit_data['x']
+    y = fit_bkg_object.fit_data['y_total'][:,0]
+    y_span = fit_bkg_object.y_span
+    x_span = fit_bkg_object.x_span
+    clip_image_center = [int(y_span/2)+fit_bkg_object.peak_shift,int(x_span/2)+fit_bkg_object.peak_shift]
+    peak_l = max([clip_image_center[int(fit_bkg_object.int_direct=='x')]-fit_bkg_object.peak_width,0])#peak_l>0
+    peak_r = clip_image_center[int(fit_bkg_object.int_direct=='x')]+fit_bkg_object.peak_width
+    #ax_profile.plot(n,y,pen='b',name="data")
+    ax_profile.plot(n,z,pen="r",name="background")
+    #ax_profile.plot(n,y-z,pen="m",name="data-background")
+    #ax_profile.plot(n,[0]*len(n),pen='k')
+    
+    ax_profile.plot([peak_l,peak_l],[z[peak_l],y.max()],pen = 'g')
+    ax_profile.plot([peak_r,peak_r],[z[peak_r],y.max()],pen = 'g')
+    ax_pot.plot(data['image_no'],data['potential'],clear = True)
+    if 'L' in data:
+        L_list, I_list, I_err_list = data['L'],data['peak_intensity'], data['peak_intensity_error']
+        if not fit_bkg_object.rod_scan:
+            L_list = data['image_no']
+        # I_list = list(np.append(I_list,[I_container[index_best]]))
+        # I_err_list = list(np.append(I_err_list,[Ierr_container[index_best]]))
+        # ax_ctr.plot(L_list, np.array(I_list)/np.array(data['transmission']),label='CTR profile')
+        #err = pg.ErrorBarItem(x=np.array(L_list), y=np.array(I_list), top=np.array(I_err_list), bottom=np.array(I_err_list), beam=0.5)
+        #ax_ctr.addItem(err)
+        ax_ctr.plot(np.array(L_list), np.array(I_list),pen={'color': 0.8, 'width': 0.5}, clear = True)
+        #ax_ctr.setLogMode(x=False,y=True)
 
 def plot_bkg_fit(fig,data, fit_bkg_object, plot_final = False):
     fig.clear()

@@ -47,12 +47,19 @@ if (sys.version_info > (3, 0)):
 class run_app(object):
     def __init__(self):
         self.stop = True
-        self.conf_file_names = {'CTR':'config_p23_ctr_new.ini'}
+        #self.conf_file_names = {'CTR':'config_p23_ctr_new.ini'}
         #config files
-        self.conf_file = os.path.join(DaFy_path, 'config', self.conf_file_names['CTR'])
+        #self.conf_file = os.path.join(DaFy_path, 'config', self.conf_file_names['CTR'])
+        self.conf_file = None
 
+    def run(self, config = None):
         #extract global vars from config
-        self.kwarg_global = extract_vars_from_config(self.conf_file, section_var ='Global')
+        if config == None:
+            #self.kwarg_global = extract_vars_from_config(self.conf_file, section_var ='Global')
+            pass
+        else:
+            self.conf_file = config
+            self.kwarg_global = extract_vars_from_config(self.conf_file, section_var ='Global')
         for each in self.kwarg_global:
             setattr(self,each,self.kwarg_global[each])
 
@@ -94,11 +101,11 @@ class run_app(object):
             return True
         except:
             pass
-            return False
+            #return False
 
     def run_update(self):
         self.bkg_sub.fit_background(None, self.img, self.data, plot_live = True, freeze_sf = True)
         self.data = update_data_bkg(self.data, self.bkg_sub)
 
 if __name__ == "__main__":
-    run()
+    run_app()

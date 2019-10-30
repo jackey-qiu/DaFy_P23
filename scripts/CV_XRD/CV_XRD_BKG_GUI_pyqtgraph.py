@@ -33,7 +33,7 @@ class MyMainWindow(QMainWindow):
         pg.setConfigOptions(imageAxisOrder='row-major')
         pg.mkQApp()
         uic.loadUi('C:\\apps\\DaFy_P23\\scripts\\CV_XRD\\ctr_bkg_pyqtgraph3.ui',self)
-
+        self.setWindowTitle('Data analysis factory: CTR data analasis')
         self.app_ctr=run_app()
         #self.app_ctr.run()
         self.current_image_no = 0
@@ -42,17 +42,40 @@ class MyMainWindow(QMainWindow):
         #self.setupUi(self)
         self.stop = False
         self.open.clicked.connect(self.load_file)
+        self.reload.clicked.connect(self.rload_file)
         self.stopBtn.clicked.connect(self.stop_func)
+        self.saveas.clicked.connect(self.save_file_as)
         self.save.clicked.connect(self.save_file)
         self.plot.clicked.connect(self.plot_figure)
         self.runstepwise.clicked.connect(self.plot_)
+        self.pushButton_filePath.clicked.connect(self.locate_data_folder)
+        self.lineEdit_data_file_name.setText('temp_data.xlsx')
+        self.lineEdit_data_file_path.setText(self.app_ctr.data_path)
+        self.lineEdit.setText(self.app_ctr.conf_path_temp)
         #self.update_poly_order(init_step = True)
         for each in self.groupBox_2.findChildren(QCheckBox):
             each.released.connect(self.update_poly_order)
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
             each.toggled.connect(self.update_cost_func)
+        self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
         self.doubleSpinBox_ss_factor.valueChanged.connect(self.update_ss_factor)
         self.setup_image()
+        self.timer_save_data = QtCore.QTimer(self)
+        self.timer_save_data.timeout.connect(self.save_data)
+        
+
+    def save_data(self):
+        data_file = os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text())
+        try:
+            self.app_ctr.save_data_file(data_file)
+            self.statusbar.showMessage('Data file is saved as {}!'.format(data_file))
+        except:
+            self.statusbar.showMessage('Failure to save data file!')
+
+    def remove_data_point(self):
+        self.app_ctr.data['mask_ctr'][-1]=False
+        self.statusbar.showMessage('Current data point is masked!')
+        self.updatePlot2()
 
     def update_poly_order(self, init_step = False):
         ord_total = 0
@@ -122,8 +145,9 @@ class MyMainWindow(QMainWindow):
 
         # Draggable line for setting isocurve level
         isoLine = pg.InfiniteLine(angle=0, movable=True, pen='g')
+        self.isoLine = isoLine
         hist.vb.addItem(isoLine)
-        hist.vb.setMouseEnabled(y=False) # makes user interaction a little easier
+        hist.vb.setMouseEnabled(y=True) # makes user interaction a little easier
         isoLine.setValue(0.8)
         isoLine.setZValue(100000) # bring iso line above contrast controls
 
@@ -184,17 +208,53 @@ class MyMainWindow(QMainWindow):
             w, h = [int(each) for each in self.roi.size()]
             self.iso.setData(pg.gaussianFilter(self.app_ctr.bkg_sub.img[y:(y+h),x:(x+w)], (2, 2)))
             self.iso.setPos(x,y)
-            isoLine.setValue(self.app_ctr.bkg_sub.img[y:(y+h),x:(x+w)].mean())
+            if self.app_ctr.img_loader.frame_number ==0:
+                isoLine.setValue(self.app_ctr.bkg_sub.img[y:(y+h),x:(x+w)].mean())
+            else:
+                pass
+            #print(isoLine.value(),self.current_image_no)
             #plot others
             plot_bkg_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.app_ctr.data, self.app_ctr.bkg_sub)
+            self.lcdNumber_potential.display(self.app_ctr.data['potential'][-1])
+            self.lcdNumber_current.display(self.app_ctr.data['current'][-1])
+            self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-1])
+            self.lcdNumber_iso.display(isoLine.value())
 
+        def updatePlot_after_remove_point():
+            #global data
+            try:
+                selected = roi.getArrayRegion(self.app_ctr.bkg_sub.img, self.img_pyqtgraph)
+            except:
+                #selected = roi.getArrayRegion(data, self.img_pyqtgraph)
+                pass
+            p2.plot(selected.sum(axis=0), clear=True)
+            self.reset_peak_center_and_width()
+            #self.app_ctr.run_update()
+            ##update iso curves
+            x, y = [int(each) for each in self.roi.pos()]
+            w, h = [int(each) for each in self.roi.size()]
+            self.iso.setData(pg.gaussianFilter(self.app_ctr.bkg_sub.img[y:(y+h),x:(x+w)], (2, 2)))
+            self.iso.setPos(x,y)
+            if self.app_ctr.img_loader.frame_number ==0:
+                isoLine.setValue(self.app_ctr.bkg_sub.img[y:(y+h),x:(x+w)].mean())
+            else:
+                pass
+            #print(isoLine.value(),self.current_image_no)
+            #plot others
+            plot_bkg_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.app_ctr.data, self.app_ctr.bkg_sub)
+            self.lcdNumber_potential.display(self.app_ctr.data['potential'][-2])
+            self.lcdNumber_current.display(self.app_ctr.data['current'][-2])
+            self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-2])
+            self.lcdNumber_iso.display(isoLine.value())
 
         roi.sigRegionChanged.connect(updatePlot)
         self.updatePlot = updatePlot
+        self.updatePlot2 = updatePlot_after_remove_point
 
         def updateIsocurve():
             global isoLine, iso
             iso.setLevel(isoLine.value())
+            self.lcdNumber_iso.display(isoLine.value())
 
         self.updateIsocurve = updateIsocurve
 
@@ -215,49 +275,77 @@ class MyMainWindow(QMainWindow):
         if fileName:
             self.lineEdit.setText(fileName)
             self.app_ctr.run(self.lineEdit.text())
+            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            #self.current_image_no = 0
+            #self.current_scan_number = self.app_ctr.img_loader.scan_number
+            self.plot_()
             with open(fileName,'r') as f:
                 self.textEdit.setText(f.read())
 
-    def save_file(self):
+    def locate_data_folder(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
+        if fileName:
+            self.lineEdit_data_file_path.setText(os.path.dirname(fileName))
+
+    def rload_file(self):
+        self.app_ctr.run(self.lineEdit.text())
+        self.timer_save_data.stop()
+        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+        #self.current_image_no = 0
+        #self.current_scan_number = self.app_ctr.img_loader.scan_number
+        self.plot_()
+
+    def save_file_as(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "Text documents (*.txt);All files (*.*)")
         text = self.textEdit.toPlainText()
         with open(path, 'w') as f:
             f.write(text)
+        self.statusbar.showMessage('Config file is saved as {}!'.format(path))
+
+    def save_file(self):
+        text = self.textEdit.toPlainText()
+        with open(self.lineEdit.text(), 'w') as f:
+            f.write(text)
+        self.statusbar.showMessage('Config file is saved with the same file name!')
 
     def plot_figure(self):
-        timer = QtCore.QTimer(self)
-        timer.timeout.connect(self.plot_)
-        timer.start(5)
+        self.timer = QtCore.QTimer(self)
+        self.timer.timeout.connect(self.plot_)
+        self.timer.start(5)
 
     def plot_(self):
         #self.app_ctr.set_fig(self.MplWidget.canvas.figure)
         if self.stop:
-            pass
+            self.timer.stop()
         else:
             return_value = self.app_ctr.run_script()
             if self.app_ctr.bkg_sub.img is not None:
+                #if self.current_scan_number == None:
+                #    self.current_scan_number = self.app_ctr.img_loader.scan_number
+                self.lcdNumber_scan_number.display(self.app_ctr.img_loader.scan_number)
                 self.img_pyqtgraph.setImage(self.app_ctr.bkg_sub.img)
-                self.p1.autoRange() 
+                if self.app_ctr.img_loader.frame_number == 0:
+                    self.p1.autoRange() 
                 self.hist.setLevels(self.app_ctr.bkg_sub.img.min(), self.app_ctr.bkg_sub.img.mean()*10)
-                #self.iso.setData(pg.gaussianFilter(self.app_ctr.bkg_sub.img[200:400,150:250], (2, 2)))
-
                 self.updatePlot()
 
             if return_value:
-                if self.app_ctr.img_loader.scan_number!=self.current_scan_number:
-                    self.current_scan_number = self.app_ctr.img_loader.scan_number 
-                    self.current_image_no = 0
-                else:
-                    self.current_image_no += 1
-                #plot_bkg_fit_gui(self.MplWidget.canvas.ax_img, self.MplWidget.canvas.ax_profile, self.MplWidget.canvas.ax_ctr, self.MplWidget.canvas.ax_pot,self.app_ctr.data, self.app_ctr.bkg_sub)
-                #self.MplWidget.canvas.figure.tight_layout()
-                #self.MplWidget.canvas.draw()
                 self.statusbar.clearMessage()
-                self.statusbar.showMessage('Working on scan{}: we are now at frame{} of {} frames in total!'.format(self.current_scan_number,self.current_image_no,self.app_ctr.img_loader.total_frame_number))
-                self.progressBar.setValue(self.current_image_no/float(self.app_ctr.img_loader.total_frame_number)*100)
+                self.statusbar.showMessage('Working on scan{}: we are now at frame{} of {} frames in total!'.format(self.app_ctr.img_loader.scan_number,self.app_ctr.img_loader.frame_number+1,self.app_ctr.img_loader.total_frame_number))
+                self.progressBar.setValue((self.app_ctr.img_loader.frame_number+1)/float(self.app_ctr.img_loader.total_frame_number)*100)
+                self.lcdNumber_frame_number.display(self.app_ctr.img_loader.frame_number+1)
+                #self.app_ctr.img_loader.frame_number
+                #self.current_image_no += 1
+
 
             else:
-                self.stop_func()
+                self.timer.stop()
+                self.stop = False
+                self.stopBtn.setText('Stop')
+                self.statusbar.clearMessage()
+                self.statusbar.showMessage('Run for scan{} is finished, {} frames in total have been processed!'.format(self.app_ctr.img_loader.scan_number,self.app_ctr.img_loader.total_frame_number))
 
     def update_plot(self):
         img = self.app_ctr.run_update()

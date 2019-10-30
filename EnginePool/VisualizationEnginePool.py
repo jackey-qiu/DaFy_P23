@@ -255,21 +255,35 @@ def plot_bkg_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_pot,data, fit_bkg_object, 
     ax_profile.plot(n,z,pen="r",name="background")
     #ax_profile.plot(n,y-z,pen="m",name="data-background")
     #ax_profile.plot(n,[0]*len(n),pen='k')
-    
     ax_profile.plot([peak_l,peak_l],[z[peak_l],y.max()],pen = 'g')
     ax_profile.plot([peak_r,peak_r],[z[peak_r],y.max()],pen = 'g')
-    ax_pot.plot(data['image_no'],data['potential'],clear = True)
+    #plot_index = []
+    #for i in range(len(data['mask_ctr'])):
+    #    if data['mask_ctr'][i]==True:
+    #        plot_index.append(i)
+    plot_index = [i for i in range(len(data['mask_ctr'])) if data['mask_ctr'][i]==True]
+    imge_no = [data['image_no'][i] for i in plot_index]
+    L_list = [data['L'][i] for i in plot_index]
+    potential = [data['potential'][i] for i in plot_index]
+    peak_intensity = [data['peak_intensity'][i] for i in plot_index]
+    peak_intensity_error = [data['peak_intensity_error'][i] for i in plot_index]
+
+    #print(np.array(data['image_no'])[plot_index].shape)
+    ax_pot.plot(imge_no,potential,clear = True)
     if 'L' in data:
-        L_list, I_list, I_err_list = data['L'],data['peak_intensity'], data['peak_intensity_error']
+        #L_list, I_list, I_err_list = np.array(data['L'])[plot_index],np.array(data['peak_intensity'])[plot_index], np.array(data['peak_intensity_error'])[plot_index]
         if not fit_bkg_object.rod_scan:
-            L_list = data['image_no']
-        # I_list = list(np.append(I_list,[I_container[index_best]]))
-        # I_err_list = list(np.append(I_err_list,[Ierr_container[index_best]]))
-        # ax_ctr.plot(L_list, np.array(I_list)/np.array(data['transmission']),label='CTR profile')
-        #err = pg.ErrorBarItem(x=np.array(L_list), y=np.array(I_list), top=np.array(I_err_list), bottom=np.array(I_err_list), beam=0.5)
-        #ax_ctr.addItem(err)
-        ax_ctr.plot(np.array(L_list), np.array(I_list),pen={'color': 0.8, 'width': 0.5}, clear = True)
-        #ax_ctr.setLogMode(x=False,y=True)
+            #L_list = np.array(data['image_no'])[plot_index]
+            # I_list = list(np.append(I_list,[I_container[index_best]]))
+            # I_err_list = list(np.append(I_err_list,[Ierr_container[index_best]]))
+            # ax_ctr.plot(L_list, np.array(I_list)/np.array(data['transmission']),label='CTR profile')
+            #err = pg.ErrorBarItem(x=np.array(L_list), y=np.array(I_list), top=np.array(I_err_list), bottom=np.array(I_err_list), beam=0.5)
+            #ax_ctr.addItem(err)
+            ax_ctr.plot(imge_no, peak_intensity,pen={'color': 'y', 'width': 1}, clear = True)
+            ax_ctr.setLogMode(x=False,y=False)
+        else:
+            ax_ctr.plot(L_list, peak_intensity,pen={'color': 'y', 'width': 1},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w',clear = True)
+            ax_ctr.setLogMode(x=False,y=True)
 
 def plot_bkg_fit(fig,data, fit_bkg_object, plot_final = False):
     fig.clear()

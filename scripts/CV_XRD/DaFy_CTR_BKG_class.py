@@ -51,6 +51,8 @@ class run_app(object):
         #config files
         #self.conf_file = os.path.join(DaFy_path, 'config', self.conf_file_names['CTR'])
         self.conf_file = None
+        self.data_path = os.path.join(DaFy_path,'data')
+        self.conf_path_temp = os.path.join(DaFy_path,'config','config_p23_ctr_new.ini')
 
     def run(self, config = None):
         #extract global vars from config
@@ -100,12 +102,18 @@ class run_app(object):
             self.data = merge_data_bkg(self.data, self.bkg_sub)
             return True
         except:
-            pass
-            #return False
+            return False
 
     def run_update(self):
         self.bkg_sub.fit_background(None, self.img, self.data, plot_live = True, freeze_sf = True)
         self.data = update_data_bkg(self.data, self.bkg_sub)
+
+    def save_data_file(self,path):
+        df = pd.DataFrame(self.data)
+        if path.endswith('.xlsx'):          
+            df.to_excel(path)
+        else:
+            df.to_excel(path+'.xlsx')
 
 if __name__ == "__main__":
     run_app()

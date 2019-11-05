@@ -126,6 +126,7 @@ def fit_pot_profile(x, y, show_fig = False):
         # print(sawtooth_pot(x_partial,*popt))
         plt.show()
     return triang_(y,*popt)
+    
 #engine function to subtraction background
 def backcor(n,y,ord_cus,s,fct):
     # Rescaling
@@ -155,11 +156,9 @@ def backcor(n,y,ord_cus,s,fct):
 
     # LEGEND
     while np.sum((z-zp)**2)/np.sum(zp**2) > 1e-10:
-
         it = it + 1        # Iteration number
         zp = z             # Previous estimation
         res = y - z        # Residual
-
         # Estimate d
         if fct=='sh':
             d = (res*(2*alpha-1)) * (abs(res)<s) + (-alpha*2*s-res) * (res<=-s) + (alpha*2*s-res) * (res>=s)
@@ -171,13 +170,17 @@ def backcor(n,y,ord_cus,s,fct):
             d = (res*(2*alpha-1)) * (res<s) - res * (res>=s)
         else:
             pass
-
         # Estimate z
         a = Tinv.dot(y+d)   # Polynomial coefficients a
         z = T.dot(a)            # Polynomial
 
-    z=np.array([(z[list(index).index(i)]-1)*dely+maxy for i in range(len(index))])
-
+    #z=np.array([(z[list(index).index(i)]-1)*dely+maxy for i in range(len(index))])
+    #print(index)
+    z=(z-1)*dely+maxy
+    #t7=time.time()
+    #print((t2-t1,t3-t2,t4-t3,t5-t4,t6-t5,t7-t6))
+    #
+    #print((t2-t1,t3-t2,t4-t3,t5-t4,t6-t5))
     return z,a,it,ord_cus,s,fct
 
 class XRD_Peak_Fitting(object):

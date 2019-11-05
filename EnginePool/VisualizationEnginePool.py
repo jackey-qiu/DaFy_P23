@@ -240,7 +240,22 @@ def replot_bkg_profile(ax_profile, data, fit_bkg_object, plot_final = False):
     #ax_profile.plot(n,[0]*len(n),pen='k')
     ax_profile.plot([peak_l,peak_l],[z[peak_l],y.max()],pen = 'g')
     ax_profile.plot([peak_r,peak_r],[z[peak_r],y.max()],pen = 'g')
-    
+
+def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_pot,app_ctr):
+
+    ax_ctr.plot(app_ctr.int_range_bkg,pen="r",name="background",clear = True)
+    ax_ctr.plot(np.array(app_ctr.int_range) + np.array(app_ctr.int_range_bkg),pen="w")
+
+    #plot_index = [i for i in range(len(data['mask_ctr'])) if data['mask_ctr'][i]==True]
+    #imge_no = [data['image_no'][i] for i in plot_index]
+    #L_list = [data['L'][i] for i in plot_index]
+    #potential = [data['potential'][i] for i in plot_index]
+    #peak_intensity = [data['peak_intensity'][i] for i in plot_index]
+    #peak_intensity_error = [data['peak_intensity_error'][i] for i in plot_index]
+
+    #print(np.array(data['image_no'])[plot_index].shape)
+    ax_pot.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],app_ctr.data[app_ctr.img_loader.scan_number]['intensity'],clear = True)
+
 
 def plot_bkg_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_pot,data, fit_bkg_object, plot_final = False):
     z = fit_bkg_object.fit_data['y_bkg'][:,0]

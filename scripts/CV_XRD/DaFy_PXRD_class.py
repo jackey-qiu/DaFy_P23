@@ -356,12 +356,20 @@ class run_app(object):
         else:
             keys = ['2theta','intensity','intensity_without_bkg','potential','current']
         #print(keys)
-        data = {key:self.data[self.img_loader.scan_number][key] for key in keys}
-        df = pd.DataFrame(data)
-        if path.endswith('.xlsx'):          
-            df.to_excel(path)
+        if hasattr(self,'writer'):
+            pass
         else:
-            df.to_excel(path+'.xlsx')
+            self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
+        data = {key:self.data[self.img_loader.scan_number][key] for key in keys}
+        data['scan_number'] = [self.img_loader.scan_number]*len(data['current'])
+        df = pd.DataFrame(data)
+        #with pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a') as writer:
+        df.to_excel(self.writer,sheet_name='scan{}'.format(self.img_loader.scan_number),columns = ['scan_number']+keys)
+        self.writer.save()
+        #if path.endswith('.xlsx'):          
+        #    df.to_excel(path,columns = ['scan_number']+keys)
+        #else:
+        #    df.to_excel(path+'.xlsx',columns = ['scan_number']+keys)
 
 if __name__ == "__main__":
     run_app()

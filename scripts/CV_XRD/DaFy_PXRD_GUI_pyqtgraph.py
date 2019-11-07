@@ -33,7 +33,7 @@ class MyMainWindow(QMainWindow):
         pg.setConfigOptions(imageAxisOrder='row-major')
         pg.mkQApp()
         #uic.loadUi('C:\\apps\\DaFy_P23\\scripts\\CV_XRD\\pxrd_bkg_pyqtgraph.ui',self)
-        uic.loadUi('C:\\apps\\DaFy_P23\\scripts\\CV_XRD\\ctr_bkg_pyqtgraph4_new.ui',self)
+        uic.loadUi(os.path.join(DaFy_path,'scripts','CV_XRD','ctr_bkg_pyqtgraph4_new.ui'),self)
         
         self.setWindowTitle('Data analysis factory: PXRD data analasis')
         self.app_ctr=run_app()
@@ -68,6 +68,7 @@ class MyMainWindow(QMainWindow):
 
     def save_data(self):
         data_file = os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text())
+        #self.app_ctr.save_data_file(data_file)
         try:
             self.app_ctr.save_data_file(data_file)
             self.statusbar.showMessage('Data file is saved as {}!'.format(data_file))
@@ -200,8 +201,7 @@ class MyMainWindow(QMainWindow):
         self.p2 = p2
         self.p3 = p3
         self.p4 = p4
-        if self.app_ctr.time_scan:
-            self.p5 = p5
+        self.p5 = p5
         p1.autoRange()  
 
 

@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import copy
 import scipy
+import scipy.optimize as opt
 try:
     from . import locate_path
 except:
@@ -26,7 +27,7 @@ matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 from VisualizationEnginePool import plot_pxrd_profile,plot_pxrd_profile_time_scan
 from DataFilterPool import create_mask, save_data_pxrd
-from FitEnginePool import fit_pot_profile,backcor
+from FitEnginePool import fit_pot_profile,backcor,model
 from util.XRD_tools import reciprocal_space_v3 as rsp
 from util.UtilityFunctions import image_generator_bkg
 from util.UtilityFunctions import scan_generator
@@ -42,7 +43,9 @@ class run_app(object):
         self.stop = True
         self.conf_file = None
         self.data = {}
+        self.model = model
         self.int_range = []
+        self.current_frame = 0
         self.int_range_bkg = []
         self.data_path = os.path.join(DaFy_path,'data')
         self.conf_path_temp = os.path.join(DaFy_path,'config','config_p23_pxrd_new.ini')
@@ -69,6 +72,7 @@ class run_app(object):
         self.kwarg_image = extract_vars_from_config(self.conf_file, section_var = 'Image_Loader')
         self.kwarg_mask = extract_vars_from_config(self.conf_file,section_var = 'Mask')
         self.kwarg_bkg = extract_vars_from_config(self.conf_file,section_var = 'Background_Subtraction')
+        self.kwarg_peak_fit = extract_vars_from_config(self.conf_file,section_var = 'Peak_Fit')
 
         #recal clip_boundary and cen(you need to remove the edges)
         self.ver_offset = self.clip_width['ver']
@@ -78,19 +82,30 @@ class run_app(object):
 
         #init peak fit, bkg subtraction and reciprocal space and image loader instance
         self.img_loader = nexus_image_loader(clip_boundary = self.clip_boundary, kwarg = self.kwarg_image)
+        
         self.create_mask_new = create_mask(kwarg = self.kwarg_mask)
 
         #build generator funcs
         self._scans = scan_generator(scans = self.scan_nos)
         self._images = image_generator_bkg(self._scans,self.img_loader,self.create_mask_new)
+        
 
     def run_script(self):
         try:
+            t1=time.time()
             img = next(self._images)
+            self.current_frame = self.img_loader.frame_number
             self.img = img
+            t2=time.time()
             self.merge_data_image_loader()
+            t3=time.time()
             self.fit_background()
+            t4=time.time()
             self._merge_data_bkg(tweak = False)
+            if self.time_scan:
+                self.fit_peak(tweak = False)
+            t5=time.time()
+            #print(t5-t4,t4-t3,t3-t2,t2-t1)
             return True
         except:
             return False
@@ -98,53 +113,179 @@ class run_app(object):
     def run_update(self):
         self.fit_background()
         self._merge_data_bkg(tweak = True)
+        if self.time_scan:
+            self.fit_peak(tweak = True)
 
     def merge_data_image_loader(self):
         if self.img_loader.scan_number not in self.data:
             if not self.time_scan:
-                self.data[self.img_loader.scan_number] = {'2theta':[],'intensity':[],'2theta_previous':[],'intensity_previous':[]}
+                self.data[self.img_loader.scan_number] = {'2theta':[],'intensity':[],'potential':[],'current':[]}
             else:
-                self.data[self.img_loader.scan_number] = {'2theta':[],'intensity':[],'frame_number':[],'potential':[],'current':[]}
-                for i in range(len(self.delta_segment_time_scan)):
-                    self.data[img_loader.scan_number]['intensity_peak{}'.format(i+1)]=[]
+                self.data[self.img_loader.scan_number] = {'time':[],'2theta':[],'intensity':[],'frame_number':[],'potential':[],'current':[]}
+                for i in range(len(self.kwarg_peak_fit['peak_ranges'])):
+                    self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_intensity']=[]
+                    if self.kwarg_peak_fit['peak_fit'][i]:
+                        pars = ['_peak_pos','_FWHM','_amp','_lfrac','_bg_slope','_bg_offset','_pcov','_fit_status']
+                        for each in pars:
+                            self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+each]=[]
+                    else:
+                        pass
         else:
-            if self.time_scan:
-                self.data[self.img_loader.scan_number]['frame_number'].append(self.img_loader.frame_number)
-                self.data[self.img_loader.scan_number]['potential'].append(self.img_loader.potential)
-                self.data[self.img_loader.scan_number]['current'].append(self.img_loader.current)
-            else:
-                pass
+            pass
 
-    def fit_background_old(self):
+    def fit_background(self,fit_background=True):
         int_range = np.sum(self.img[:,:],axis = 1)
-        #bkg subtraction
-        n=np.array(range(len(int_range)))
-        #by default the contamination rate is 25%
-        #the algorithm may fail if the peak cover >40% of the cut profile
-        bkg_n = int(len(n)/4)
-        y_sorted = list(copy.deepcopy(int_range))
-        y_sorted.sort()
-        std_bkg =np.array(y_sorted[0:bkg_n*3]).std()/(max(y_sorted)-min(y_sorted))
-        t3=time.time()
-        int_range[np.argmin(int_range)] =  int_range[np.argmin(int_range)+1]#???what for???
-        int_range_bkg, *discard = backcor(range(len(int_range)),int_range,\
-                                            ord_cus=self.kwarg_bkg['ord_cus_s'],\
-                                            s=std_bkg*self.kwarg_bkg['ss_factor'],fct=self.kwarg_bkg['fct'])
-        self.int_range = int_range-int_range_bkg
-        self.int_range_bkg = list(int_range_bkg)
+        if fit_background:
+            #bkg subtraction
+            n=np.array(range(len(int_range)))
+            #by default the contamination rate is 25%
+            #the algorithm may fail if the peak cover >40% of the cut profile
+            bkg_n = int(len(n)/4)
+            y_sorted = list(copy.deepcopy(int_range))
+            y_sorted.sort()
+            std_bkg =np.array(y_sorted[0:bkg_n*3]).std()/(max(y_sorted)-min(y_sorted))
+            t3=time.time()
+            int_range[np.argmin(int_range)] =  int_range[np.argmin(int_range)+1]#???what for???
+            int_range_bkg, *discard = backcor(range(len(int_range)),int_range,\
+                                                ord_cus=self.kwarg_bkg['ord_cus_s'],\
+                                                s=std_bkg*self.kwarg_bkg['ss_factor'],fct=self.kwarg_bkg['fct'])
+            self.int_range = (int_range-int_range_bkg)[::-1]
+            self.int_range_bkg = list(int_range_bkg)[::-1]
+        else:
+            self.int_range = int_range[::-1]
+            self.int_range_bkg = int_range*0
 
+    def get_peak_fit_data(self,delta,data,bounds):
+        delta = np.array(delta)
+        data = np.array(data)
+        return data[np.where(delta>=bounds[0 and delta<=bounds[1]])]
 
-    def fit_background(self):
-        self.int_range = np.sum(self.img[:,:],axis = 1)
-        self.int_range_bkg=self.int_range*0
-
+    def fit_peak(self,tweak = False):
+        self.peak_fit_results, self.peak_fit_fom, self.peak_fit_status= [], [], []
+        for i in range(len(self.kwarg_peak_fit['peak_fit'])):
+            if self.kwarg_peak_fit['peak_fit'][i]:
+                fit_bounds = self.kwarg_peak_fit['peak_fit_bounds']
+                fit_bounds[0][0], fit_bounds[1][0] = self.kwarg_peak_fit['peak_ranges'][i]
+                fit_p0= [np.mean(self.kwarg_peak_fit['peak_ranges'][i])] + self.kwarg_peak_fit['peak_fit_p0'][1:]
+                xdata = self.get_peak_fit_data(delta=self.data[self.img_loader.scan_number]['2theta'],\
+                                               data = self.data[self.img_loader.scan_number]['2theta'],\
+                                               bounds = self.kwarg_peak_fit['peak_ranges'][i])
+                ydata = self.get_peak_fit_data(delta=self.data[self.img_loader.scan_number]['2theta'],\
+                                               data = self.int_range,\
+                                               bounds = self.kwarg_peak_fit['peak_ranges'][i])
+                try:
+                    fit_result,fom_result = opt.curve_fit(f=model, xdata=xdata, ydata=ydata, p0 = fit_p0, bounds = fit_bounds, max_nfev = 10000)
+                    if not tweak:
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_peak_pos'].append(fit_result[0])
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_FWHM'].append(fit_result[1])
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_amp'].append(fit_result[2])
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_lfrac'].append(fit_result[3])
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_bg_slope'].append(fit_result[4])
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_bg_offset'].append(fit_result[5])
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_fit_status'].append(True)
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_pcov'].append(fom_result)
+                    else:
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_peak_pos'][-1]=fit_result[0]
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_FWHM'][-1]=fit_result[1]
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_amp'][-1]=fit_result[2]
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_lfrac'][-1]=fit_result[3]
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_bg_slope'][-1]=fit_result[4]
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_bg_offset'][-1]=fit_result[5]
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_fit_status'][-1]=True
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_pcov'][-1]=fom_result
+                except:
+                    if not tweak:
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_peak_pos'].append(0)
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_FWHM'].append(0)
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_amp'].append(0)
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_lfrac'].append(0)
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_bg_slope'].append(0)
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_bg_offset'].append(0)
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_fit_status'].append(False)
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_pcov'].append(None)
+                    else:
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_peak_pos'][-1]=0
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_FWHM'][-1]=0
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_amp'][-1]=0
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_lfrac'][-1]=0
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_bg_slope'][-1]=0
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_bg_offset'][-1]=0
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_fit_status'][-1]=False
+                        self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_pcov'][-1]=None
+                
     def _merge_data_bkg(self, tweak = False):
+        if hasattr(self,'delta_motor'):
+            pass
+        else:
+            self.delta_motor = list(self.img_loader.extract_delta_angles())
         #run this after fit_background
         t0=time.time()
         #data_temp = pd.DataFrame(self.data[self.img_loader.scan_number])
         if not self.time_scan:
             delta = self.img_loader.motor_angles['delta']
-            delta_range = list(np.round(delta + np.arctan((self.cen[0] - np.array(range(self.dim_detector[0]-self.ver_offset*2)))*self.ps/self.sd)/np.pi*180, 4))
+            delta_range = np.round(delta + np.arctan((self.cen_clip[0] - np.array(range(self.dim_detector[0]-self.ver_offset*2)))*self.ps/self.sd)/np.pi*180, 4)[::-1]
+            self.delta_range = delta_range
+             #append results
+            if self.delta_motor[0]==delta:
+                where_is_delta = 'head'
+            else:
+                where_is_delta = self.delta_motor.index(delta)           
+            append_index_lf = None
+            append_index_rg = None
+            if where_is_delta=='head':
+                append_index_lf = 0
+                append_index_rg = len(delta_range)
+            else:
+                append_index_lf=np.argmin(abs(delta_range-self.data[self.img_loader.scan_number]['2theta'][-1]))
+                append_index_rg = len(delta_range)
+                if self.data[self.img_loader.scan_number]['2theta'][-1] == delta_range[append_index_lf]:
+                    append_index_lf = append_index_lf +1
+            if tweak:
+                current_length = len(self.data[self.img_loader.scan_number]['2theta'])
+                append_length =append_index_rg - append_index_lf
+                if append_length<0:
+                    append_length=0
+                self.data[self.img_loader.scan_number]['intensity'][current_length-append_length:current_length] = list(self.int_range[append_index_lf:append_index_rg])
+            else:
+                self.data[self.img_loader.scan_number]['2theta'] += list(delta_range[append_index_lf:append_index_rg])
+                self.data[self.img_loader.scan_number]['intensity'] += list(self.int_range[append_index_lf:append_index_rg])
+                self.data[self.img_loader.scan_number]['potential']+=[self.img_loader.potential]*len(range(append_index_lf,append_index_rg))
+                self.data[self.img_loader.scan_number]['current']+=[self.img_loader.current]*len(range(append_index_lf,append_index_rg))
+        else:
+            if len(self.data[self.img_loader.scan_number]['2theta']) == 0:
+                delta = self.img_loader.motor_angles['delta']
+                delta_range = np.round(delta + np.arctan((self.cen_clip[0] - np.array(range(self.dim_detector[0]-self.ver_offset*2)))*self.ps/self.sd)/np.pi*180, 4)[::-1]
+                
+                self.data[self.img_loader.scan_number]['2theta'] = delta_range
+                self.data[self.img_loader.scan_number]['intensity'] = self.int_range
+            else:#time scan: same 2theta value for each frame
+                self.data[self.img_loader.scan_number]['intensity'] = np.array(self.int_range)
+            k=0
+            for each_segment in self.kwarg_peak_fit['peak_ranges']:
+                index_left = np.argmin(np.abs(np.array(self.data[self.img_loader.scan_number]['2theta'])-each_segment[0]))
+                index_right = np.argmin(np.abs(np.array(self.data[self.img_loader.scan_number]['2theta'])-each_segment[1]))
+                if not tweak:
+                    self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][k]+'_intensity'].append(np.array(self.int_range)[min([index_left,index_right]):max([index_left,index_right])].sum())
+                else:
+                    self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][k]+'_intensity'][-1] = np.array(self.int_range)[min([index_left,index_right]):max([index_left,index_right])].sum()
+                k = k+1
+            if not tweak:
+                self.data[self.img_loader.scan_number]['frame_number'].append(self.img_loader.frame_number)
+                self.data[self.img_loader.scan_number]['potential'].append(self.img_loader.potential)
+                self.data[self.img_loader.scan_number]['current'].append(self.img_loader.current)
+                self.data[self.img_loader.scan_number]['time'].append(self.img_loader.motor_angles['time'])
+
+    def _merge_data_bkg_old(self, tweak = False):
+        if hasattr(self,'delta_motor'):
+            pass
+        else:
+            self.delta_motor = list(self.img_loader.extract_delta_angles())
+        #run this after fit_background
+        t0=time.time()
+        #data_temp = pd.DataFrame(self.data[self.img_loader.scan_number])
+        if not self.time_scan:
+            delta = self.img_loader.motor_angles['delta']
+            delta_range = list(np.round(delta + np.arctan((self.cen_clip[0] - np.array(range(self.dim_detector[0]-self.ver_offset*2)))*self.ps/self.sd)/np.pi*180, 4))
             #overlap_start_index = np.argmin(abs(min(delta_range)-np.array(self.data[self.img_loader.scan_number]['2theta'])))
             #overlap_end_index = np.argmin(abs(np.array(delta_range)-max(self.data[self.img_loader.scan_number]['2theta'])))
             #append results
@@ -153,27 +294,6 @@ class run_app(object):
             time_step2=0
             time_step3=0
             if not tweak:
-                '''
-                index_vec=[]
-                for each in delta_range:
-                    if each in self.data[self.img_loader.scan_number]['2theta']:
-                        index_vec.append(self.data[self.img_loader.scan_number]['2theta'].index(each))
-                    else:
-                        index_vec.append(None)
-                index_vec_modify, index_vec_append=[],[]
-                index_vec_modify_original_data = []
-                for j in range(len(index_vec)):
-                    if index_vec[j]==None:
-                        index_vec_append.append(j)
-                    else:
-                        index_vec_modify.append(j)
-                        index_vec_modify_original_data.append(index_vec[j])
-                theta_temp = np.array(self.data[self.img_loader.scan_number]['2theta'])
-                intensity_temp = np.array(self.data[self.img_loader.scan_number]['intensity'])
-                intensity_temp[index_vec_modify_original_data]=0.5*intensity_temp[index_vec_modify_original_data]+0.5*self.int_range[index_vec_modify]
-                intensity_temp=np.append(intensity_temp,self.int_range[index_vec_append])
-                theta_temp=np.append(theta_temp,np.array(delta_range)[index_vec_append])
-                '''
                 time_0=time.time()-t0
                 for j in delta_range:
                     t1=time.time()
@@ -181,7 +301,6 @@ class run_app(object):
                         t2=time.time()
                         jj = self.data[self.img_loader.scan_number]['2theta'].index(j)
                         time_step1=time_step1+t2-t1
-
                         self.data[self.img_loader.scan_number]['intensity'][jj] = 0.5*self.data[self.img_loader.scan_number]['intensity'][jj] + 0.5*self.int_range[delta_range.index(j)]
                         time_step2=time_step2+time.time()-t2
                     else:
@@ -221,74 +340,24 @@ class run_app(object):
                 else:
                     self.data[self.img_loader.scan_number]['intensity_peak{}'.format(k)][-1] = np.array(self.int_range)[min([index_left,index_right]):max([index_left,index_right])].sum()
 
-    def _merge_data_bkg_old(self, tweak = False):
-        #run this after fit_background
-        if not self.time_scan:
-            delta = self.img_loader.motor_angles['delta']
-            delta_range = list(np.round(delta + np.arctan((self.cen[0] - np.array(range(self.dim_detector[0]-self.ver_offset*2)))*self.ps/self.sd)/np.pi*180, 3))
-            #overlap_start_index = np.argmin(abs(min(delta_range)-np.array(self.data[self.img_loader.scan_number]['2theta'])))
-            #overlap_end_index = np.argmin(abs(np.array(delta_range)-max(self.data[self.img_loader.scan_number]['2theta'])))
-            #append results
-            time_step1=0
-            time_step2=0
-            time_step3=0
-            if not tweak:
-                for j in delta_range:
-                    t1=time.time()
-                    if j in self.data[self.img_loader.scan_number]['2theta']:
-                        t2=time.time()
-                        time_step1=time_step1+t2-t1
-                        #jj = np.where(np.array(self.data[self.img_loader.scan_number]['2theta'])==j)[0][0]
-                        jj = self.data[self.img_loader.scan_number]['2theta'].index(j)
-                        time_step2=time_step2+time.time()-t2
-                        
-                        self.data[self.img_loader.scan_number]['intensity'][jj] = 0.5*self.data[self.img_loader.scan_number]['intensity'][jj] + 0.5*self.int_range[delta_range.index(j)]
-                        
-                    else:
-                        self.data[self.img_loader.scan_number]['2theta'].append(j)
-                        self.data[self.img_loader.scan_number]['intensity'].append(self.int_range[delta_range.index(j)])
-                        time_step3=time_step3+time.time()-t1
-                self.data[self.img_loader.scan_number]['2theta_previous'] = copy.deepcopy(self.data[self.img_loader.scan_number]['2theta'])
-                self.data[self.img_loader.scan_number]['intensity_previous'] = copy.deepcopy(self.data[self.img_loader.scan_number]['intensity'])
-            else:
-                for j in delta_range:
-                    if j in self.data[self.img_loader.scan_number]['2theta_previous']:
-                        jj = self.data[self.img_loader.scan_number]['2theta_previous'].index(j)
-                        self.data[self.img_loader.scan_number]['intensity'][jj] = 0.5*self.data[self.img_loader.scan_number]['intensity_previous'][jj] + 0.5*self.int_range[delta_range.index(j)]
-                    else:
-                        #self.data[self.img_loader.scan_number]['2theta'].append(j)
-                        self.data[self.img_loader.scan_number]['intensity'].append(self.int_range[delta_range.index(j)])
-            print(time_step1,time_step2,time_step3)
-
-        else:
-            if len(self.data[self.img_loader.scan_number]['2theta']) == 0:
-                delta = self.img_loader.motor_angles['delta']
-                delta_range = np.round(delta + np.arctan((self.cen[0] - np.array(range(self.dim_detector[0]-self.ver_offset*2)))*self.ps/self.sd)/np.pi*180, 3)
-                self.data[self.img_loader.scan_number]['2theta'] = delta_range
-                self.data[self.img_loader.scan_number]['intensity'] = self.int_range
-            else:#time scan: same 2theta value for each frame
-                self.data[self.img_loader.scan_number]['intensity'] = np.array(self.int_range)
-            k=0
-            for each_segment in self.delta_segment_time_scan:
-                k = k+1
-                index_left = np.argmin(np.abs(np.array(self.data[self.img_loader.scan_number]['2theta'])-each_segment[0]))
-                index_right = np.argmin(np.abs(np.array(self.data[self.img_loader.scan_number]['2theta'])-each_segment[1]))
-                if not tweak:
-                    self.data[self.img_loader.scan_number]['intensity_peak{}'.format(k)].append(np.array(self.int_range)[min([index_left,index_right]):max([index_left,index_right])].sum())
-                else:
-                    self.data[self.img_loader.scan_number]['intensity_peak{}'.format(k)][-1] = np.array(self.int_range)[min([index_left,index_right]):max([index_left,index_right])].sum()
-
     def save_data_file(self,path):
         #to be finished
-        df = pd.DataFrame(self.data)
+        if self.time_scan:
+            keys = ['time','frame_number','potential','current']+[each+'_intensity' for each in self.kwarg_peak_fit['peak_ids']]
+            for i in range(len(self.kwarg_peak_fit['peak_ranges'])):
+                if self.kwarg_peak_fit['peak_fit'][i]:
+                    pars = ['_peak_pos','_FWHM','_amp','_lfrac','_bg_slope','_bg_offset','_pcov','_fit_status']
+                    for each in pars:
+                        keys.append(self.kwarg_peak_fit['peak_ids'][i]+each)
+        else:
+            keys = ['2theta','intensity','potential','current']
+        #print(keys)
+        data = {key:self.data[self.img_loader.scan_number][key] for key in keys}
+        df = pd.DataFrame(data)
         if path.endswith('.xlsx'):          
             df.to_excel(path)
         else:
             df.to_excel(path+'.xlsx')
-        #save data
-        save_data_pxrd(data=int_intensity[scan_number], scan_number=scan_number, path=DaFy_path, time_scan = time_scan)
-
-
 
 if __name__ == "__main__":
     run_app()

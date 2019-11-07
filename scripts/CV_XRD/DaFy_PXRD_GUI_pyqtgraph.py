@@ -35,7 +35,7 @@ class MyMainWindow(QMainWindow):
         #uic.loadUi('C:\\apps\\DaFy_P23\\scripts\\CV_XRD\\pxrd_bkg_pyqtgraph.ui',self)
         uic.loadUi('C:\\apps\\DaFy_P23\\scripts\\CV_XRD\\ctr_bkg_pyqtgraph4_new.ui',self)
         
-        self.setWindowTitle('Data analysis factory: CTR data analasis')
+        self.setWindowTitle('Data analysis factory: PXRD data analasis')
         self.app_ctr=run_app()
         #self.app_ctr.run()
         self.current_image_no = 0
@@ -53,8 +53,8 @@ class MyMainWindow(QMainWindow):
         self.pushButton_filePath.clicked.connect(self.locate_data_folder)
         self.lineEdit_data_file_name.setText('temp_data.xlsx')
         self.lineEdit_data_file_path.setText(self.app_ctr.data_path)
-        self.lineEdit.setText(self.app_ctr.conf_path_temp)
-        #self.update_poly_order(init_step = True)
+        #self.lineEdit.setText(self.app_ctr.conf_path_temp)
+        self.update_poly_order(init_step = True)
         for each in self.groupBox_2.findChildren(QCheckBox):
             each.released.connect(self.update_poly_order)
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
@@ -67,15 +67,13 @@ class MyMainWindow(QMainWindow):
         
 
     def save_data(self):
-        pass
-        '''
         data_file = os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text())
         try:
             self.app_ctr.save_data_file(data_file)
             self.statusbar.showMessage('Data file is saved as {}!'.format(data_file))
         except:
             self.statusbar.showMessage('Failure to save data file!')
-        '''
+
     def remove_data_point(self):
         pass
         '''
@@ -128,7 +126,10 @@ class MyMainWindow(QMainWindow):
         win.addItem(hist)
 
         # A plot area (ViewBox + axes) for displaying the image
-        p1 = win.addPlot(row=1,col=0,rowspan=3,colspan=1)
+        if self.app_ctr.time_scan:
+            p1 = win.addPlot(row=1,col=0,rowspan=4,colspan=1)
+        else:
+            p1 = win.addPlot(row=1,col=0,rowspan=3,colspan=1)
         p1.setMaximumWidth(300)
 
         # Item for displaying image data
@@ -153,7 +154,7 @@ class MyMainWindow(QMainWindow):
         self.isoLine = isoLine
         hist.vb.addItem(isoLine)
         hist.vb.setMouseEnabled(y=True) # makes user interaction a little easier
-        isoLine.setValue(0.8)
+        isoLine.setValue(0.)
         isoLine.setZValue(100000) # bring iso line above contrast controls
 
         # Another plot area for displaying ROI data
@@ -161,18 +162,23 @@ class MyMainWindow(QMainWindow):
         p2 = win.addPlot(0,1,rowspan=1,colspan=3)
         #p2.setMaximumHeight(200)
         #p2.setLogMode(y = True)
-
+        
 
         # plot to show intensity over time
         #win.nextRow()
         p3 = win.addPlot(1,1,rowspan=1,colspan=3)
+        #p3.addLegend()
         p3.setMaximumHeight(200)
-
+        #
 
         # plot to show intensity over time
         #win.nextRow()
         p4 = win.addPlot(2,1,rowspan=1,colspan=3)
         p4.setMaximumHeight(200)
+
+        if self.app_ctr.time_scan:
+            p5 = win.addPlot(3,1,rowspan=1,colspan=3)
+            p5.setMaximumHeight(200)
 
         # Generate image data
         #data = np.random.normal(size=(500, 600))
@@ -194,6 +200,8 @@ class MyMainWindow(QMainWindow):
         self.p2 = p2
         self.p3 = p3
         self.p4 = p4
+        if self.app_ctr.time_scan:
+            self.p5 = p5
         p1.autoRange()  
 
 
@@ -207,8 +215,9 @@ class MyMainWindow(QMainWindow):
                 #selected = roi.getArrayRegion(data, self.img_pyqtgraph)
                 pass
             #p2.plot(selected.sum(axis=1), clear=True)
-            p2.plot(self.app_ctr.int_range,clear=True)
-            p2.plot([0,len(self.app_ctr.int_range)],[0,0],pen='r')
+            self.app_ctr.run_update()
+            #p2.plot(self.app_ctr.int_range,clear=True)
+            #p2.plot([0,len(self.app_ctr.int_range)],[0,0],pen='r')
             #self.reset_peak_center_and_width()
             #self.app_ctr.run_update()
             ##update iso curves
@@ -224,11 +233,19 @@ class MyMainWindow(QMainWindow):
             '''
             #print(isoLine.value(),self.current_image_no)
             #plot others
-            plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.app_ctr)
-            #self.lcdNumber_potential.display(self.app_ctr.data['potential'][-1])
-            #self.lcdNumber_current.display(self.app_ctr.data['current'][-1])
-            #self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-1])
+            if self.app_ctr.time_scan:
+                plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.p5,self.app_ctr)
+            else:
+                plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4, None, self.app_ctr)
+            try:
+                self.lcdNumber_potential.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['potential'][-1])
+                self.lcdNumber_current.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['current'][-1])
+                self.lcdNumber_intensity.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['peak_intensity'][-1])
+            except:
+                pass
             self.lcdNumber_iso.display(isoLine.value())
+            #p4.setLimits(xMin=12,xMax=18,yMin=0)
+            #p4.autoRange()
 
         def updatePlot_after_remove_point():
             #global data
@@ -284,11 +301,9 @@ class MyMainWindow(QMainWindow):
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
         if fileName:
             self.lineEdit.setText(fileName)
-            self.app_ctr.run(self.lineEdit.text())
+            #self.app_ctr.run(self.lineEdit.text())
             self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
-            #self.current_image_no = 0
-            #self.current_scan_number = self.app_ctr.img_loader.scan_number
-            self.plot_()
+            #self.plot_()
             with open(fileName,'r') as f:
                 self.textEdit.setText(f.read())
 
@@ -300,12 +315,17 @@ class MyMainWindow(QMainWindow):
             self.lineEdit_data_file_path.setText(os.path.dirname(fileName))
 
     def rload_file(self):
-        self.app_ctr.run(self.lineEdit.text())
-        self.timer_save_data.stop()
-        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
-        #self.current_image_no = 0
-        #self.current_scan_number = self.app_ctr.img_loader.scan_number
-        self.plot_()
+        self.save_file()
+        try:
+            self.app_ctr.run(self.lineEdit.text())
+            self.timer_save_data.stop()
+            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            #self.current_image_no = 0
+            #self.current_scan_number = self.app_ctr.img_loader.scan_number
+            self.plot_()
+            self.statusbar.showMessage('Initialization succeed!')
+        except:
+            self.statusbar.showMessage('Initialization failed!')
 
     def save_file_as(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "Text documents (*.txt);All files (*.*)")
@@ -316,9 +336,12 @@ class MyMainWindow(QMainWindow):
 
     def save_file(self):
         text = self.textEdit.toPlainText()
-        with open(self.lineEdit.text(), 'w') as f:
-            f.write(text)
-        self.statusbar.showMessage('Config file is saved with the same file name!')
+        if text=='':
+            self.statusbar.showMessage('Text editor is empty. Config file is not saved!')
+        else:
+            with open(self.lineEdit.text(), 'w') as f:
+                f.write(text)
+            self.statusbar.showMessage('Config file is saved with the same file name!')
 
     def plot_figure(self):
         self.timer = QtCore.QTimer(self)
@@ -340,7 +363,10 @@ class MyMainWindow(QMainWindow):
                     self.p1.autoRange() 
                 self.hist.setLevels(self.app_ctr.img.min(), self.app_ctr.img.mean()*10)
                 self.updatePlot()
-                plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4, self.app_ctr)
+                if self.app_ctr.time_scan:
+                    plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4, self.p5, self.app_ctr)
+                else:
+                    plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4, None, self.app_ctr)
 
             if return_value:
                 self.statusbar.clearMessage()

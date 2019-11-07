@@ -32,7 +32,7 @@ class MyMainWindow(QMainWindow):
         super(MyMainWindow, self).__init__(parent)
         pg.setConfigOptions(imageAxisOrder='row-major')
         pg.mkQApp()
-        uic.loadUi('C:\\apps\\DaFy_P23\\scripts\\CV_XRD\\ctr_bkg_pyqtgraph3_new.ui',self)
+        uic.loadUi('C:\\apps\\DaFy_P23\\scripts\\CV_XRD\\ctr_bkg_pyqtgraph4_new.ui',self)
         self.setWindowTitle('Data analysis factory: CTR data analasis')
         self.app_ctr=run_app()
         #self.app_ctr.run()

@@ -686,6 +686,7 @@ class nexus_image_loader(object):
                     self.clip_boundary['hor'][0]:self.clip_boundary['hor'][1]]
             #normalized the intensity by the monitor and trams counters
             yield img/self.motor_angles['mon']/self.motor_angles['transm']
+            #yield img/self.motor_angles['transm']/200000
             frame_number +=1
 
 
@@ -698,22 +699,37 @@ class nexus_image_loader(object):
         #data=nxload(img_path)
         motors={}
         motor_names = ['phi', 'chi', 'delta', 'gamma', 'mu', 'omega_t']
-        for motor in self.constant_motors:
-            motors[motor] = self.constant_motors[motor]
+        #for motor in self.constant_motors:
+        #    motors[motor] = self.constant_motors[motor]
         for motor in motor_names:
-            if motor not in motors.keys():
+            #if motor not in motors.keys():
+            try:#use those from nexus file if it is presence
                 fetch_path = 'scan/data/{}'.format(motor)
                 motors[motor] = np.array(self.nexus_data[fetch_path])[frame_number]
+            except:#if not then use the constant motor angles
+                motors[motor] = self.constant_motors[motor]
         motors['mon'] = np.array(self.nexus_data['scan/data/eh_c01'])[frame_number]
         try:
             motors['transm']=1./np.array(self.nexus_data['scan/data/atten'])[frame_number]
         except:
             motors['transm']=np.array(self.nexus_data['scan/data/lmbd_countsroi1'])[frame_number]/np.array(self.nexus_data['scan/data/lmbd_countsroi1_atten'])[frame_number]
-
+        try:
+            motors['time'] = np.array(self.nexus_data['scan/data/timestamp'])[frame_number]
+        except:
+            motors['time'] = sum(np.array(self.nexus_data['scan/data/eh_t01'])[0:frame_number])
         self.motor_angles = motors
         #self.motor_angles['transm'] = 1
         #self.motor_angles['mon'] =1
         return motors
+
+    def extract_delta_angles(self):
+        #img_name='{}_{:0>5}.nxs'.format(self.frame_prefix,scan_number)
+        #img_path=os.path.join(self.nexus_path,img_name)
+        #data=nxload(img_path)
+        try:
+            return np.array(self.nexus_data['scan/data/{}'.format('delta')])
+        except:
+            return [self.constant_motors['delta']]
 
     def update_motor_angles_in_data(self,data):
         for motor in self.motor_angles:

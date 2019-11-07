@@ -119,7 +119,7 @@ class run_app(object):
     def merge_data_image_loader(self):
         if self.img_loader.scan_number not in self.data:
             if not self.time_scan:
-                self.data[self.img_loader.scan_number] = {'2theta':[],'intensity':[],'potential':[],'current':[]}
+                self.data[self.img_loader.scan_number] = {'2theta':[],'intensity':[],'intensity_without_bkg':[],'potential':[],'current':[]}
             else:
                 self.data[self.img_loader.scan_number] = {'time':[],'2theta':[],'intensity':[],'frame_number':[],'potential':[],'current':[]}
                 for i in range(len(self.kwarg_peak_fit['peak_ranges'])):
@@ -151,9 +151,11 @@ class run_app(object):
                                                 s=std_bkg*self.kwarg_bkg['ss_factor'],fct=self.kwarg_bkg['fct'])
             self.int_range = (int_range-int_range_bkg)[::-1]
             self.int_range_bkg = list(int_range_bkg)[::-1]
+            self.int_range_without_bkg = int_range[::-1]
         else:
-            self.int_range = int_range[::-1]
-            self.int_range_bkg = int_range*0
+            pass
+            #self.int_range = int_range[::-1]
+            #self.int_range_bkg = int_range*0
 
     def get_peak_fit_data(self,delta,data,bounds):
         delta = np.array(delta)
@@ -246,9 +248,11 @@ class run_app(object):
                 if append_length<0:
                     append_length=0
                 self.data[self.img_loader.scan_number]['intensity'][current_length-append_length:current_length] = list(self.int_range[append_index_lf:append_index_rg])
+                self.data[self.img_loader.scan_number]['intensity_without_bkg'][current_length-append_length:current_length] = list(self.int_range_without_bkg[append_index_lf:append_index_rg])
             else:
                 self.data[self.img_loader.scan_number]['2theta'] += list(delta_range[append_index_lf:append_index_rg])
                 self.data[self.img_loader.scan_number]['intensity'] += list(self.int_range[append_index_lf:append_index_rg])
+                self.data[self.img_loader.scan_number]['intensity_without_bkg'] += list(self.int_range_without_bkg[append_index_lf:append_index_rg])
                 self.data[self.img_loader.scan_number]['potential']+=[self.img_loader.potential]*len(range(append_index_lf,append_index_rg))
                 self.data[self.img_loader.scan_number]['current']+=[self.img_loader.current]*len(range(append_index_lf,append_index_rg))
         else:
@@ -350,7 +354,7 @@ class run_app(object):
                     for each in pars:
                         keys.append(self.kwarg_peak_fit['peak_ids'][i]+each)
         else:
-            keys = ['2theta','intensity','potential','current']
+            keys = ['2theta','intensity','intensity_without_bkg','potential','current']
         #print(keys)
         data = {key:self.data[self.img_loader.scan_number][key] for key in keys}
         df = pd.DataFrame(data)

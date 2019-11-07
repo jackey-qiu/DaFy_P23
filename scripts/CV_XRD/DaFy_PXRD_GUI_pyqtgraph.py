@@ -176,9 +176,9 @@ class MyMainWindow(QMainWindow):
         p4 = win.addPlot(2,1,rowspan=1,colspan=3)
         p4.setMaximumHeight(200)
 
-        if self.app_ctr.time_scan:
-            p5 = win.addPlot(3,1,rowspan=1,colspan=3)
-            p5.setMaximumHeight(200)
+        #if self.app_ctr.time_scan:
+        p5 = win.addPlot(3,1,rowspan=1,colspan=3)
+        p5.setMaximumHeight(200)
 
         # Generate image data
         #data = np.random.normal(size=(500, 600))
@@ -236,7 +236,7 @@ class MyMainWindow(QMainWindow):
             if self.app_ctr.time_scan:
                 plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.p5,self.app_ctr)
             else:
-                plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4, None, self.app_ctr)
+                plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, None,self.p4, self.app_ctr)
             try:
                 self.lcdNumber_potential.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['potential'][-1])
                 self.lcdNumber_current.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['current'][-1])
@@ -366,7 +366,7 @@ class MyMainWindow(QMainWindow):
                 if self.app_ctr.time_scan:
                     plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4, self.p5, self.app_ctr)
                 else:
-                    plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4, None, self.app_ctr)
+                    plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, None, self.p4, self.app_ctr)
 
             if return_value:
                 self.statusbar.clearMessage()

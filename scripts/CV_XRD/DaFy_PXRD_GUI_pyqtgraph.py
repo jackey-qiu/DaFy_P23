@@ -31,7 +31,7 @@ class MyMainWindow(QMainWindow):
     def __init__(self, parent = None):
         super(MyMainWindow, self).__init__(parent)
         pg.setConfigOptions(imageAxisOrder='row-major')
-        pg.mkQApp()
+        #pg.mkQApp()
         #uic.loadUi('C:\\apps\\DaFy_P23\\scripts\\CV_XRD\\pxrd_bkg_pyqtgraph.ui',self)
         uic.loadUi(os.path.join(DaFy_path,'scripts','CV_XRD','ctr_bkg_pyqtgraph4_new.ui'),self)
         
@@ -115,7 +115,7 @@ class MyMainWindow(QMainWindow):
 
     def setup_image(self):
         # Interpret image data as row-major instead of col-major
-        global img, roi, data, isoLine, iso
+        global img, roi, data, isoLine, iso,region
         win = self.widget_image
         #win.setWindowTitle('pyqtgraph example: Image Analysis')
         #iso.setZValue(5)
@@ -160,14 +160,37 @@ class MyMainWindow(QMainWindow):
 
         # Another plot area for displaying ROI data
         #win.nextColumn()
-        p2 = win.addPlot(0,1,rowspan=1,colspan=3)
+        p2 = win.addPlot(0,1,rowspan=1,colspan=1)
+        p2.setMaximumWidth(400)
         #p2.setMaximumHeight(200)
         #p2.setLogMode(y = True)
-        
+
+        region = pg.LinearRegionItem()
+        region.setZValue(10)
+        region.setRegion([10, 15])
+        # Add the LinearRegionItem to the ViewBox, but tell the ViewBox to exclude this 
+        # item when doing auto-range calculations.
+
+
+        #monitor window
+        p2_mon = win.addPlot(0,2,rowspan=1, colspan=2)
+
+        def update():
+            region.setZValue(10)
+            region.show()
+            minX, maxX = region.getRegion()
+            #save the bounds of shape area for plotting in monitor window
+            self.region_bounds = [minX, maxX]
+            p2_mon.setXRange(minX, maxX, padding=0)    
+        region.sigRegionChanged.connect(update)
 
         # plot to show intensity over time
         #win.nextRow()
         p3 = win.addPlot(1,1,rowspan=1,colspan=3)
+        if self.app_ctr.time_scan:
+            p2.addItem(region, ignoreBounds=True)
+        else:
+            p3.addItem(region, ignoreBounds=True)
         #p3.addLegend()
         p3.setMaximumHeight(200)
         #
@@ -202,41 +225,23 @@ class MyMainWindow(QMainWindow):
         self.p3 = p3
         self.p4 = p4
         self.p5 = p5
+        self.p2_mon = p2_mon       
         p1.autoRange()  
-
 
         # Callbacks for handling user interaction
         def updatePlot():
-            #global data
-            #selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
             try:
                 selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
             except:
-                #selected = roi.getArrayRegion(data, self.img_pyqtgraph)
                 pass
-            #p2.plot(selected.sum(axis=1), clear=True)
             self.app_ctr.run_update()
-            #p2.plot(self.app_ctr.int_range,clear=True)
-            #p2.plot([0,len(self.app_ctr.int_range)],[0,0],pen='r')
-            #self.reset_peak_center_and_width()
-            #self.app_ctr.run_update()
-            ##update iso curves
-            '''
-            x, y = [int(each) for each in self.roi.pos()]
-            w, h = [int(each) for each in self.roi.size()]
-            self.iso.setData(pg.gaussianFilter(self.app_ctr.img, (2, 2)))
-            self.iso.setPos(x,y)
-            if self.app_ctr.img_loader.frame_number ==0:
-                isoLine.setValue(self.app_ctr.img[y:(y+h),x:(x+w)].mean())
-            else:
-                pass
-            '''
-            #print(isoLine.value(),self.current_image_no)
-            #plot others
             if self.app_ctr.time_scan:
-                plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.p5,self.app_ctr)
+                plot_pxrd_fit_gui_pyqtgraph([self.p2_mon,self.p2], self.p3, self.p4,self.p5,self.app_ctr)
+                self.p2.addItem(region, ignoreBounds=True)#re-add the region item
             else:
-                plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, None,self.p4, self.app_ctr)
+                plot_pxrd_fit_gui_pyqtgraph([self.p2_mon,self.p2], self.p3, None,self.p4, self.app_ctr)
+                self.p3.addItem(region, ignoreBounds=True)
+                #region.setRegion(self.region_bounds)#re-add the region item
             try:
                 self.lcdNumber_potential.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['potential'][-1])
                 self.lcdNumber_current.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['current'][-1])
@@ -244,10 +249,8 @@ class MyMainWindow(QMainWindow):
             except:
                 pass
             self.lcdNumber_iso.display(isoLine.value())
-            #p4.setLimits(xMin=12,xMax=18,yMin=0)
-            #p4.autoRange()
-
-        def updatePlot_after_remove_point():
+            
+        def updatePlot_after_remove_point():#not implemented for PXRD
             #global data
             try:
                 selected = roi.getArrayRegion(self.app_ctr.bkg_sub.img, self.img_pyqtgraph)
@@ -282,9 +285,7 @@ class MyMainWindow(QMainWindow):
             global isoLine, iso
             iso.setLevel(isoLine.value())
             self.lcdNumber_iso.display(isoLine.value())
-
         self.updateIsocurve = updateIsocurve
-
         isoLine.sigDragged.connect(updateIsocurve)
 
     def stop_func(self):
@@ -301,9 +302,7 @@ class MyMainWindow(QMainWindow):
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
         if fileName:
             self.lineEdit.setText(fileName)
-            #self.app_ctr.run(self.lineEdit.text())
             self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
-            #self.plot_()
             with open(fileName,'r') as f:
                 self.textEdit.setText(f.read())
 
@@ -316,12 +315,11 @@ class MyMainWindow(QMainWindow):
 
     def rload_file(self):
         self.save_file()
+        #self.region_bounds = [0,1]
         try:
             self.app_ctr.run(self.lineEdit.text())
             self.timer_save_data.stop()
             self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
-            #self.current_image_no = 0
-            #self.current_scan_number = self.app_ctr.img_loader.scan_number
             self.plot_()
             self.statusbar.showMessage('Initialization succeed!')
         except:
@@ -361,21 +359,14 @@ class MyMainWindow(QMainWindow):
                 self.img_pyqtgraph.setImage(self.app_ctr.img)
                 if self.app_ctr.img_loader.frame_number == 0:
                     self.p1.autoRange() 
-                self.hist.setLevels(self.app_ctr.img.min(), self.app_ctr.img.mean()*10)
+                self.hist.setLevels(self.app_ctr.img.min(), self.app_ctr.img.mean()*5)
                 self.updatePlot()
-                if self.app_ctr.time_scan:
-                    plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4, self.p5, self.app_ctr)
-                else:
-                    plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, None, self.p4, self.app_ctr)
 
             if return_value:
                 self.statusbar.clearMessage()
                 self.statusbar.showMessage('Working on scan{}: we are now at frame{} of {} frames in total!'.format(self.app_ctr.img_loader.scan_number,self.app_ctr.img_loader.frame_number+1,self.app_ctr.img_loader.total_frame_number))
                 self.progressBar.setValue((self.app_ctr.img_loader.frame_number+1)/float(self.app_ctr.img_loader.total_frame_number)*100)
                 self.lcdNumber_frame_number.display(self.app_ctr.img_loader.frame_number+1)
-                #self.app_ctr.img_loader.frame_number
-                #self.current_image_no += 1
-
             else:
                 self.timer.stop()
                 self.stop = False

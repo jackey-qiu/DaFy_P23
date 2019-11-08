@@ -325,7 +325,6 @@ class run_app(object):
                         self.data[self.img_loader.scan_number]['intensity'].append(self.int_range[delta_range.index(j)])
             #self.data[self.img_loader.scan_number]=data_temp
             
-
         else:
             if len(self.data[self.img_loader.scan_number]['2theta']) == 0:
                 delta = self.img_loader.motor_angles['delta']
@@ -359,17 +358,19 @@ class run_app(object):
         if hasattr(self,'writer'):
             pass
         else:
-            self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
+            try:
+                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
+            except:
+                df_temp = pd.DataFrame({})
+                writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
+                df_temp.to_excel(writer_temp)
+                writer_temp.save()
+                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
         data = {key:self.data[self.img_loader.scan_number][key] for key in keys}
         data['scan_number'] = [self.img_loader.scan_number]*len(data['current'])
         df = pd.DataFrame(data)
-        #with pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a') as writer:
         df.to_excel(self.writer,sheet_name='scan{}'.format(self.img_loader.scan_number),columns = ['scan_number']+keys)
         self.writer.save()
-        #if path.endswith('.xlsx'):          
-        #    df.to_excel(path,columns = ['scan_number']+keys)
-        #else:
-        #    df.to_excel(path+'.xlsx',columns = ['scan_number']+keys)
 
 if __name__ == "__main__":
     run_app()

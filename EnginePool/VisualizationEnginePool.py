@@ -242,17 +242,29 @@ def replot_bkg_profile(ax_profile, data, fit_bkg_object, plot_final = False):
     ax_profile.plot([peak_r,peak_r],[z[peak_r],y.max()],pen = 'g')
 
 def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_strain, ax_pot,app_ctr):
+    ax_profile_mon,ax_profile = ax_profile
     if not app_ctr.time_scan:
         ax_profile.plot(app_ctr.delta_range,app_ctr.int_range_bkg,pen="r",name="background",clear = True)
         ax_profile.plot(app_ctr.delta_range,np.array(app_ctr.int_range) + np.array(app_ctr.int_range_bkg),pen="w")
+
+        #ax_profile_mon.plot(app_ctr.delta_range,app_ctr.int_range_bkg,pen="r",name="background",clear = True)
+        #ax_profile_mon.plot(app_ctr.delta_range,np.array(app_ctr.int_range) + np.array(app_ctr.int_range_bkg),pen="w")
+
         #print(np.array(data['image_no'])[plot_index].shape)
         ax_ctr.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],app_ctr.data[app_ctr.img_loader.scan_number]['intensity'],clear = True)
+        ax_profile_mon.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],app_ctr.data[app_ctr.img_loader.scan_number]['intensity'],clear = True)
         ax_pot.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],app_ctr.data[app_ctr.img_loader.scan_number]['potential'])
     else:
         ax_profile.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],app_ctr.int_range_bkg,pen="r",name="background",clear = True)
         ax_profile.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],np.array(app_ctr.int_range) + np.array(app_ctr.int_range_bkg),pen="w")
         ax_profile.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],np.array(app_ctr.int_range),pen="w")
         ax_profile.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],np.array(app_ctr.int_range)*0,pen="g")
+
+        ax_profile_mon.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],app_ctr.int_range_bkg,pen="r",name="background",clear = True)
+        ax_profile_mon.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],np.array(app_ctr.int_range) + np.array(app_ctr.int_range_bkg),pen="w")
+        ax_profile_mon.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],np.array(app_ctr.int_range),pen="w",clear = True)
+        ax_profile_mon.plot(app_ctr.data[app_ctr.img_loader.scan_number]['2theta'],np.array(app_ctr.int_range)*0,pen="g")
+
         max_int = max(np.array(app_ctr.int_range))
         y_values = [0,max_int]
         for i in range(len(app_ctr.kwarg_peak_fit['peak_ranges'])):
@@ -260,6 +272,8 @@ def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_strain, ax_pot,app_ctr):
             left, right =[line_segment[0]]*2,[line_segment[1]]*2
             ax_profile.plot(left,y_values,pen=app_ctr.kwarg_peak_fit['colors'][i])
             ax_profile.plot(right,y_values,pen=app_ctr.kwarg_peak_fit['colors'][i])
+            ax_profile_mon.plot(left,y_values,pen=app_ctr.kwarg_peak_fit['colors'][i])
+            ax_profile_mon.plot(right,y_values,pen=app_ctr.kwarg_peak_fit['colors'][i])
             if app_ctr.kwarg_peak_fit['peak_fit'][i]:
                 x = np.arange(line_segment[0]-0.2, line_segment[1]+0.2,0.01)
                 par_labels = ['_peak_pos','_FWHM','_amp','_lfrac','_bg_slope','_bg_offset']
@@ -267,6 +281,7 @@ def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_strain, ax_pot,app_ctr):
                 y = app_ctr.model(x,*pars)
                 #print(x,y)
                 ax_profile.plot(x,y,pen=app_ctr.kwarg_peak_fit['colors'][i])
+                ax_profile_mon.plot(x,y,pen=app_ctr.kwarg_peak_fit['colors'][i])
         clear = True
         for i in range(len(app_ctr.kwarg_peak_fit['peak_ranges'])):
             if app_ctr.kwarg_peak_fit['peak_fit'][i]:

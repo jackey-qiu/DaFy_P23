@@ -295,7 +295,7 @@
          <item>
           <widget class="QSpinBox" name="spinBox_save_frequency">
            <property name="value">
-            <number>10</number>
+            <number>60</number>
            </property>
           </widget>
          </item>

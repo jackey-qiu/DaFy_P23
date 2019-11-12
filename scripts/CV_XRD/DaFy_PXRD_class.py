@@ -49,7 +49,7 @@ class run_app(object):
         self.int_range_bkg = []
         self.data_path = os.path.join(DaFy_path,'data')
         self.conf_path_temp = os.path.join(DaFy_path,'config','config_p23_pxrd_new.ini')
-        self.run()
+        #self.run()
 
     def run(self, config = 'C:\\apps\\DaFy_P23\\config\\config_p23_pxrd_new.ini'):
         #extract global vars from config
@@ -62,7 +62,6 @@ class run_app(object):
         
         for each in self.kwarg_global:
             setattr(self,each,self.kwarg_global[each])
-
         if self.time_scan:
             self.plot_pxrd = plot_pxrd_profile_time_scan
         else:

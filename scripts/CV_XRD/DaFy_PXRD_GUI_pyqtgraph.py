@@ -32,9 +32,7 @@ class MyMainWindow(QMainWindow):
         super(MyMainWindow, self).__init__(parent)
         pg.setConfigOptions(imageAxisOrder='row-major')
         #pg.mkQApp()
-        #uic.loadUi('C:\\apps\\DaFy_P23\\scripts\\CV_XRD\\pxrd_bkg_pyqtgraph.ui',self)
         uic.loadUi(os.path.join(DaFy_path,'scripts','CV_XRD','ctr_bkg_pyqtgraph4_new.ui'),self)
-        
         self.setWindowTitle('Data analysis factory: PXRD data analasis')
         self.app_ctr=run_app()
         #self.app_ctr.run()
@@ -54,14 +52,14 @@ class MyMainWindow(QMainWindow):
         self.lineEdit_data_file_name.setText('temp_data.xlsx')
         self.lineEdit_data_file_path.setText(self.app_ctr.data_path)
         #self.lineEdit.setText(self.app_ctr.conf_path_temp)
-        self.update_poly_order(init_step = True)
+        #self.update_poly_order(init_step = True)
         for each in self.groupBox_2.findChildren(QCheckBox):
             each.released.connect(self.update_poly_order)
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
             each.toggled.connect(self.update_cost_func)
         self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
         self.doubleSpinBox_ss_factor.valueChanged.connect(self.update_ss_factor)
-        self.setup_image()
+        #self.setup_image()
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_data)
         
@@ -302,7 +300,7 @@ class MyMainWindow(QMainWindow):
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
         if fileName:
             self.lineEdit.setText(fileName)
-            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            #self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
             with open(fileName,'r') as f:
                 self.textEdit.setText(f.read())
 
@@ -314,10 +312,10 @@ class MyMainWindow(QMainWindow):
             self.lineEdit_data_file_path.setText(os.path.dirname(fileName))
 
     def rload_file(self):
-        self.save_file()
-        #self.region_bounds = [0,1]
+        self.save_file()     
         try:
             self.app_ctr.run(self.lineEdit.text())
+            self.setup_image()
             self.timer_save_data.stop()
             self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
             self.plot_()
@@ -342,6 +340,7 @@ class MyMainWindow(QMainWindow):
             self.statusbar.showMessage('Config file is saved with the same file name!')
 
     def plot_figure(self):
+        #auto plotting timmer
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.plot_)
         self.timer.start(5)

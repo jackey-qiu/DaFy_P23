@@ -242,6 +242,7 @@ def replot_bkg_profile(ax_profile, data, fit_bkg_object, plot_final = False):
     ax_profile.plot([peak_r,peak_r],[z[peak_r],y.max()],pen = 'g')
 
 def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_strain, ax_pot,app_ctr):
+
     ax_profile_mon,ax_profile = ax_profile
     if not app_ctr.time_scan:
         ax_profile.plot(app_ctr.delta_range,app_ctr.int_range_bkg,pen="r",name="background",clear = True)
@@ -285,14 +286,18 @@ def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_strain, ax_pot,app_ctr):
         clear = True
         for i in range(len(app_ctr.kwarg_peak_fit['peak_ranges'])):
             if app_ctr.kwarg_peak_fit['peak_fit'][i]:
-                y = app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_peak_pos']
-                ax_strain.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],y,pen=app_ctr.kwarg_peak_fit['colors'][i],clear=clear)
+                #y = app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_peak_pos']
+                y = app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_{}'.format(app_ctr.p4_data_source)]
+                ax_strain.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],y,pen=app_ctr.kwarg_peak_fit['colors'][i],name = app_ctr.kwarg_peak_fit['peak_ids'][i],clear=clear)
                 clear = False
+
         for i in range(len(app_ctr.kwarg_peak_fit['peak_ids'])):
-            ax_ctr.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity'],name=app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity',pen=app_ctr.kwarg_peak_fit['colors'][i],clear = i==0)
+            if app_ctr.kwarg_peak_fit['peak_fit'][i]:
+                ax_ctr.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity'],name=app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity',pen=app_ctr.kwarg_peak_fit['colors'][i],clear = i==0)
         
         #ax_ctr.addLegend()
-        ax_pot.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number]['potential'],clear = True)
+        #ax_pot.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number]['potential'],clear = True)
+        ax_pot.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.p5_data_source],clear = True)
 
 def plot_pxrd_fit_gui_pyqtgraph_old(ax_profile, ax_ctr, ax_pot,app_ctr):
     if not app_ctr.time_scan:

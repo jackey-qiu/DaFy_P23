@@ -689,7 +689,6 @@ class nexus_image_loader(object):
             #yield img/self.motor_angles['transm']/200000
             frame_number +=1
 
-
     def extract_beam_mon_ct(self,mon_path = 'scan/data/eh_c01'):
         return np.array(self.nexus_data['scan/data/eh_c01'])
 

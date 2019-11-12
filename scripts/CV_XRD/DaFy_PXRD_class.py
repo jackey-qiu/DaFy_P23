@@ -47,6 +47,7 @@ class run_app(object):
         self.int_range = []
         self.current_frame = 0
         self.int_range_bkg = []
+        self.spikes_bounds = None
         self.data_path = os.path.join(DaFy_path,'data')
         self.conf_path_temp = os.path.join(DaFy_path,'config','config_p23_pxrd_new.ini')
         #self.run()
@@ -91,15 +92,11 @@ class run_app(object):
 
     def run_script(self):
         try:
-            t1=time.time()
             img = next(self._images)
             self.current_frame = self.img_loader.frame_number
             self.img = img
-            t2=time.time()
             self.merge_data_image_loader()
-            t3=time.time()
             self.fit_background()
-            t4=time.time()
             self._merge_data_bkg(tweak = False)
             if self.time_scan:
                 self.fit_peak(tweak = False)
@@ -157,9 +154,18 @@ class run_app(object):
             #self.int_range_bkg = int_range*0
 
     def get_peak_fit_data(self,delta,data,bounds):
+        spikes = self.spikes_bounds
         delta = np.array(delta)
         data = np.array(data)
-        return data[np.where(delta>=bounds[0 and delta<=bounds[1]])]
+        if spikes is not None:
+            if spikes[0]>bounds[0] and spikes[1]<bounds[1]:
+                return data[np.where(((delta>=bounds[0]) & (delta<=spikes[0]))|((delta>=spikes[1]) & (delta<=bounds[1])))]
+            else:
+                return data[np.where((delta>=bounds[0]) & (delta<=bounds[1]))]
+        else:
+            return data[np.where((delta>=bounds[0]) & (delta<=bounds[1]))]
+        #return data[np.where(delta>=bounds[0 and delta<=bounds[1]])]
+        #return data[np.where((delta>=bounds[0]) & (delta<=bounds[1]))]
 
     def fit_peak(self,tweak = False):
         self.peak_fit_results, self.peak_fit_fom, self.peak_fit_status= [], [], []
@@ -168,6 +174,7 @@ class run_app(object):
                 fit_bounds = self.kwarg_peak_fit['peak_fit_bounds']
                 fit_bounds[0][0], fit_bounds[1][0] = self.kwarg_peak_fit['peak_ranges'][i]
                 fit_p0= [np.mean(self.kwarg_peak_fit['peak_ranges'][i])] + self.kwarg_peak_fit['peak_fit_p0'][1:]
+                #print(fit_bounds)
                 xdata = self.get_peak_fit_data(delta=self.data[self.img_loader.scan_number]['2theta'],\
                                                data = self.data[self.img_loader.scan_number]['2theta'],\
                                                bounds = self.kwarg_peak_fit['peak_ranges'][i])
@@ -176,6 +183,7 @@ class run_app(object):
                                                bounds = self.kwarg_peak_fit['peak_ranges'][i])
                 try:
                     fit_result,fom_result = opt.curve_fit(f=model, xdata=xdata, ydata=ydata, p0 = fit_p0, bounds = fit_bounds, max_nfev = 10000)
+                    #print(fit_result)
                     if not tweak:
                         self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_peak_pos'].append(fit_result[0])
                         self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_FWHM'].append(fit_result[1])

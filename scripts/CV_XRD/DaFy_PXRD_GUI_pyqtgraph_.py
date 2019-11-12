@@ -59,6 +59,7 @@ class MyMainWindow(QMainWindow):
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
             each.toggled.connect(self.update_cost_func)
         self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
+        self.pushButton_remove_spike.clicked.connect(self.remove_spikes)
         self.doubleSpinBox_ss_factor.valueChanged.connect(self.update_ss_factor)
         self.comboBox_p4.activated.connect(self.select_source_for_plot_p4)
         self.comboBox_p5.activated.connect(self.select_source_for_plot_p5)
@@ -70,6 +71,12 @@ class MyMainWindow(QMainWindow):
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_data)
 
+    def remove_spikes(self):
+        if self.app_ctr.time_scan:
+            setattr(self.app_ctr,'spikes_bounds', self.region_mon.getRegion())
+            self.updatePlot()
+        else:
+            setattr(self.app_ctr,'spikes_bounds', None)
 
     def select_source_for_plot_p4(self):
         if self.app_ctr.time_scan:
@@ -189,7 +196,9 @@ class MyMainWindow(QMainWindow):
         region.setRegion([10, 15])
         # Add the LinearRegionItem to the ViewBox, but tell the ViewBox to exclude this 
         # item when doing auto-range calculations.
-
+        region_mon = pg.LinearRegionItem()
+        region_mon.setZValue(10)
+        region_mon.setRegion([10, 15])
 
         #monitor window
         p2_mon = win.addPlot(0,2,rowspan=1, colspan=2,title='Monitor window')
@@ -198,6 +207,8 @@ class MyMainWindow(QMainWindow):
             region.setZValue(10)
             region.show()
             minX, maxX = region.getRegion()
+            region_mon.show()
+            region_mon.setRegion([(minX+maxX)/2-0.05,(minX+maxX)/2+0.05])
             #save the bounds of shape area for plotting in monitor window
             self.region_bounds = [minX, maxX]
 
@@ -219,8 +230,10 @@ class MyMainWindow(QMainWindow):
         p3 = win.addPlot(1,1,rowspan=1,colspan=3)
         if self.app_ctr.time_scan:
             p2.addItem(region, ignoreBounds=True)
+            p2_mon.addItem(region_mon, ignoreBounds=True)
         else:
             p3.addItem(region, ignoreBounds=True)
+            p2_mon.addItem(region_mon, ignoreBounds=True)
         #p3.addLegend()
         #p3.setMaximumHeight(200)
         #
@@ -256,6 +269,7 @@ class MyMainWindow(QMainWindow):
         self.p4 = p4
         self.p5 = p5
         self.p2_mon = p2_mon       
+        self.region_mon = region_mon
         p1.autoRange()  
         self.legend_p2 = self.p2.addLegend()
         self.legend_p3 = self.p3.addLegend()
@@ -268,9 +282,9 @@ class MyMainWindow(QMainWindow):
         self.p2_mon.setLabel('bottom','2theta angle',units='°')
         self.p3.setLabel('left','Integrated peak intensity',units='c/s')
         #self.p3.setLabel('bottom','frame_number')
-        self.p4.setLabel('left','Peak position',units='°')
+        self.p4.setLabel('left','Peak position')
         #self.p4.setLabel('bottom','frame_number')
-        self.p5.setLabel('left','Potential wrt Ag/AgCl',units='V')
+        self.p5.setLabel('left','Potential wrt Ag/AgCl')
         self.p5.setLabel('bottom','frame_number')
 
         # Callbacks for handling user interaction
@@ -290,13 +304,17 @@ class MyMainWindow(QMainWindow):
             self.legend_p3 = self.p3.addLegend()
             self.legend_p4 = self.p4.addLegend()
             self.legend_p5 = self.p5.addLegend()
+            self.p4.setLabel('left',self.comboBox_p4.currentText())
+            self.p5.setLabel('left',self.comboBox_p5.currentText())
 
             if self.app_ctr.time_scan:
                 plot_pxrd_fit_gui_pyqtgraph([self.p2_mon,self.p2], self.p3, self.p4,self.p5,self.app_ctr)
                 self.p2.addItem(region, ignoreBounds=True)#re-add the region item
+                self.p2_mon.addItem(region_mon, ignoreBounds=True)#re-add the region item
             else:
                 plot_pxrd_fit_gui_pyqtgraph([self.p2_mon,self.p2], self.p3, None,self.p4, self.app_ctr)
                 self.p3.addItem(region, ignoreBounds=True)
+                self.p2_mon.addItem(region_mon, ignoreBounds=True)#re-add the region item
                 #region.setRegion(self.region_bounds)#re-add the region item
             try:
                 self.lcdNumber_potential.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['potential'][-1])
@@ -373,7 +391,6 @@ class MyMainWindow(QMainWindow):
         self.save_file()     
         try:
             self.app_ctr.run(self.lineEdit.text())
-            #self.setup_image()
             self.timer_save_data.stop()
             self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
             self.plot_()

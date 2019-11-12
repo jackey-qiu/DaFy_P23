@@ -581,6 +581,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="pushButton_remove_spike">
+         <property name="text">
+          <string>Remove selected spike during fit?</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="Line" name="line_2">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
@@ -624,11 +631,6 @@
          </item>
          <item row="0" column="1">
           <widget class="QComboBox" name="comboBox_p4">
-           <item>
-            <property name="text">
-             <string>intensity</string>
-            </property>
-           </item>
            <item>
             <property name="text">
              <string>amp</string>

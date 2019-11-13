@@ -279,7 +279,10 @@ def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_strain, ax_pot,app_ctr):
                 x = np.arange(line_segment[0]-0.2, line_segment[1]+0.2,0.01)
                 par_labels = ['_peak_pos','_FWHM','_amp','_lfrac','_bg_slope','_bg_offset']
                 pars=[app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+par_label][-1] for par_label in par_labels]
-                y = app_ctr.model(x,*pars)
+                try:
+                    y = app_ctr.model(x,*pars)
+                except:
+                    y = x
                 #print(x,y)
                 ax_profile.plot(x,y,pen=app_ctr.kwarg_peak_fit['colors'][i])
                 ax_profile_mon.plot(x,y,pen=app_ctr.kwarg_peak_fit['colors'][i])
@@ -291,10 +294,13 @@ def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_strain, ax_pot,app_ctr):
                 ax_strain.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],y,pen=app_ctr.kwarg_peak_fit['colors'][i],name = app_ctr.kwarg_peak_fit['peak_ids'][i],clear=clear)
                 clear = False
 
-        for i in range(len(app_ctr.kwarg_peak_fit['peak_ids'])):
-            if app_ctr.kwarg_peak_fit['peak_fit'][i]:
-                ax_ctr.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity'],name=app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity',pen=app_ctr.kwarg_peak_fit['colors'][i],clear = i==0)
-        
+        if app_ctr.p3_data_source == 'peak_intensity':
+            for i in range(len(app_ctr.kwarg_peak_fit['peak_ids'])):
+                if app_ctr.kwarg_peak_fit['peak_fit'][i]:
+                    ax_ctr.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity'],name=app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity',pen=app_ctr.kwarg_peak_fit['colors'][i],clear = i==0)
+        elif app_ctr.p3_data_source == 'bkg_intensity':
+            ax_ctr.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number]['bkg'],name='bkg_intensity',pen='g',clear = True)
+
         #ax_ctr.addLegend()
         #ax_pot.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number]['potential'],clear = True)
         ax_pot.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.p5_data_source],clear = True)

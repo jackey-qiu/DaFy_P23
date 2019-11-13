@@ -100,7 +100,13 @@ def tweak_integration(integration_object, tweak_motion_str, pre_tweak_motion):
 
 #define generator funcs to hold scans and images
 def scan_generator(scans):
-    for scan in scans:
+    _scans = []
+    for each in scans:
+        if type(each)==type([]):
+            _scans = _scans + list(range(each[0],each[1]+1))
+        else:
+            _scans = _scans + [each]
+    for scan in _scans:
         yield scan
 
 def image_generator(scans,img_loader,rsp_instance,peak_fitting_instance,mask_creator):
@@ -588,6 +594,7 @@ class nexus_image_loader(object):
         # self.frame_prefix=frame_prefix
         self.scan_number = None
         self.frame_number = None
+        self.img_structure = 'one'#by default all images saved in one nexus file
         self.potential = None
         self.current = None
         self.hkl = None
@@ -604,6 +611,22 @@ class nexus_image_loader(object):
         #self.nexus_data = nxload(img_path)
         #self.get_frame_number()
 
+    def update_scan_info_old(self,scan_number):
+        self.scan_number = scan_number
+        print('\nRunning scan {} now...'.format(scan_number))
+        img_name='{}_{:0>5}.nxs'.format(self.frame_prefix,scan_number)
+        img_name_1='{}_{:0>5}_00000.nxs'.format(self.frame_prefix,scan_number)
+        img_path=os.path.join(self.nexus_path,img_name)
+        img_path_1=os.path.join(self.nexus_path,img_name.replace(".nxs",""),'lmbd',img_name_1)
+        self.nexus_data = nxload(img_path)
+        self.nexus_data_1 = nxload(img_path_1)
+        self.get_frame_number()
+        self.extract_pot_profile()
+        if self.check_abnormality:
+            self.abnormal_range = remove_abnormality_2(mon = self.extract_beam_mon_ct(),left_offset = self.left_offset, right_offset = self.right_offset)
+        else:
+            self.abnormal_range = [-10,-1]
+
     def update_scan_info(self,scan_number):
         self.scan_number = scan_number
         print('\nRunning scan {} now...'.format(scan_number))
@@ -614,6 +637,8 @@ class nexus_image_loader(object):
         self.nexus_data = nxload(img_path)
         self.nexus_data_1 = nxload(img_path_1)
         self.get_frame_number()
+        if abs(self.total_frame_number - self.nexus_data_1.entry.instrument.detector.data.shape[0])>1:
+            self.img_structure = 'multiple'#means each image correspond to one nexus fle
         self.extract_pot_profile()
         if self.check_abnormality:
             self.abnormal_range = remove_abnormality_2(mon = self.extract_beam_mon_ct(),left_offset = self.left_offset, right_offset = self.right_offset)
@@ -672,22 +697,46 @@ class nexus_image_loader(object):
         #img_path=os.path.join(self.nexus_path,img_name)
         #data=nxload(img_path)
         #img=np.array(data.entry.instrument.detector.data.nxdata[0])
-        while frame_number < self.total_frame_number:
-            img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(frame_number)
-            if img is None:
-                img = img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(frame_number-1)
-            self.extract_motor_angles(frame_number)
-            self.extract_pot_current(frame_number)
-            self.extract_HKL(frame_number)
-            self.frame_number = frame_number
-            if flip:
-                img = np.flip(img.T,1)
-            img = img[self.clip_boundary['ver'][0]:self.clip_boundary['ver'][1],
-                    self.clip_boundary['hor'][0]:self.clip_boundary['hor'][1]]
-            #normalized the intensity by the monitor and trams counters
-            yield img/self.motor_angles['mon']/self.motor_angles['transm']
-            #yield img/self.motor_angles['transm']/200000
-            frame_number +=1
+        if self.img_structure=='one':
+            while frame_number < self.total_frame_number:
+                img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(frame_number)
+                #print(self.nexus_data_1.entry.instrument.detector.data.shape)
+                #print(img)
+                if img is None:
+                    img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(frame_number-1)
+                self.extract_motor_angles(frame_number)
+                self.extract_pot_current(frame_number)
+                self.extract_HKL(frame_number)
+                self.frame_number = frame_number
+                if flip:
+                    img = np.flip(img.T,1)
+                img = img[self.clip_boundary['ver'][0]:self.clip_boundary['ver'][1],
+                        self.clip_boundary['hor'][0]:self.clip_boundary['hor'][1]]
+                #normalized the intensity by the monitor and trams counters
+                yield img/self.motor_angles['mon']/self.motor_angles['transm']
+                #yield img/self.motor_angles['transm']/200000
+                frame_number +=1
+        elif self.img_structure == 'multiple':
+            while frame_number < self.total_frame_number:
+                img_name_1='{}_{:0>5}_{:0>5}.nxs'.format(self.frame_prefix,self.scan_number,frame_number)
+                img_path_1=os.path.join(self.nexus_path,img_name.replace(".nxs",""),'lmbd',img_name_1)
+                self.nexus_data_1 = nxload(img_path_1)
+                img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(0)
+                #print(self.nexus_data_1.entry.instrument.detector.data.shape)
+                #if img is None:
+                #    img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(frame_number-1)
+                self.extract_motor_angles(frame_number)
+                self.extract_pot_current(frame_number)
+                self.extract_HKL(frame_number)
+                self.frame_number = frame_number
+                if flip:
+                    img = np.flip(img.T,1)
+                img = img[self.clip_boundary['ver'][0]:self.clip_boundary['ver'][1],
+                        self.clip_boundary['hor'][0]:self.clip_boundary['hor'][1]]
+                #normalized the intensity by the monitor and trams counters
+                yield img/self.motor_angles['mon']/self.motor_angles['transm']
+                #yield img/self.motor_angles['transm']/200000
+                frame_number +=1
 
     def extract_beam_mon_ct(self,mon_path = 'scan/data/eh_c01'):
         return np.array(self.nexus_data['scan/data/eh_c01'])
@@ -711,7 +760,8 @@ class nexus_image_loader(object):
         try:
             motors['transm']=1./np.array(self.nexus_data['scan/data/atten'])[frame_number]
         except:
-            motors['transm']=np.array(self.nexus_data['scan/data/lmbd_countsroi1'])[frame_number]/np.array(self.nexus_data['scan/data/lmbd_countsroi1_atten'])[frame_number]
+            #motors['transm']=np.array(self.nexus_data['scan/data/lmbd_countsroi1'])[frame_number]/np.array(self.nexus_data['scan/data/lmbd_countsroi1_atten'])[frame_number]
+            motors['transm']= 1
         try:
             motors['time'] = np.array(self.nexus_data['scan/data/timestamp'])[frame_number]
         except:
@@ -736,8 +786,16 @@ class nexus_image_loader(object):
         return data
 
     def extract_pot_current(self, frame_number):
-        pot = np.array(self.nexus_data['scan/data/voltage2'])[frame_number]
-        cur = np.array(self.nexus_data['scan/data/voltage1'])[frame_number]
+        try:
+            pot = np.array(self.nexus_data['scan/data/voltage2'])[frame_number]
+        except:
+            print('Potential channel not saved in the nexus file!')
+            pot = np.zeros(self.total_frame_number)[frame_number]
+        try:
+            cur = np.array(self.nexus_data['scan/data/voltage1'])[frame_number]
+        except:
+            print('Current channel not saved in the nexus file!')
+            cur = np.zeros(self.total_frame_number)[frame_number]
         self.potential = pot
         self.current = cur
         try:

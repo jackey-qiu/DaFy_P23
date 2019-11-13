@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1172</width>
-    <height>830</height>
+    <height>916</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -588,6 +588,26 @@
         </widget>
        </item>
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_8">
+         <item>
+          <widget class="QLabel" name="label_20">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Spike range</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_spike_range"/>
+         </item>
+        </layout>
+       </item>
+       <item>
         <widget class="Line" name="line_2">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
@@ -619,7 +639,7 @@
          <property name="labelAlignment">
           <set>Qt::AlignCenter</set>
          </property>
-         <item row="0" column="0">
+         <item row="1" column="0">
           <widget class="QLabel" name="label_18">
            <property name="frameShape">
             <enum>QFrame::StyledPanel</enum>
@@ -629,7 +649,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
+         <item row="1" column="1">
           <widget class="QComboBox" name="comboBox_p4">
            <item>
             <property name="text">
@@ -648,7 +668,7 @@
            </item>
           </widget>
          </item>
-         <item row="1" column="0">
+         <item row="2" column="0">
           <widget class="QLabel" name="label_19">
            <property name="frameShape">
             <enum>QFrame::StyledPanel</enum>
@@ -658,7 +678,7 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="1">
+         <item row="2" column="1">
           <widget class="QComboBox" name="comboBox_p5">
            <item>
             <property name="text">
@@ -668,6 +688,30 @@
            <item>
             <property name="text">
              <string>current</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_17">
+           <property name="frameShape">
+            <enum>QFrame::StyledPanel</enum>
+           </property>
+           <property name="text">
+            <string>P3</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="comboBox_p3">
+           <item>
+            <property name="text">
+             <string>peak_intensity</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>bkg_intensity</string>
             </property>
            </item>
           </widget>

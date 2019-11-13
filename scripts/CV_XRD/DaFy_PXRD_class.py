@@ -46,6 +46,7 @@ class run_app(object):
         self.model = model
         self.int_range = []
         self.current_frame = 0
+        #self.current_scan_number = None
         self.int_range_bkg = []
         self.spikes_bounds = None
         self.data_path = os.path.join(DaFy_path,'data')
@@ -90,9 +91,15 @@ class run_app(object):
         self._images = image_generator_bkg(self._scans,self.img_loader,self.create_mask_new)
         
 
-    def run_script(self):
+    def run_script(self,bkg_intensity = 0):
         try:
             img = next(self._images)
+            if hasattr(self,'current_scan_number'):
+                if self.current_scan_number!=self.img_loader.scan_number:
+                    self.save_data_file(self.data_path)
+                    self.current_scan_number = self.img_loader.scan_number
+            else:
+                setattr(self,'current_scan_number',self.img_loader.scan_number)
             self.current_frame = self.img_loader.frame_number
             self.img = img
             self.merge_data_image_loader()
@@ -100,24 +107,25 @@ class run_app(object):
             self._merge_data_bkg(tweak = False)
             if self.time_scan:
                 self.fit_peak(tweak = False)
-            t5=time.time()
-            #print(t5-t4,t4-t3,t3-t2,t2-t1)
+                self.data[self.img_loader.scan_number]['bkg'].append(bkg_intensity)
             return True
-        except:
+        except StopIteration:
+            self.save_data_file(self.data_path)
             return False
 
-    def run_update(self):
+    def run_update(self,bkg_intensity = 0):
         self.fit_background()
         self._merge_data_bkg(tweak = True)
         if self.time_scan:
             self.fit_peak(tweak = True)
+            self.data[self.img_loader.scan_number]['bkg'][-1] = bkg_intensity
 
     def merge_data_image_loader(self):
         if self.img_loader.scan_number not in self.data:
             if not self.time_scan:
                 self.data[self.img_loader.scan_number] = {'2theta':[],'intensity':[],'intensity_without_bkg':[],'potential':[],'current':[]}
             else:
-                self.data[self.img_loader.scan_number] = {'time':[],'2theta':[],'intensity':[],'frame_number':[],'potential':[],'current':[]}
+                self.data[self.img_loader.scan_number] = {'time':[],'2theta':[],'intensity':[],'bkg':[],'frame_number':[],'potential':[],'current':[]}
                 for i in range(len(self.kwarg_peak_fit['peak_ranges'])):
                     self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_intensity']=[]
                     if self.kwarg_peak_fit['peak_fit'][i]:
@@ -158,10 +166,13 @@ class run_app(object):
         delta = np.array(delta)
         data = np.array(data)
         if spikes is not None:
-            if spikes[0]>bounds[0] and spikes[1]<bounds[1]:
-                return data[np.where(((delta>=bounds[0]) & (delta<=spikes[0]))|((delta>=spikes[1]) & (delta<=bounds[1])))]
-            else:
-                return data[np.where((delta>=bounds[0]) & (delta<=bounds[1]))]
+            try:
+                if spikes[0]>bounds[0] and spikes[1]<bounds[1]:
+                    return data[np.where(((delta>=bounds[0]) & (delta<=spikes[0]))|((delta>=spikes[1]) & (delta<=bounds[1])))]
+                else:
+                    return data[np.where((delta>=bounds[0]) & (delta<=bounds[1]))]
+            except:
+                print('conflict of spike bounds compare to data range!')
         else:
             return data[np.where((delta>=bounds[0]) & (delta<=bounds[1]))]
         #return data[np.where(delta>=bounds[0 and delta<=bounds[1]])]
@@ -183,6 +194,11 @@ class run_app(object):
                                                bounds = self.kwarg_peak_fit['peak_ranges'][i])
                 try:
                     fit_result,fom_result = opt.curve_fit(f=model, xdata=xdata, ydata=ydata, p0 = fit_p0, bounds = fit_bounds, max_nfev = 10000)
+                except:
+                    pass
+                #    fit_result 
+                try:
+                    #fit_result,fom_result = opt.curve_fit(f=model, xdata=xdata, ydata=ydata, p0 = fit_p0, bounds = fit_bounds, max_nfev = 10000)
                     #print(fit_result)
                     if not tweak:
                         self.data[self.img_loader.scan_number][self.kwarg_peak_fit['peak_ids'][i]+'_peak_pos'].append(fit_result[0])
@@ -350,10 +366,10 @@ class run_app(object):
                 else:
                     self.data[self.img_loader.scan_number]['intensity_peak{}'.format(k)][-1] = np.array(self.int_range)[min([index_left,index_right]):max([index_left,index_right])].sum()
 
-    def save_data_file(self,path):
+    def save_data_file(self,path,one_sheet = True):
         #to be finished
         if self.time_scan:
-            keys = ['time','frame_number','potential','current']+[each+'_intensity' for each in self.kwarg_peak_fit['peak_ids']]
+            keys = ['time','frame_number','potential','current','bkg']+[each+'_intensity' for each in self.kwarg_peak_fit['peak_ids']]
             for i in range(len(self.kwarg_peak_fit['peak_ranges'])):
                 if self.kwarg_peak_fit['peak_fit'][i]:
                     pars = ['_peak_pos','_FWHM','_amp','_lfrac','_bg_slope','_bg_offset','_pcov','_fit_status']
@@ -373,11 +389,35 @@ class run_app(object):
                 df_temp.to_excel(writer_temp)
                 writer_temp.save()
                 self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
-        data = {key:self.data[self.img_loader.scan_number][key] for key in keys}
-        data['scan_number'] = [self.img_loader.scan_number]*len(data['current'])
-        df = pd.DataFrame(data)
-        df.to_excel(self.writer,sheet_name='scan{}'.format(self.img_loader.scan_number),columns = ['scan_number']+keys)
-        self.writer.save()
+        #data = {key:self.data[self.img_loader.scan_number][key] for key in keys}
+        if not one_sheet:
+            data = {key:self.data[self.current_scan_number][key] for key in keys}
+            data['scan_number'] = [self.current_scan_number]*len(data['current'])
+            df = pd.DataFrame(data)
+            df.to_excel(self.writer,sheet_name='scan{}'.format(self.current_scan_number),columns = ['scan_number']+keys)
+            self.writer.save()
+        else:#all data saved in one sheet
+            data = {}
+            scan_numbers = list(self.data.keys())
+            scan_numbers.sort()
+            scan_numbers = scan_numbers
+            for key in scan_numbers:
+                data_temp = copy.deepcopy(self.data[key])
+                data_temp = {k:data_temp[k] for k in keys}
+                data_temp['scan_number'] = [key]*len(data_temp['current'])
+                if data == {}:
+                    data.update(data_temp)
+                else:
+                    for k in ['scan_number']+keys:
+                        data[k] = data[k] + data_temp[k]
+            #data.update(self.data[key]) for key in scan_numbers
+            #data['scan_number'] = [self.current_scan_number]*len(data['current'])
+            df = pd.DataFrame(data)
+            df.to_excel(self.writer,sheet_name='Sheet1',columns = ['scan_number']+keys)
+            self.writer.save()
+
+
+
 
 if __name__ == "__main__":
     run_app()

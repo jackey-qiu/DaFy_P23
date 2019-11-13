@@ -32,17 +32,19 @@ class MyMainWindow(QMainWindow):
         super(MyMainWindow, self).__init__(parent)
         pg.setConfigOptions(imageAxisOrder='row-major')
         #pg.mkQApp()
-        uic.loadUi(os.path.join(DaFy_path,'scripts','CV_XRD','ctr_bkg_pyqtgraph4_new.ui'),self)
+        uic.loadUi(os.path.join(DaFy_path,'scripts','CV_XRD','ctr_bkg_pyqtgraph6_new.ui'),self)
         self.setWindowTitle('Data analysis factory: PXRD data analasis')
         self.app_ctr=run_app()
         #self.app_ctr.run()
         self.current_image_no = 0
         self.current_scan_number = None
+        self.bkg_intensity = 0
          
         #self.setupUi(self)
         self.stop = False
         self.open.clicked.connect(self.load_file)
-        self.reload.clicked.connect(self.rload_file)
+        self.relaunch.clicked.connect(self.relaunch_file)
+        self.launch.clicked.connect(self.launch_file)
         self.stopBtn.clicked.connect(self.stop_func)
         self.saveas.clicked.connect(self.save_file_as)
         self.save.clicked.connect(self.save_file)
@@ -51,18 +53,59 @@ class MyMainWindow(QMainWindow):
         self.pushButton_filePath.clicked.connect(self.locate_data_folder)
         self.lineEdit_data_file_name.setText('temp_data.xlsx')
         self.lineEdit_data_file_path.setText(self.app_ctr.data_path)
+        setattr(self.app_ctr,'data_path',os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text()))
         #self.lineEdit.setText(self.app_ctr.conf_path_temp)
         #self.update_poly_order(init_step = True)
         for each in self.groupBox_2.findChildren(QCheckBox):
             each.released.connect(self.update_poly_order)
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
             each.toggled.connect(self.update_cost_func)
-        self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
+        #self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
+        self.pushButton_remove_current_point.setEnabled(False)
+        self.pushButton_remove_spike.clicked.connect(self.remove_spikes)
         self.doubleSpinBox_ss_factor.valueChanged.connect(self.update_ss_factor)
+        self.comboBox_p3.activated.connect(self.select_source_for_plot_p3)
+        self.comboBox_p4.activated.connect(self.select_source_for_plot_p4)
+        self.comboBox_p5.activated.connect(self.select_source_for_plot_p5)
+        self.p3_data_source = self.comboBox_p3.currentText()
+        self.p4_data_source = self.comboBox_p4.currentText()
+        self.p5_data_source = self.comboBox_p5.currentText()
+        setattr(self.app_ctr,'p3_data_source',self.comboBox_p3.currentText())
+        setattr(self.app_ctr,'p4_data_source',self.comboBox_p4.currentText())
+        setattr(self.app_ctr,'p5_data_source',self.comboBox_p5.currentText())
         #self.setup_image()
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_data)
-        
+
+    def remove_spikes(self):
+        if self.app_ctr.time_scan:
+            spike_range = self.region_mon.getRegion()
+            setattr(self.app_ctr,'spikes_bounds', spike_range)
+            self.lineEdit_spike_range.setText('from {:6.2f} to {:6.2f}'.format(*spike_range))
+            self.updatePlot()
+        else:
+            setattr(self.app_ctr,'spikes_bounds', None)
+
+    def select_source_for_plot_p3(self):
+        if self.app_ctr.time_scan:
+            self.app_ctr.p3_data_source = self.comboBox_p3.currentText()
+            self.updatePlot()
+        else:
+            pass
+
+    def select_source_for_plot_p4(self):
+        if self.app_ctr.time_scan:
+            self.app_ctr.p4_data_source = self.comboBox_p4.currentText()
+            self.updatePlot()
+        else:
+            pass
+
+    def select_source_for_plot_p5(self):
+        if self.app_ctr.time_scan:
+            self.app_ctr.p5_data_source = self.comboBox_p5.currentText()
+            self.updatePlot()
+        else:
+            pass
 
     def save_data(self):
         data_file = os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text())
@@ -137,7 +180,9 @@ class MyMainWindow(QMainWindow):
 
         # Custom ROI for selecting an image region
         
-        roi = pg.ROI([0, 0], [self.app_ctr.dim_detector[1]-2*self.app_ctr.hor_offset, self.app_ctr.dim_detector[0]-2*self.app_ctr.ver_offset])
+        #roi = pg.ROI([0, 0], [self.app_ctr.dim_detector[1]-2*self.app_ctr.hor_offset, self.app_ctr.dim_detector[0]-2*self.app_ctr.ver_offset])
+        roi = pg.ROI([0, 0], [self.app_ctr.dim_detector[1]-2*self.app_ctr.hor_offset, 50])
+
         self.roi = roi
         roi.addScaleHandle([0.5, 1], [0.5, 0.5])
         roi.addScaleHandle([0, 0.5], [0.5, 0.5])
@@ -158,8 +203,8 @@ class MyMainWindow(QMainWindow):
 
         # Another plot area for displaying ROI data
         #win.nextColumn()
-        p2 = win.addPlot(0,1,rowspan=1,colspan=1)
-        p2.setMaximumWidth(400)
+        p2 = win.addPlot(0,1,rowspan=1,colspan=1, title = 'image profile (vertical direction)')
+        #p2.setMaximumWidth(400)
         #p2.setMaximumHeight(200)
         #p2.setLogMode(y = True)
 
@@ -168,18 +213,33 @@ class MyMainWindow(QMainWindow):
         region.setRegion([10, 15])
         # Add the LinearRegionItem to the ViewBox, but tell the ViewBox to exclude this 
         # item when doing auto-range calculations.
-
+        region_mon = pg.LinearRegionItem()
+        region_mon.setZValue(10)
+        region_mon.setRegion([10, 15])
 
         #monitor window
-        p2_mon = win.addPlot(0,2,rowspan=1, colspan=2)
+        p2_mon = win.addPlot(0,2,rowspan=1, colspan=2,title='Monitor window')
 
         def update():
             region.setZValue(10)
             region.show()
             minX, maxX = region.getRegion()
+            region_mon.show()
+            region_mon.setRegion([(minX+maxX)/2-0.05,(minX+maxX)/2+0.05])
             #save the bounds of shape area for plotting in monitor window
             self.region_bounds = [minX, maxX]
-            p2_mon.setXRange(minX, maxX, padding=0)    
+
+            x, y = p2_mon.listDataItems()[0].xData, p2_mon.listDataItems()[0].yData 
+            data_range =[np.argmin(abs(x-minX)),np.argmin(abs(x-maxX))]
+            if data_range[1]>len(y):
+                data_range[1] = len(y)
+            minY = min(y[data_range[0]:data_range[1]])
+            maxY = max(y[data_range[0]:data_range[1]])*1.1
+            p2_mon.setYRange(minY, maxY, padding=0) 
+
+            p2_mon.setXRange(minX, maxX, padding=0)  
+            #print(p2_mon.listDataItems()[0].xData)
+            #print(dir(p2_mon))
         region.sigRegionChanged.connect(update)
 
         # plot to show intensity over time
@@ -187,16 +247,18 @@ class MyMainWindow(QMainWindow):
         p3 = win.addPlot(1,1,rowspan=1,colspan=3)
         if self.app_ctr.time_scan:
             p2.addItem(region, ignoreBounds=True)
+            p2_mon.addItem(region_mon, ignoreBounds=True)
         else:
             p3.addItem(region, ignoreBounds=True)
+            p2_mon.addItem(region_mon, ignoreBounds=True)
         #p3.addLegend()
-        p3.setMaximumHeight(200)
+        #p3.setMaximumHeight(200)
         #
 
         # plot to show intensity over time
         #win.nextRow()
         p4 = win.addPlot(2,1,rowspan=1,colspan=3)
-        p4.setMaximumHeight(200)
+        #p4.setMaximumHeight(200)
 
         #if self.app_ctr.time_scan:
         p5 = win.addPlot(3,1,rowspan=1,colspan=3)
@@ -224,21 +286,58 @@ class MyMainWindow(QMainWindow):
         self.p4 = p4
         self.p5 = p5
         self.p2_mon = p2_mon       
+        self.region_mon = region_mon
         p1.autoRange()  
+        self.legend_p2 = self.p2.addLegend()
+        self.legend_p3 = self.p3.addLegend()
+        self.legend_p4 = self.p4.addLegend()
+        self.legend_p5 = self.p5.addLegend()
+        #set axis labels
+        self.p2.setLabel('left','Normalized intensity',units='c/s')
+        self.p2.setLabel('bottom','2theta angle',units='°')
+        self.p2_mon.setLabel('left','Normalized intensity',units='c/s')
+        self.p2_mon.setLabel('bottom','2theta angle',units='°')
+        self.p3.setLabel('left','Integrated peak intensity',units='c/s')
+        #self.p3.setLabel('bottom','frame_number')
+        self.p4.setLabel('left','Peak position')
+        #self.p4.setLabel('bottom','frame_number')
+        self.p5.setLabel('left','Potential wrt Ag/AgCl')
+        self.p5.setLabel('bottom','frame_number')
+
+
+        def update_bkg_signal():
+            selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
+            self.bkg_intensity = selected.sum()
 
         # Callbacks for handling user interaction
         def updatePlot():
-            try:
-                selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
-            except:
-                pass
-            self.app_ctr.run_update()
+            #try:
+            #    selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
+            #except:
+            #    pass
+            update_bkg_signal()
+            self.app_ctr.run_update(bkg_intensity = self.bkg_intensity)
+            #remove legend and plot again
+            for legend in [self.legend_p2,self.legend_p3,self.legend_p4,self.legend_p5]:
+                try:
+                    legend.scene().removeItem(legend)
+                except:
+                    pass
+            self.legend_p2 = self.p2.addLegend()
+            self.legend_p3 = self.p3.addLegend()
+            self.legend_p4 = self.p4.addLegend()
+            self.legend_p5 = self.p5.addLegend()
+            self.p4.setLabel('left',self.comboBox_p4.currentText())
+            self.p5.setLabel('left',self.comboBox_p5.currentText())
+
             if self.app_ctr.time_scan:
                 plot_pxrd_fit_gui_pyqtgraph([self.p2_mon,self.p2], self.p3, self.p4,self.p5,self.app_ctr)
                 self.p2.addItem(region, ignoreBounds=True)#re-add the region item
+                self.p2_mon.addItem(region_mon, ignoreBounds=True)#re-add the region item
             else:
                 plot_pxrd_fit_gui_pyqtgraph([self.p2_mon,self.p2], self.p3, None,self.p4, self.app_ctr)
                 self.p3.addItem(region, ignoreBounds=True)
+                self.p2_mon.addItem(region_mon, ignoreBounds=True)#re-add the region item
                 #region.setRegion(self.region_bounds)#re-add the region item
             try:
                 self.lcdNumber_potential.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['potential'][-1])
@@ -275,6 +374,7 @@ class MyMainWindow(QMainWindow):
             self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-2])
             self.lcdNumber_iso.display(isoLine.value())
 
+        #roi.sigRegionChanged.connect(updatePlot)
         roi.sigRegionChanged.connect(updatePlot)
         self.updatePlot = updatePlot
         self.updatePlot2 = updatePlot_after_remove_point
@@ -311,7 +411,18 @@ class MyMainWindow(QMainWindow):
         if fileName:
             self.lineEdit_data_file_path.setText(os.path.dirname(fileName))
 
-    def rload_file(self):
+    def relaunch_file(self):
+        self.save_file()     
+        try:
+            self.app_ctr.run(self.lineEdit.text())
+            self.timer_save_data.stop()
+            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            self.plot_()
+            self.statusbar.showMessage('Initialization succeed!')
+        except:
+            self.statusbar.showMessage('Initialization failed!')
+
+    def launch_file(self):
         self.save_file()     
         try:
             self.app_ctr.run(self.lineEdit.text())
@@ -319,6 +430,7 @@ class MyMainWindow(QMainWindow):
             self.timer_save_data.stop()
             self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
             self.plot_()
+            self.launch.setEnabled(False)
             self.statusbar.showMessage('Initialization succeed!')
         except:
             self.statusbar.showMessage('Initialization failed!')
@@ -350,7 +462,7 @@ class MyMainWindow(QMainWindow):
         if self.stop:
             self.timer.stop()
         else:
-            return_value = self.app_ctr.run_script()
+            return_value = self.app_ctr.run_script(bkg_intensity = self.bkg_intensity)
             if self.app_ctr.img is not None:
                 #if self.current_scan_number == None:
                 #    self.current_scan_number = self.app_ctr.img_loader.scan_number

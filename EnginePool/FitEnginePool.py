@@ -118,14 +118,17 @@ def fit_pot_profile(x, y, show_fig = False):
     x_partial = x[0:200]
     phase = np.argmin(y_partial)
     length = abs(np.argmin(y_partial)-np.argmax(y_partial))*2
-    popt, pcov = opt.curve_fit(triang, y_partial,y_partial*0, p0=[phase,length,y_offset,ampt],bounds =([phase-10,length-10,y_offset-0.0005,ampt-0.0005],[phase+10,length+10,y_offset+0.0005,ampt+0.0005]),max_nfev = 10000)
-    # print(popt)
-    if show_fig:
-        plt.plot(x,y,'or')
-        plt.plot(x,triang_(y,*popt),'g-')
-        # print(sawtooth_pot(x_partial,*popt))
-        plt.show()
-    return triang_(y,*popt)
+    try:
+        popt, pcov = opt.curve_fit(triang, y_partial,y_partial*0, p0=[phase,length,y_offset,ampt],bounds =([phase-10,length-10,y_offset-0.0005,ampt-0.0005],[phase+10,length+10,y_offset+0.0005,ampt+0.0005]),max_nfev = 10000)
+        # print(popt)
+        if show_fig:
+            plt.plot(x,y,'or')
+            plt.plot(x,triang_(y,*popt),'g-')
+            # print(sawtooth_pot(x_partial,*popt))
+            plt.show()
+        return triang_(y,*popt)
+    except:
+        return y_partial
     
 #engine function to subtraction background
 def backcor(n,y,ord_cus,s,fct):

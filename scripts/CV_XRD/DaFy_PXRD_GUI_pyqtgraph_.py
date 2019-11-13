@@ -38,6 +38,7 @@ class MyMainWindow(QMainWindow):
         #self.app_ctr.run()
         self.current_image_no = 0
         self.current_scan_number = None
+        self.bkg_intensity = 0
          
         #self.setupUi(self)
         self.stop = False
@@ -52,19 +53,24 @@ class MyMainWindow(QMainWindow):
         self.pushButton_filePath.clicked.connect(self.locate_data_folder)
         self.lineEdit_data_file_name.setText('temp_data.xlsx')
         self.lineEdit_data_file_path.setText(self.app_ctr.data_path)
+        setattr(self.app_ctr,'data_path',os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text()))
         #self.lineEdit.setText(self.app_ctr.conf_path_temp)
         #self.update_poly_order(init_step = True)
         for each in self.groupBox_2.findChildren(QCheckBox):
             each.released.connect(self.update_poly_order)
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
             each.toggled.connect(self.update_cost_func)
-        self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
+        #self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
+        self.pushButton_remove_current_point.setEnabled(False)
         self.pushButton_remove_spike.clicked.connect(self.remove_spikes)
         self.doubleSpinBox_ss_factor.valueChanged.connect(self.update_ss_factor)
+        self.comboBox_p3.activated.connect(self.select_source_for_plot_p3)
         self.comboBox_p4.activated.connect(self.select_source_for_plot_p4)
         self.comboBox_p5.activated.connect(self.select_source_for_plot_p5)
+        self.p3_data_source = self.comboBox_p3.currentText()
         self.p4_data_source = self.comboBox_p4.currentText()
         self.p5_data_source = self.comboBox_p5.currentText()
+        setattr(self.app_ctr,'p3_data_source',self.comboBox_p3.currentText())
         setattr(self.app_ctr,'p4_data_source',self.comboBox_p4.currentText())
         setattr(self.app_ctr,'p5_data_source',self.comboBox_p5.currentText())
         #self.setup_image()
@@ -73,10 +79,19 @@ class MyMainWindow(QMainWindow):
 
     def remove_spikes(self):
         if self.app_ctr.time_scan:
-            setattr(self.app_ctr,'spikes_bounds', self.region_mon.getRegion())
+            spike_range = self.region_mon.getRegion()
+            setattr(self.app_ctr,'spikes_bounds', spike_range)
+            self.lineEdit_spike_range.setText('from {:6.2f} to {:6.2f}'.format(*spike_range))
             self.updatePlot()
         else:
             setattr(self.app_ctr,'spikes_bounds', None)
+
+    def select_source_for_plot_p3(self):
+        if self.app_ctr.time_scan:
+            self.app_ctr.p3_data_source = self.comboBox_p3.currentText()
+            self.updatePlot()
+        else:
+            pass
 
     def select_source_for_plot_p4(self):
         if self.app_ctr.time_scan:
@@ -165,7 +180,9 @@ class MyMainWindow(QMainWindow):
 
         # Custom ROI for selecting an image region
         
-        roi = pg.ROI([0, 0], [self.app_ctr.dim_detector[1]-2*self.app_ctr.hor_offset, self.app_ctr.dim_detector[0]-2*self.app_ctr.ver_offset])
+        #roi = pg.ROI([0, 0], [self.app_ctr.dim_detector[1]-2*self.app_ctr.hor_offset, self.app_ctr.dim_detector[0]-2*self.app_ctr.ver_offset])
+        roi = pg.ROI([0, 0], [self.app_ctr.dim_detector[1]-2*self.app_ctr.hor_offset, 50])
+
         self.roi = roi
         roi.addScaleHandle([0.5, 1], [0.5, 0.5])
         roi.addScaleHandle([0, 0.5], [0.5, 0.5])
@@ -287,13 +304,19 @@ class MyMainWindow(QMainWindow):
         self.p5.setLabel('left','Potential wrt Ag/AgCl')
         self.p5.setLabel('bottom','frame_number')
 
+
+        def update_bkg_signal():
+            selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
+            self.bkg_intensity = selected.sum()
+
         # Callbacks for handling user interaction
         def updatePlot():
-            try:
-                selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
-            except:
-                pass
-            self.app_ctr.run_update()
+            #try:
+            #    selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
+            #except:
+            #    pass
+            update_bkg_signal()
+            self.app_ctr.run_update(bkg_intensity = self.bkg_intensity)
             #remove legend and plot again
             for legend in [self.legend_p2,self.legend_p3,self.legend_p4,self.legend_p5]:
                 try:
@@ -351,6 +374,7 @@ class MyMainWindow(QMainWindow):
             self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-2])
             self.lcdNumber_iso.display(isoLine.value())
 
+        #roi.sigRegionChanged.connect(updatePlot)
         roi.sigRegionChanged.connect(updatePlot)
         self.updatePlot = updatePlot
         self.updatePlot2 = updatePlot_after_remove_point
@@ -438,7 +462,7 @@ class MyMainWindow(QMainWindow):
         if self.stop:
             self.timer.stop()
         else:
-            return_value = self.app_ctr.run_script()
+            return_value = self.app_ctr.run_script(bkg_intensity = self.bkg_intensity)
             if self.app_ctr.img is not None:
                 #if self.current_scan_number == None:
                 #    self.current_scan_number = self.app_ctr.img_loader.scan_number

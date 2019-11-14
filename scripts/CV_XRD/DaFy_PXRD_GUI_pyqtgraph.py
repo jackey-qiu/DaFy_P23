@@ -426,6 +426,8 @@ class MyMainWindow(QMainWindow):
         self.save_file()     
         try:
             self.app_ctr.run(self.lineEdit.text())
+            self.update_poly_order(init_step=True)
+            self.update_cost_func(init_step=True)
             self.setup_image()
             self.timer_save_data.stop()
             self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
@@ -479,7 +481,7 @@ class MyMainWindow(QMainWindow):
                 self.progressBar.setValue((self.app_ctr.img_loader.frame_number+1)/float(self.app_ctr.img_loader.total_frame_number)*100)
                 self.lcdNumber_frame_number.display(self.app_ctr.img_loader.frame_number+1)
             else:
-                self.timer.stop()
+                #self.timer.stop()
                 self.stop = False
                 self.stopBtn.setText('Stop')
                 self.statusbar.clearMessage()

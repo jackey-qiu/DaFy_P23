@@ -148,8 +148,7 @@ class run_app(object):
             y_sorted = list(copy.deepcopy(int_range))
             y_sorted.sort()
             std_bkg =np.array(y_sorted[0:bkg_n*3]).std()/(max(y_sorted)-min(y_sorted))
-            t3=time.time()
-            int_range[np.argmin(int_range)] =  int_range[np.argmin(int_range)+1]#???what for???
+            #int_range[np.argmin(int_range)] =  int_range[np.argmin(int_range)+1]#???what for???
             int_range_bkg, *discard = backcor(range(len(int_range)),int_range,\
                                                 ord_cus=self.kwarg_bkg['ord_cus_s'],\
                                                 s=std_bkg*self.kwarg_bkg['ss_factor'],fct=self.kwarg_bkg['fct'])

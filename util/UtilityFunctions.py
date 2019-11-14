@@ -718,7 +718,9 @@ class nexus_image_loader(object):
                 frame_number +=1
         elif self.img_structure == 'multiple':
             while frame_number < self.total_frame_number:
+                img_name='{}_{:0>5}.nxs'.format(self.frame_prefix,self.scan_number)
                 img_name_1='{}_{:0>5}_{:0>5}.nxs'.format(self.frame_prefix,self.scan_number,frame_number)
+                #print(img_name_1,img_name)
                 img_path_1=os.path.join(self.nexus_path,img_name.replace(".nxs",""),'lmbd',img_name_1)
                 self.nexus_data_1 = nxload(img_path_1)
                 img=self.nexus_data_1.entry.instrument.detector.data._get_filedata(0)
@@ -729,6 +731,7 @@ class nexus_image_loader(object):
                 self.extract_pot_current(frame_number)
                 self.extract_HKL(frame_number)
                 self.frame_number = frame_number
+                
                 if flip:
                     img = np.flip(img.T,1)
                 img = img[self.clip_boundary['ver'][0]:self.clip_boundary['ver'][1],

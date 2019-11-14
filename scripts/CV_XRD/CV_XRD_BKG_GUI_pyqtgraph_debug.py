@@ -419,6 +419,7 @@ class MyMainWindow(QMainWindow):
 
     def plot_(self):
         #self.app_ctr.set_fig(self.MplWidget.canvas.figure)
+        t0 = time.time()
         if self.stop:
             self.timer.stop()
         else:
@@ -448,6 +449,10 @@ class MyMainWindow(QMainWindow):
                 self.stopBtn.setText('Stop')
                 self.statusbar.clearMessage()
                 self.statusbar.showMessage('Run for scan{} is finished, {} frames in total have been processed!'.format(self.app_ctr.img_loader.scan_number,self.app_ctr.img_loader.total_frame_number))
+        try:
+            self.lcdNumber_speed.display(int(1./(time.time()-t0)))
+        except:
+            pass
 
     def update_plot(self):
         img = self.app_ctr.run_update()

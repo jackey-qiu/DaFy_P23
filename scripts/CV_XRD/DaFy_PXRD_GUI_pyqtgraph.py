@@ -53,6 +53,13 @@ class MyMainWindow(QMainWindow):
         self.pushButton_filePath.clicked.connect(self.locate_data_folder)
         self.lineEdit_data_file_name.setText('temp_data.xlsx')
         self.lineEdit_data_file_path.setText(self.app_ctr.data_path)
+
+        self.actionOpenConfig.triggered.connect(self.load_file)
+        self.actionSaveConfig.triggered.connect(self.save_file)
+        self.actionRun.triggered.connect(self.plot_)
+        self.actionStop.triggered.connect(self.stop_func)
+        self.actionSaveData.triggered.connect(self.save_data)
+
         setattr(self.app_ctr,'data_path',os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text()))
         #self.lineEdit.setText(self.app_ctr.conf_path_temp)
         #self.update_poly_order(init_step = True)

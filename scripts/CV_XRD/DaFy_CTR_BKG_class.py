@@ -47,10 +47,12 @@ if (sys.version_info > (3, 0)):
 class run_app(object):
     def __init__(self):
         self.stop = True
+        self.current_frame = 0
         #self.conf_file_names = {'CTR':'config_p23_ctr_new.ini'}
         #config files
         #self.conf_file = os.path.join(DaFy_path, 'config', self.conf_file_names['CTR'])
         self.conf_file = None
+        self.bkg_clip_image = None
         self.data_path = os.path.join(DaFy_path,'data')
         self.conf_path_temp = os.path.join(DaFy_path,'config','config_p23_ctr_new.ini')
 
@@ -93,27 +95,48 @@ class run_app(object):
         self._scans = scan_generator(scans = self.scan_nos)
         self._images = image_generator_bkg(self._scans,self.img_loader,self.create_mask_new)
 
-    def run_script(self):
+    def run_script(self,bkg_intensity = 0):
         try:
             img = next(self._images)
+            #img = img/self.bkg_clip_image
+            if hasattr(self,'current_scan_number'):
+                if self.current_scan_number!=self.img_loader.scan_number:
+                    self.save_data_file(self.data_path)
+                    self.current_scan_number = self.img_loader.scan_number
+            else:
+                setattr(self,'current_scan_number',self.img_loader.scan_number)
+            self.current_frame = self.img_loader.frame_number
             self.img = img
             self.data = merge_data_image_loader(self.data, self.img_loader)
             self.bkg_sub.fit_background(None, img, self.data, plot_live = True, freeze_sf = True)
             self.data = merge_data_bkg(self.data, self.bkg_sub)
+            self.data['bkg'].append(bkg_intensity)
             return True
-        except:
+        except StopIteration:
+            self.save_data_file(self.data_path)
             return False
 
-    def run_update(self):
+    def run_update(self,bkg_intensity = 0):
         self.bkg_sub.fit_background(None, self.img, self.data, plot_live = True, freeze_sf = True)
         self.data = update_data_bkg(self.data, self.bkg_sub)
+        self.data['bkg'][-1] = bkg_intensity
 
     def save_data_file(self,path):
-        df = pd.DataFrame(self.data)
-        if path.endswith('.xlsx'):          
-            df.to_excel(path)
+        if hasattr(self,'writer'):
+            pass
         else:
-            df.to_excel(path+'.xlsx')
+            try:
+                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
+            except:
+                df_temp = pd.DataFrame({})
+                writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
+                df_temp.to_excel(writer_temp)
+                writer_temp.save()
+                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
+        df = pd.DataFrame(self.data)
+        #df.to_excel(path)
+        df.to_excel(self.writer,sheet_name='CTR_data',columns = self.data_keys)
+        self.writer.save()
 
 if __name__ == "__main__":
     run_app()

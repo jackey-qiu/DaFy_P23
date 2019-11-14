@@ -6,7 +6,7 @@ from mplwidget import MplWidget
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from DaFy_PXRD_class import run_app
+from DaFy_CTR_BKG_class import run_app
 try:
     from . import locate_path
 except:
@@ -17,7 +17,7 @@ sys.path.append(DaFy_path)
 sys.path.append(os.path.join(DaFy_path,'EnginePool'))
 sys.path.append(os.path.join(DaFy_path,'FilterPool'))
 sys.path.append(os.path.join(DaFy_path,'util'))
-from VisualizationEnginePool import plot_bkg_fit_gui_pyqtgraph,replot_bkg_profile, plot_pxrd_fit_gui_pyqtgraph
+from VisualizationEnginePool import plot_bkg_fit_gui_pyqtgraph,replot_bkg_profile
 import time
 import matplotlib
 matplotlib.use("Qt5Agg")
@@ -31,85 +31,65 @@ class MyMainWindow(QMainWindow):
     def __init__(self, parent = None):
         super(MyMainWindow, self).__init__(parent)
         pg.setConfigOptions(imageAxisOrder='row-major')
-        #pg.mkQApp()
-        uic.loadUi(os.path.join(DaFy_path,'scripts','CV_XRD','ctr_bkg_pyqtgraph6_new.ui'),self)
-        self.setWindowTitle('Data analysis factory: PXRD data analasis')
+        pg.mkQApp()
+        uic.loadUi(os.path.join(DaFy_path,'scripts','CV_XRD','CTR_bkg_pyqtgraph_new.ui'),self)
+        self.setWindowTitle('Data analysis factory: CTR data analasis')
         self.app_ctr=run_app()
         #self.app_ctr.run()
         self.current_image_no = 0
         self.current_scan_number = None
         self.bkg_intensity = 0
+        self.bkg_clip_image = None
          
         #self.setupUi(self)
         self.stop = False
         self.open.clicked.connect(self.load_file)
+
         self.relaunch.clicked.connect(self.relaunch_file)
         self.launch.clicked.connect(self.launch_file)
+        #self.reload.clicked.connect(self.rload_file)
+        self.horizontalSlider.valueChanged.connect(self.change_peak_width)
         self.stopBtn.clicked.connect(self.stop_func)
         self.saveas.clicked.connect(self.save_file_as)
         self.save.clicked.connect(self.save_file)
         self.plot.clicked.connect(self.plot_figure)
         self.runstepwise.clicked.connect(self.plot_)
         self.pushButton_filePath.clicked.connect(self.locate_data_folder)
-        self.lineEdit_data_file_name.setText('temp_data.xlsx')
+        self.lineEdit_data_file_name.setText('temp_data_ctr.xlsx')
         self.lineEdit_data_file_path.setText(self.app_ctr.data_path)
-        setattr(self.app_ctr,'data_path',os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text()))
         #self.lineEdit.setText(self.app_ctr.conf_path_temp)
+        self.actionOpenConfig.triggered.connect(self.load_file)
+        self.actionSaveConfig.triggered.connect(self.save_file)
+        self.actionRun.triggered.connect(self.plot_)
+        self.actionStop.triggered.connect(self.stop_func)
+        self.actionSaveData.triggered.connect(self.save_data)
+        setattr(self.app_ctr,'data_path',os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text()))
         #self.update_poly_order(init_step = True)
         for each in self.groupBox_2.findChildren(QCheckBox):
             each.released.connect(self.update_poly_order)
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
             each.toggled.connect(self.update_cost_func)
-        #self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
-        self.pushButton_remove_current_point.setEnabled(False)
-        self.pushButton_remove_spike.clicked.connect(self.remove_spikes)
+        self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
         self.doubleSpinBox_ss_factor.valueChanged.connect(self.update_ss_factor)
+
         self.comboBox_p3.activated.connect(self.select_source_for_plot_p3)
         self.comboBox_p4.activated.connect(self.select_source_for_plot_p4)
-        self.comboBox_p5.activated.connect(self.select_source_for_plot_p5)
         self.p3_data_source = self.comboBox_p3.currentText()
         self.p4_data_source = self.comboBox_p4.currentText()
-        self.p5_data_source = self.comboBox_p5.currentText()
         setattr(self.app_ctr,'p3_data_source',self.comboBox_p3.currentText())
         setattr(self.app_ctr,'p4_data_source',self.comboBox_p4.currentText())
-        setattr(self.app_ctr,'p5_data_source',self.comboBox_p5.currentText())
+
         #self.setup_image()
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_data)
-
-    def remove_spikes(self):
-        if self.app_ctr.time_scan:
-            spike_range = self.region_mon.getRegion()
-            setattr(self.app_ctr,'spikes_bounds', spike_range)
-            self.lineEdit_spike_range.setText('from {:6.2f} to {:6.2f}'.format(*spike_range))
-            self.updatePlot()
-        else:
-            setattr(self.app_ctr,'spikes_bounds', None)
-
-    def select_source_for_plot_p3(self):
-        if self.app_ctr.time_scan:
-            self.app_ctr.p3_data_source = self.comboBox_p3.currentText()
-            self.updatePlot()
-        else:
-            pass
-
-    def select_source_for_plot_p4(self):
-        if self.app_ctr.time_scan:
-            self.app_ctr.p4_data_source = self.comboBox_p4.currentText()
-            self.updatePlot()
-        else:
-            pass
-
-    def select_source_for_plot_p5(self):
-        if self.app_ctr.time_scan:
-            self.app_ctr.p5_data_source = self.comboBox_p5.currentText()
-            self.updatePlot()
-        else:
-            pass
+        
+    def change_peak_width(self):
+        self.lineEdit_peak_width.setText(str(self.horizontalSlider.value()))
+        self.app_ctr.bkg_sub.peak_width = int(self.horizontalSlider.value())
+        self.updatePlot()
 
     def save_data(self):
         data_file = os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text())
-        #self.app_ctr.save_data_file(data_file)
         try:
             self.app_ctr.save_data_file(data_file)
             self.statusbar.showMessage('Data file is saved as {}!'.format(data_file))
@@ -117,12 +97,17 @@ class MyMainWindow(QMainWindow):
             self.statusbar.showMessage('Failure to save data file!')
 
     def remove_data_point(self):
-        pass
-        '''
         self.app_ctr.data['mask_ctr'][-1]=False
         self.statusbar.showMessage('Current data point is masked!')
         self.updatePlot2()
-        '''
+
+    def select_source_for_plot_p3(self):
+        self.app_ctr.p3_data_source = self.comboBox_p3.currentText()
+        self.updatePlot()
+
+    def select_source_for_plot_p4(self):
+        self.app_ctr.p4_data_source = self.comboBox_p4.currentText()
+        self.updatePlot()
 
     def update_poly_order(self, init_step = False):
         ord_total = 0
@@ -130,7 +115,7 @@ class MyMainWindow(QMainWindow):
         for each in self.groupBox_2.findChildren(QCheckBox):
             ord_total += int(bool(each.checkState()))*int(each.text())
             i+=i
-        self.app_ctr.kwarg_bkg['ord_cus_s']=ord_total
+        self.app_ctr.bkg_sub.update_integration_order(ord_total)
         #print(self.app_ctr.bkg_sub.ord_cus_s)
         
         if not init_step:
@@ -139,7 +124,7 @@ class MyMainWindow(QMainWindow):
     def update_cost_func(self, init_step = False):
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
             if each.isChecked():
-                self.app_ctr.kwarg_bkg['fct']=each.text()
+                self.app_ctr.bkg_sub.update_integration_function(each.text())
                 break
         try:
             self.updatePlot()
@@ -147,7 +132,7 @@ class MyMainWindow(QMainWindow):
             pass
 
     def update_ss_factor(self, init_step = False):
-        self.app_ctr.kwarg_bkg['ss_factor']=self.doubleSpinBox_ss_factor.value()
+        self.app_ctr.bkg_sub.update_ss_factor(self.doubleSpinBox_ss_factor.value())
         #print(self.app_ctr.bkg_sub.ss_factor)
         try:
             self.updatePlot()
@@ -156,113 +141,80 @@ class MyMainWindow(QMainWindow):
 
     def setup_image(self):
         # Interpret image data as row-major instead of col-major
-        global img, roi, data, isoLine, iso,region
+        global img, roi, roi_bkg, data, p2, isoLine, iso
+
         win = self.widget_image
-        #win.setWindowTitle('pyqtgraph example: Image Analysis')
-        #iso.setZValue(5)
-        img = pg.ImageItem()
-        # Contrast/color control
-        hist = pg.HistogramLUTItem()
-        self.hist = hist
-        hist.setImageItem(img)
-        win.addItem(hist)
+        win.setWindowTitle('pyqtgraph example: Image Analysis')
 
         # A plot area (ViewBox + axes) for displaying the image
-        if self.app_ctr.time_scan:
-            p1 = win.addPlot(row=1,col=0,rowspan=4,colspan=1)
-        else:
-            p1 = win.addPlot(row=1,col=0,rowspan=3,colspan=1)
-        p1.setMaximumWidth(300)
+        p1 = win.addPlot()
 
         # Item for displaying image data
+        img = pg.ImageItem()
         self.img_pyqtgraph = img
         p1.addItem(img)
 
         # Custom ROI for selecting an image region
-        
-        #roi = pg.ROI([0, 0], [self.app_ctr.dim_detector[1]-2*self.app_ctr.hor_offset, self.app_ctr.dim_detector[0]-2*self.app_ctr.ver_offset])
-        roi = pg.ROI([0, 0], [self.app_ctr.dim_detector[1]-2*self.app_ctr.hor_offset, 50])
-
+        roi = pg.ROI([100, 100], [100, 100])
         self.roi = roi
         roi.addScaleHandle([0.5, 1], [0.5, 0.5])
         roi.addScaleHandle([0, 0.5], [0.5, 0.5])
         p1.addItem(roi)
+
+        # Custom ROI for monitoring bkg
+        roi_bkg = pg.ROI([0, 100], [100, 100],pen = 'r')
+        self.roi_bkg = roi_bkg
+        roi_bkg.addScaleHandle([0.5, 1], [0.5, 0.5])
+        roi_bkg.addScaleHandle([0, 0.5], [0.5, 0.5])
+        p1.addItem(roi_bkg)
         #roi.setZValue(10)  # make sure ROI is drawn above image
 
         # Isocurve drawing
         iso = pg.IsocurveItem(level=0.8, pen='g')
         iso.setParentItem(img)
         self.iso = iso
+        
+        #iso.setZValue(5)
+
+        # Contrast/color control
+        hist = pg.HistogramLUTItem()
+        self.hist = hist
+        hist.setImageItem(img)
+        win.addItem(hist)
+
         # Draggable line for setting isocurve level
         isoLine = pg.InfiniteLine(angle=0, movable=True, pen='g')
         self.isoLine = isoLine
         hist.vb.addItem(isoLine)
         hist.vb.setMouseEnabled(y=True) # makes user interaction a little easier
-        isoLine.setValue(0.)
+        isoLine.setValue(0.8)
         isoLine.setZValue(100000) # bring iso line above contrast controls
 
         # Another plot area for displaying ROI data
-        #win.nextColumn()
-        p2 = win.addPlot(0,1,rowspan=1,colspan=1, title = 'image profile (vertical direction)')
-        #p2.setMaximumWidth(400)
-        #p2.setMaximumHeight(200)
+        win.nextRow()
+        p2 = win.addPlot(colspan=2, title = 'ROI image profile')
+        p2.setMaximumHeight(200)
+        p2.setLabel('left','Intensity', units='c/s')
+        p2.setLabel('bottom','Pixel number')
+
         #p2.setLogMode(y = True)
 
-        region = pg.LinearRegionItem()
-        region.setZValue(10)
-        region.setRegion([10, 15])
-        # Add the LinearRegionItem to the ViewBox, but tell the ViewBox to exclude this 
-        # item when doing auto-range calculations.
-        region_mon = pg.LinearRegionItem()
-        region_mon.setZValue(10)
-        region_mon.setRegion([10, 15])
-
-        #monitor window
-        p2_mon = win.addPlot(0,2,rowspan=1, colspan=2,title='Monitor window')
-
-        def update():
-            region.setZValue(10)
-            region.show()
-            minX, maxX = region.getRegion()
-            region_mon.show()
-            region_mon.setRegion([(minX+maxX)/2-0.05,(minX+maxX)/2+0.05])
-            #save the bounds of shape area for plotting in monitor window
-            self.region_bounds = [minX, maxX]
-
-            x, y = p2_mon.listDataItems()[0].xData, p2_mon.listDataItems()[0].yData 
-            data_range =[np.argmin(abs(x-minX)),np.argmin(abs(x-maxX))]
-            if data_range[1]>len(y):
-                data_range[1] = len(y)
-            minY = min(y[data_range[0]:data_range[1]])
-            maxY = max(y[data_range[0]:data_range[1]])*1.1
-            p2_mon.setYRange(minY, maxY, padding=0) 
-
-            p2_mon.setXRange(minX, maxX, padding=0)  
-            #print(p2_mon.listDataItems()[0].xData)
-            #print(dir(p2_mon))
-        region.sigRegionChanged.connect(update)
 
         # plot to show intensity over time
-        #win.nextRow()
-        p3 = win.addPlot(1,1,rowspan=1,colspan=3)
-        if self.app_ctr.time_scan:
-            p2.addItem(region, ignoreBounds=True)
-            p2_mon.addItem(region_mon, ignoreBounds=True)
-        else:
-            p3.addItem(region, ignoreBounds=True)
-            p2_mon.addItem(region_mon, ignoreBounds=True)
-        #p3.addLegend()
-        #p3.setMaximumHeight(200)
-        #
+        win.nextRow()
+        p3 = win.addPlot(colspan=2)
+        p3.setMaximumHeight(200)
+        p3.setLabel('left','Integrated Intensity', units='c/s')
 
         # plot to show intensity over time
-        #win.nextRow()
-        p4 = win.addPlot(2,1,rowspan=1,colspan=3)
-        #p4.setMaximumHeight(200)
+        win.nextRow()
+        p4 = win.addPlot(colspan=2)
+        p4.setMaximumHeight(200)
+        p4.setLabel('bottom','frame number')
 
-        #if self.app_ctr.time_scan:
-        p5 = win.addPlot(3,1,rowspan=1,colspan=3)
-        p5.setMaximumHeight(200)
+        region_roi = pg.LinearRegionItem()
+        region_roi.setZValue(10)
+        region_roi.setRegion([10, 15])
 
         # Generate image data
         #data = np.random.normal(size=(500, 600))
@@ -284,70 +236,58 @@ class MyMainWindow(QMainWindow):
         self.p2 = p2
         self.p3 = p3
         self.p4 = p4
-        self.p5 = p5
-        self.p2_mon = p2_mon       
-        self.region_mon = region_mon
         p1.autoRange()  
-        self.legend_p2 = self.p2.addLegend()
-        self.legend_p3 = self.p3.addLegend()
-        self.legend_p4 = self.p4.addLegend()
-        self.legend_p5 = self.p5.addLegend()
-        #set axis labels
-        self.p2.setLabel('left','Normalized intensity',units='c/s')
-        self.p2.setLabel('bottom','2theta angle',units='°')
-        self.p2_mon.setLabel('left','Normalized intensity',units='c/s')
-        self.p2_mon.setLabel('bottom','2theta angle',units='°')
-        self.p3.setLabel('left','Integrated peak intensity',units='c/s')
-        #self.p3.setLabel('bottom','frame_number')
-        self.p4.setLabel('left','Peak position')
-        #self.p4.setLabel('bottom','frame_number')
-        self.p5.setLabel('left','Potential wrt Ag/AgCl')
-        self.p5.setLabel('bottom','frame_number')
-
 
         def update_bkg_signal():
-            selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
-            self.bkg_intensity = selected.sum()
+            selected = roi_bkg.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
+            self.bkg_intensity = selected.mean()
+            #self.bkg_clip_image = selected
+            #self.app_ctr.bkg_clip_image = selected
+
+        def update_bkg_clip():
+            selected = roi_bkg.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
+            #self.bkg_intensity = selected.sum()
+            #self.bkg_clip_image = selected
+            self.app_ctr.bkg_clip_image = selected
 
         # Callbacks for handling user interaction
         def updatePlot():
-            #try:
-            #    selected = roi.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
-            #except:
-            #    pass
             update_bkg_signal()
-            self.app_ctr.run_update(bkg_intensity = self.bkg_intensity)
-            #remove legend and plot again
-            for legend in [self.legend_p2,self.legend_p3,self.legend_p4,self.legend_p5]:
-                try:
-                    legend.scene().removeItem(legend)
-                except:
-                    pass
-            self.legend_p2 = self.p2.addLegend()
-            self.legend_p3 = self.p3.addLegend()
-            self.legend_p4 = self.p4.addLegend()
-            self.legend_p5 = self.p5.addLegend()
-            self.p4.setLabel('left',self.comboBox_p4.currentText())
-            self.p5.setLabel('left',self.comboBox_p5.currentText())
-
-            if self.app_ctr.time_scan:
-                plot_pxrd_fit_gui_pyqtgraph([self.p2_mon,self.p2], self.p3, self.p4,self.p5,self.app_ctr)
-                self.p2.addItem(region, ignoreBounds=True)#re-add the region item
-                self.p2_mon.addItem(region_mon, ignoreBounds=True)#re-add the region item
-            else:
-                plot_pxrd_fit_gui_pyqtgraph([self.p2_mon,self.p2], self.p3, None,self.p4, self.app_ctr)
-                self.p3.addItem(region, ignoreBounds=True)
-                self.p2_mon.addItem(region_mon, ignoreBounds=True)#re-add the region item
-                #region.setRegion(self.region_bounds)#re-add the region item
+            #global data
             try:
-                self.lcdNumber_potential.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['potential'][-1])
-                self.lcdNumber_current.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['current'][-1])
-                self.lcdNumber_intensity.display(self.app_ctr.data[self.app_ctr.img_loader.scan_number]['peak_intensity'][-1])
+                selected = roi.getArrayRegion(self.app_ctr.bkg_sub.img, self.img_pyqtgraph)
             except:
+                #selected = roi.getArrayRegion(data, self.img_pyqtgraph)
                 pass
+
+            self.p3.setLabel('left',self.comboBox_p3.currentText())
+            self.p4.setLabel('left',self.comboBox_p4.currentText())
+
+            p2.plot(selected.sum(axis=0), clear=True)
+            self.reset_peak_center_and_width()
+            self.app_ctr.run_update(bkg_intensity=self.bkg_intensity)
+            ##update iso curves
+            x, y = [int(each) for each in self.roi.pos()]
+            w, h = [int(each) for each in self.roi.size()]
+            self.iso.setData(pg.gaussianFilter(self.app_ctr.bkg_sub.img[y:(y+h),x:(x+w)], (2, 2)))
+            self.iso.setPos(x,y)
+            #update bkg roi
+            self.roi_bkg.setSize([w,h])
+            #self.roi_bkg.setPos([x-w,y])
+
+            if self.app_ctr.img_loader.frame_number ==0:
+                isoLine.setValue(self.app_ctr.bkg_sub.img[y:(y+h),x:(x+w)].mean())
+            else:
+                pass
+            #print(isoLine.value(),self.current_image_no)
+            #plot others
+            plot_bkg_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.app_ctr)
+            self.lcdNumber_potential.display(self.app_ctr.data['potential'][-1])
+            self.lcdNumber_current.display(self.app_ctr.data['current'][-1])
+            self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-1])
             self.lcdNumber_iso.display(isoLine.value())
-            
-        def updatePlot_after_remove_point():#not implemented for PXRD
+
+        def updatePlot_after_remove_point():
             #global data
             try:
                 selected = roi.getArrayRegion(self.app_ctr.bkg_sub.img, self.img_pyqtgraph)
@@ -355,7 +295,7 @@ class MyMainWindow(QMainWindow):
                 #selected = roi.getArrayRegion(data, self.img_pyqtgraph)
                 pass
             p2.plot(selected.sum(axis=0), clear=True)
-            #self.reset_peak_center_and_width()
+            self.reset_peak_center_and_width()
             #self.app_ctr.run_update()
             ##update iso curves
             x, y = [int(each) for each in self.roi.pos()]
@@ -368,22 +308,24 @@ class MyMainWindow(QMainWindow):
                 pass
             #print(isoLine.value(),self.current_image_no)
             #plot others
-            plot_bkg_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.app_ctr.data, self.app_ctr.bkg_sub)
+            plot_bkg_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.app_ctr)
             self.lcdNumber_potential.display(self.app_ctr.data['potential'][-2])
             self.lcdNumber_current.display(self.app_ctr.data['current'][-2])
             self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-2])
             self.lcdNumber_iso.display(isoLine.value())
 
-        #roi.sigRegionChanged.connect(updatePlot)
         roi.sigRegionChanged.connect(updatePlot)
         self.updatePlot = updatePlot
         self.updatePlot2 = updatePlot_after_remove_point
+        self.update_bkg_clip = update_bkg_clip
 
         def updateIsocurve():
             global isoLine, iso
             iso.setLevel(isoLine.value())
             self.lcdNumber_iso.display(isoLine.value())
+
         self.updateIsocurve = updateIsocurve
+
         isoLine.sigDragged.connect(updateIsocurve)
 
     def stop_func(self):
@@ -400,7 +342,11 @@ class MyMainWindow(QMainWindow):
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
         if fileName:
             self.lineEdit.setText(fileName)
-            #self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            #self.app_ctr.run(self.lineEdit.text())
+            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            #self.current_image_no = 0
+            #self.current_scan_number = self.app_ctr.img_loader.scan_number
+            #self.plot_()
             with open(fileName,'r') as f:
                 self.textEdit.setText(f.read())
 
@@ -410,6 +356,18 @@ class MyMainWindow(QMainWindow):
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
         if fileName:
             self.lineEdit_data_file_path.setText(os.path.dirname(fileName))
+
+    def rload_file(self):#to be deleted
+        self.save_file()
+        #self.region_bounds = [0,1]
+        try:
+            self.app_ctr.run(self.lineEdit.text())
+            self.timer_save_data.stop()
+            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            self.plot_()
+            self.statusbar.showMessage('Initialization succeed!')
+        except:
+            self.statusbar.showMessage('Initialization failed!')
 
     def relaunch_file(self):
         self.save_file()     
@@ -426,6 +384,8 @@ class MyMainWindow(QMainWindow):
         self.save_file()     
         try:
             self.app_ctr.run(self.lineEdit.text())
+            self.update_poly_order(init_step=True)
+            self.update_cost_func(init_step=True)
             self.setup_image()
             self.timer_save_data.stop()
             self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
@@ -434,6 +394,7 @@ class MyMainWindow(QMainWindow):
             self.statusbar.showMessage('Initialization succeed!')
         except:
             self.statusbar.showMessage('Initialization failed!')
+
 
     def save_file_as(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "Text documents (*.txt);All files (*.*)")
@@ -452,7 +413,6 @@ class MyMainWindow(QMainWindow):
             self.statusbar.showMessage('Config file is saved with the same file name!')
 
     def plot_figure(self):
-        #auto plotting timmer
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.plot_)
         self.timer.start(5)
@@ -462,15 +422,16 @@ class MyMainWindow(QMainWindow):
         if self.stop:
             self.timer.stop()
         else:
-            return_value = self.app_ctr.run_script(bkg_intensity = self.bkg_intensity)
-            if self.app_ctr.img is not None:
+            #self.update_bkg_clip()
+            return_value = self.app_ctr.run_script()
+            if self.app_ctr.bkg_sub.img is not None:
                 #if self.current_scan_number == None:
                 #    self.current_scan_number = self.app_ctr.img_loader.scan_number
                 self.lcdNumber_scan_number.display(self.app_ctr.img_loader.scan_number)
-                self.img_pyqtgraph.setImage(self.app_ctr.img)
+                self.img_pyqtgraph.setImage(self.app_ctr.bkg_sub.img)
                 if self.app_ctr.img_loader.frame_number == 0:
                     self.p1.autoRange() 
-                self.hist.setLevels(self.app_ctr.img.min(), self.app_ctr.img.mean()*5)
+                self.hist.setLevels(self.app_ctr.bkg_sub.img.min(), self.app_ctr.bkg_sub.img.mean()*10)
                 self.updatePlot()
 
             if return_value:
@@ -478,8 +439,11 @@ class MyMainWindow(QMainWindow):
                 self.statusbar.showMessage('Working on scan{}: we are now at frame{} of {} frames in total!'.format(self.app_ctr.img_loader.scan_number,self.app_ctr.img_loader.frame_number+1,self.app_ctr.img_loader.total_frame_number))
                 self.progressBar.setValue((self.app_ctr.img_loader.frame_number+1)/float(self.app_ctr.img_loader.total_frame_number)*100)
                 self.lcdNumber_frame_number.display(self.app_ctr.img_loader.frame_number+1)
+                #self.app_ctr.img_loader.frame_number
+                #self.current_image_no += 1
             else:
                 self.timer.stop()
+                self.save_data()
                 self.stop = False
                 self.stopBtn.setText('Stop')
                 self.statusbar.clearMessage()
@@ -487,9 +451,20 @@ class MyMainWindow(QMainWindow):
 
     def update_plot(self):
         img = self.app_ctr.run_update()
-        plot_pxrd_fit_gui_pyqtgraph(self.p2, self.p3, self.p4, self.app_ctr)
+        plot_bkg_fit_gui_pyqtgraph(self.p2, self.p3, self.p4,self.app_ctr)
         #self.MplWidget.canvas.figure.tight_layout()
         #self.MplWidget.canvas.draw()
+
+    def reset_peak_center_and_width(self):
+        roi_size = [int(each/2) for each in self.roi.size()][::-1]
+        roi_pos = [int(each) for each in self.roi.pos()][::-1]
+        #roi_pos[0] = self.app_ctr.cen_clip[0]*2-roi_pos[0]
+        #new_center = [roi_pos[0]-roi_size[0],roi_pos[1]+roi_size[1]]
+        #roi_pos[0] = self.app_ctr.cen_clip[0]*2-roi_pos[0]
+        new_center = [roi_pos[0]+roi_size[0],roi_pos[1]+roi_size[1]]
+        self.app_ctr.bkg_sub.center_pix = new_center
+        self.app_ctr.bkg_sub.row_width = roi_size[1]
+        self.app_ctr.bkg_sub.col_width = roi_size[0]
 
     def peak_cen_shift_hor(self):
         offset = int(self.spinBox_hor.value())

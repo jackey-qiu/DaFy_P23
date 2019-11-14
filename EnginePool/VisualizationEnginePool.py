@@ -334,8 +334,61 @@ def plot_pxrd_fit_gui_pyqtgraph_old(ax_profile, ax_ctr, ax_pot,app_ctr):
         #ax_ctr.addLegend()
         ax_pot.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number]['potential'])
 
+def plot_bkg_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_pot,app_ctr):
+    data = app_ctr.data
+    fit_bkg_object = app_ctr.bkg_sub
+    z = fit_bkg_object.fit_data['y_bkg'][:,0]
+    n = fit_bkg_object.fit_data['x']
+    y = fit_bkg_object.fit_data['y_total'][:,0]
+    y_span = fit_bkg_object.y_span
+    x_span = fit_bkg_object.x_span
+    clip_image_center = [int(y_span/2)+fit_bkg_object.peak_shift,int(x_span/2)+fit_bkg_object.peak_shift]
+    peak_l = max([clip_image_center[int(fit_bkg_object.int_direct=='x')]-fit_bkg_object.peak_width,0])#peak_l>0
+    peak_r = clip_image_center[int(fit_bkg_object.int_direct=='x')]+fit_bkg_object.peak_width
+    #ax_profile.plot(n,y,pen='b',name="data")
+    ax_profile.plot(n,z,pen="r",name="background")
+    #ax_profile.plot(n,y-z,pen="m",name="data-background")
+    #ax_profile.plot(n,[0]*len(n),pen='k')
+    ax_profile.plot([peak_l,peak_l],[z[peak_l],y.max()],pen = 'g')
+    ax_profile.plot([peak_r,peak_r],[z[peak_r],y.max()],pen = 'g')
+    #plot_index = []
+    #for i in range(len(data['mask_ctr'])):
+    #    if data['mask_ctr'][i]==True:
+    #        plot_index.append(i)
+    plot_index = [i for i in range(len(data['mask_ctr'])) if data['mask_ctr'][i]==True]
+    imge_no = [data['image_no'][i] for i in plot_index]
+    L_list = [data['L'][i] for i in plot_index]
+    potential = [data['potential'][i] for i in plot_index]
+    current = [data['current'][i] for i in plot_index]
+    peak_intensity = np.array([data['peak_intensity'][i] for i in plot_index])
+    peak_intensity_error = [data['peak_intensity_error'][i] for i in plot_index]
+    bkg_intensity = np.array([data['bkg'][i] for i in plot_index])
 
-def plot_bkg_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_pot,data, fit_bkg_object, plot_final = False):
+    #print(np.array(data['image_no'])[plot_index].shape)
+    if app_ctr.p4_data_source == 'potential':
+        ax_pot.plot(imge_no,potential,clear = True)
+    elif app_ctr.p4_data_source == 'current':
+        ax_pot.plot(imge_no,current,clear = True)
+    if 'L' in data:
+        #L_list, I_list, I_err_list = np.array(data['L'])[plot_index],np.array(data['peak_intensity'])[plot_index], np.array(data['peak_intensity_error'])[plot_index]
+        if not fit_bkg_object.rod_scan:
+            ax_ctr.setLabel('bottom','frame_number')
+            if app_ctr.p3_data_source == 'peak_intensity':
+                ax_ctr.plot(imge_no, peak_intensity,pen={'color': 'y', 'width': 1}, clear = True)
+                ax_ctr.setLogMode(x=False,y=False)
+            elif app_ctr.p3_data_source == 'bkg_intensity':
+                ax_ctr.plot(imge_no, bkg_intensity,pen={'color': 'g', 'width': 1}, clear = True)
+                ax_ctr.setLogMode(x=False,y=False)
+        else:
+            ax_ctr.setLabel('bottom','L')
+            if app_ctr.p3_data_source == 'peak_intensity':
+                ax_ctr.plot(L_list, peak_intensity,pen={'color': 'y', 'width': 1},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w',clear = True)
+                ax_ctr.setLogMode(x=False,y=True)
+            elif app_ctr.p3_data_source == 'bkg_intensity':
+                ax_ctr.plot(L_list, bkg_intensity,pen={'color': 'g', 'width': 1},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w',clear = True)
+                ax_ctr.setLogMode(x=False,y=True)
+
+def plot_bkg_fit_gui_pyqtgraph_old(ax_profile, ax_ctr, ax_pot,data, fit_bkg_object, plot_final = False):
     z = fit_bkg_object.fit_data['y_bkg'][:,0]
     n = fit_bkg_object.fit_data['x']
     y = fit_bkg_object.fit_data['y_total'][:,0]

@@ -140,7 +140,7 @@ def update_data_bkg(data, object_bkg):
     data['peak_intensity_error'][-1] = data['peak_intensity_error'][-1]/(data['mon'][-1]*data['transm'][-1])**0.5
     return data
 
-def merge_data(data, object_image_loader, object_peak_fit, object_bkg, global_kwarg):
+def merge_data(data, object_image_loader, object_peak_fit, object_bkg, global_kwarg, tweak = False):
     key_map_rules = {'scan_no':object_image_loader.scan_number,
                      'phs': global_kwarg['phs'][global_kwarg['scan_nos'].index(object_image_loader.scan_number)],
                      'image_no':object_image_loader.frame_number,
@@ -181,8 +181,14 @@ def merge_data(data, object_image_loader, object_peak_fit, object_bkg, global_kw
                      'mon':object_image_loader.motor_angles['mon'],
                      'transm':object_image_loader.motor_angles['transm']
                      }
-    for key in data:
-        data[key].append(key_map_rules[key])
+    if tweak:
+        for key in data:
+            if key!='bkg':
+                data[key][-1] = key_map_rules[key]
+    else:
+        for key in data:
+            if key!='bkg':
+                data[key].append(key_map_rules[key])
     data['peak_intensity_error'][-1] = data['peak_intensity_error'][-1]/(data['mon'][-1]*data['transm'][-1])**0.5
     return data
 

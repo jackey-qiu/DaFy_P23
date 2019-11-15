@@ -26,6 +26,12 @@ from PyQt5 import QtCore
 from PyQt5.QtWidgets import QCheckBox, QRadioButton
 
 #from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as NavigationToolbar)
+class NonScientific(pg.AxisItem):
+    def __init__(self, *args, **kwargs):
+        super(NonScientific, self).__init__(*args, **kwargs)
+
+    def tickStrings(self, values, scale, spacing):
+        return ['{}_t'.format(value) for value in values] #This line return the NonScientific notation value
 
 class MyMainWindow(QMainWindow):
     def __init__(self, parent = None):

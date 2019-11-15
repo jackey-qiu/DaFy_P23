@@ -241,6 +241,52 @@ def replot_bkg_profile(ax_profile, data, fit_bkg_object, plot_final = False):
     ax_profile.plot([peak_l,peak_l],[z[peak_l],y.max()],pen = 'g')
     ax_profile.plot([peak_r,peak_r],[z[peak_r],y.max()],pen = 'g')
 
+def plot_xrv_gui_pyqtgraph(p2, p3, p4, p5, p6, p7, app_ctr):
+    data = app_ctr.data
+    current_scan_number = app_ctr.current_scan_number
+    index_list = np.where(np.array(data['scan_no'])==current_scan_number)
+    img_number = np.array(data['image_no'])[index_list]
+
+    if app_ctr.p2_data_source == 'vertical':
+        p2.plot(img_number,np.array(data['strain_oop'])[index_list],clear = True)
+    elif app_ctr.p2_data_source == 'horizontal':
+        p2.plot(img_number,np.array(data['strain_ip'])[index_list],clear = True)
+
+    if app_ctr.p3_data_source == 'peak_intensity':
+        p3.plot(img_number,np.array(data['peak_intensity'])[index_list],clear = True)
+    elif app_ctr.p3_data_source == 'bkg_intensity':
+        p3.plot(img_number,np.array(data['bkg'])[index_list],clear = True)
+
+    if app_ctr.p4_data_source == 'current':
+        p4.plot(img_number,np.array(data['current'])[index_list],clear = True)
+    elif app_ctr.p4_data_source == 'potential':
+        p4.plot(img_number,np.array(data['potential'])[index_list],clear = True)
+    
+    p5.plot(app_ctr.peak_fitting_instance.fit_data['hor']['x'][-1],app_ctr.peak_fitting_instance.fit_data['hor']['y'][-1], clear = True)
+    p5.plot(app_ctr.peak_fitting_instance.fit_data['hor']['x'][0],app_ctr.model(app_ctr.peak_fitting_instance.fit_data['hor']['x'][0],*app_ctr.peak_fitting_instance.fit_results_plot['hor'][0]))
+    q_boundary_ip = [app_ctr.peak_fitting_instance.fit_data['hor']['x'][0].min(), app_ctr.peak_fitting_instance.fit_data['hor']['x'][0].max(),app_ctr.peak_fitting_instance.fit_data['hor']['x'][-1].min(), app_ctr.peak_fitting_instance.fit_data['hor']['x'][-1].max()]
+    intensity_boundary_ip = [app_ctr.peak_fitting_instance.fit_data['hor']['y'][-1].min(), app_ctr.peak_fitting_instance.fit_data['hor']['y'][-1].max()]
+    for i in range(len(q_boundary_ip)):
+        if i in [0,1]:
+            color = 'k'
+        else:
+            color = 'r'
+        p5.plot([q_boundary_ip[i],q_boundary_ip[i]],intensity_boundary_ip,pen = color)
+
+    p6.plot(app_ctr.peak_fitting_instance.fit_data['ver']['x'][-1],app_ctr.peak_fitting_instance.fit_data['ver']['y'][-1], clear = True)
+    p6.plot(app_ctr.peak_fitting_instance.fit_data['ver']['x'][0],app_ctr.model(app_ctr.peak_fitting_instance.fit_data['ver']['x'][0],*app_ctr.peak_fitting_instance.fit_results_plot['ver'][0]))
+    q_boundary_oop = [app_ctr.peak_fitting_instance.fit_data['ver']['x'][0].min(), app_ctr.peak_fitting_instance.fit_data['ver']['x'][0].max(),app_ctr.peak_fitting_instance.fit_data['ver']['x'][-1].min(), app_ctr.peak_fitting_instance.fit_data['ver']['x'][-1].max()]
+    intensity_boundary_oop = [app_ctr.peak_fitting_instance.fit_data['ver']['y'][-1].min(), app_ctr.peak_fitting_instance.fit_data['ver']['y'][-1].max()]
+    for i in range(len(q_boundary_oop)):
+        if i in [0,1]:
+            color = 'k'
+        else:
+            color = 'r'
+        p6.plot([q_boundary_oop[i],q_boundary_oop[i]],intensity_boundary_oop,pen = color)
+
+    p7.plot(np.array(data['potential'])[index_list],np.array(data['current'])[index_list],clear = True)
+
+
 def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_strain, ax_pot,app_ctr):
 
     ax_profile_mon,ax_profile = ax_profile

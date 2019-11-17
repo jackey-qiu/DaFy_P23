@@ -199,7 +199,6 @@ class MyMainWindow(QMainWindow):
         self.iso = iso
         
         #iso.setZValue(5)
-
         # Draggable line for setting isocurve level
         isoLine = pg.InfiniteLine(angle=0, movable=True, pen='g')
         self.isoLine = isoLine
@@ -207,6 +206,13 @@ class MyMainWindow(QMainWindow):
         hist.vb.setMouseEnabled(y=True) # makes user interaction a little easier
         isoLine.setValue(0.8)
         isoLine.setZValue(100000) # bring iso line above contrast controls
+
+        self.region_cut_hor = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Horizontal)
+        self.region_cut_ver = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical)
+        self.region_cut_hor.setRegion([180,220])
+        self.region_cut_ver.setRegion([180,220])
+        p1.addItem(self.region_cut_hor, ignoreBounds = True)
+        p1.addItem(self.region_cut_ver, ignoreBounds = True)
 
         # Another plot area for displaying ROI data
         #win.nextRow()
@@ -233,10 +239,10 @@ class MyMainWindow(QMainWindow):
         p5 = win.addPlot(row=1,col=0,colspan=1,rowspan=1,title = 'peak fit result_horz')
         #p5.setLabel('bottom','q')
         p6 = win.addPlot(row=2,col=0,colspan=1,rowspan=1,title = 'peak fit result_vert')
-        p5.setLabel('bottom','q')
-        p7 = win.addPlot(row=3,col=0,colspan=1,rowspan=1,title = 'CV')
-        p7.setLabel('bottom','Potential (E)')
-        p7.setLabel('left','Current density (I)')
+        p6.setLabel('bottom','q')
+        p7 = win.addPlot(row=3,col=0,colspan=1,rowspan=1,title = 'Peak intensity')
+        p7.setLabel('bottom','pixel index')
+        p7.setLabel('left','bkg subtracted peak intensity')
 
         # zoom to fit imageo
         self.p1 = p1
@@ -286,7 +292,7 @@ class MyMainWindow(QMainWindow):
                 pass
             #print(isoLine.value(),self.current_image_no)
             #plot others
-            plot_xrv_gui_pyqtgraph(self.p2, self.p3, self.p4,self.p5, self.p6, self.p7,self.app_ctr)
+            plot_xrv_gui_pyqtgraph(self.p1,self.p2, self.p3, self.p4,self.p5, self.p6, self.p7,self.app_ctr)
             self.lcdNumber_potential.display(self.app_ctr.data['potential'][-1])
             self.lcdNumber_current.display(self.app_ctr.data['current'][-1])
             self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-1])
@@ -313,7 +319,7 @@ class MyMainWindow(QMainWindow):
                 pass
             #print(isoLine.value(),self.current_image_no)
             #plot others
-            plot_xrv_gui_pyqtgraph(self.p2, self.p3, self.p4,self.p5, self.p6, self.p7, self.app_ctr)
+            plot_xrv_gui_pyqtgraph(self.p1,self.p2, self.p3, self.p4,self.p5, self.p6, self.p7, self.app_ctr)
             self.lcdNumber_potential.display(self.app_ctr.data['potential'][-2])
             self.lcdNumber_current.display(self.app_ctr.data['current'][-2])
             self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-2])
@@ -387,7 +393,6 @@ class MyMainWindow(QMainWindow):
 
     def launch_file(self):
         self.save_file()   
-
         try:
             self.app_ctr.run(self.lineEdit.text())
             self.update_poly_order(init_step=True)
@@ -435,7 +440,16 @@ class MyMainWindow(QMainWindow):
                 #if self.current_scan_number == None:
                 #    self.current_scan_number = self.app_ctr.img_loader.scan_number
                 self.lcdNumber_scan_number.display(self.app_ctr.img_loader.scan_number)
+                #set image and cut on the image
+                cut_values_ver=[self.app_ctr.peak_fitting_instance.peak_center[0]-self.app_ctr.peak_fitting_instance.cut_offset['hor'][-1],self.app_ctr.peak_fitting_instance.peak_center[0]+self.app_ctr.peak_fitting_instance.cut_offset['hor'][-1]]
+                cut_values_hoz=[self.app_ctr.peak_fitting_instance.peak_center[1]-self.app_ctr.peak_fitting_instance.cut_offset['ver'][-1],self.app_ctr.peak_fitting_instance.peak_center[1]+self.app_ctr.peak_fitting_instance.cut_offset['ver'][-1]]
                 self.img_pyqtgraph.setImage(self.app_ctr.bkg_sub.img)
+                self.region_cut_hor.setRegion(cut_values_hoz)
+                self.region_cut_ver.setRegion(cut_values_ver)
+                #set roi
+                size_of_roi = self.roi.size()
+                self.roi.setPos([self.app_ctr.peak_fitting_instance.peak_center[0]-size_of_roi[0]/2.,self.app_ctr.peak_fitting_instance.peak_center[1]-size_of_roi[1]/2.])
+                #self.p1.plot([0,400],[200,200])
                 if self.app_ctr.img_loader.frame_number == 0:
                     self.p1.autoRange() 
                 self.hist.setLevels(self.app_ctr.bkg_sub.img.min(), self.app_ctr.bkg_sub.img.mean()*10)

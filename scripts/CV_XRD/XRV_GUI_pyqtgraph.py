@@ -33,7 +33,21 @@ class pixel_to_q(pg.AxisItem):
         self.shift = shift
 
     def tickStrings(self, values, scale, spacing):
-        return [value*self.scale+self.shift for value in values]
+        return [round(value*self.scale+self.shift,2) for value in values]
+
+    def attachToPlotItem(self, plotItem):
+        """Add this axis to the given PlotItem
+        :param plotItem: (PlotItem)
+        """
+        self.setParentItem(plotItem)
+        viewBox = plotItem.getViewBox()
+        self.linkToView(viewBox)
+        self._oldAxis = plotItem.axes[self.orientation]['item']
+        self._oldAxis.hide()
+        plotItem.axes[self.orientation]['item'] = self
+        pos = plotItem.axes[self.orientation]['pos']
+        plotItem.layout.addItem(self, *pos)
+        self.setZValue(-1000)
 
 class MyMainWindow(QMainWindow):
     def __init__(self, parent = None):
@@ -53,16 +67,17 @@ class MyMainWindow(QMainWindow):
         self.stop = False
         self.open.clicked.connect(self.load_file)
 
-        self.relaunch.clicked.connect(self.relaunch_file)
+        # self.relaunch.clicked.connect(self.relaunch_file)
         self.launch.clicked.connect(self.launch_file)
         #self.reload.clicked.connect(self.rload_file)
-        self.horizontalSlider.valueChanged.connect(self.change_peak_width)
+        #self.horizontalSlider.valueChanged.connect(self.change_peak_width)
         self.stopBtn.clicked.connect(self.stop_func)
         self.saveas.clicked.connect(self.save_file_as)
         self.save.clicked.connect(self.save_file)
         self.plot.clicked.connect(self.plot_figure)
         self.runstepwise.clicked.connect(self.plot_)
         self.pushButton_filePath.clicked.connect(self.locate_data_folder)
+        self.pushButton_fold_or_unfold.clicked.connect(self.fold_or_unfold)
         self.lineEdit_data_file_name.setText('temp_data_xrv.xlsx')
         self.lineEdit_data_file_path.setText(self.app_ctr.data_path)
         #self.lineEdit.setText(self.app_ctr.conf_path_temp)
@@ -81,19 +96,28 @@ class MyMainWindow(QMainWindow):
         self.doubleSpinBox_ss_factor.valueChanged.connect(self.update_ss_factor)
 
         self.comboBox_p2.activated.connect(self.select_source_for_plot_p2)
-        self.comboBox_p3.activated.connect(self.select_source_for_plot_p3)
-        self.comboBox_p4.activated.connect(self.select_source_for_plot_p4)
+        #self.comboBox_p3.activated.connect(self.select_source_for_plot_p3)
+        #self.comboBox_p4.activated.connect(self.select_source_for_plot_p4)
         self.p2_data_source = self.comboBox_p2.currentText()
-        self.p3_data_source = self.comboBox_p3.currentText()
-        self.p4_data_source = self.comboBox_p4.currentText()
+        #self.p3_data_source = self.comboBox_p3.currentText()
+        #self.p4_data_source = self.comboBox_p4.currentText()
         setattr(self.app_ctr,'p2_data_source',self.comboBox_p2.currentText())
-        setattr(self.app_ctr,'p3_data_source',self.comboBox_p3.currentText())
-        setattr(self.app_ctr,'p4_data_source',self.comboBox_p4.currentText())
+        #setattr(self.app_ctr,'p3_data_source',self.comboBox_p3.currentText())
+        #setattr(self.app_ctr,'p4_data_source',self.comboBox_p4.currentText())
 
         #self.setup_image()
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_data)
         
+    def fold_or_unfold(self):
+        text = self.pushButton_fold_or_unfold.text()
+        if text == "<":
+            self.frame.setVisible(False)
+            self.pushButton_fold_or_unfold.setText(">")
+        elif text == ">":
+            self.frame.setVisible(True)
+            self.pushButton_fold_or_unfold.setText("<")
+
     def change_peak_width(self):
         self.lineEdit_peak_width.setText(str(self.horizontalSlider.value()))
         self.app_ctr.bkg_sub.peak_width = int(self.horizontalSlider.value())
@@ -108,9 +132,13 @@ class MyMainWindow(QMainWindow):
             self.statusbar.showMessage('Failure to save data file!')
 
     def remove_data_point(self):
-        self.app_ctr.data['mask_cv_xrd'][-1]=False
-        self.statusbar.showMessage('Current data point is masked!')
-        self.updatePlot2()
+        left,right = [int(each) for each in self.region_abnormal.getRegion()]
+        self.lineEdit_abnormal_points.setText('Frame {} to Frame {}'.format(left,right))
+        first_index_for_current_scan = np.where(np.array(self.app_ctr.data['scan_no'])==self.app_ctr.img_loader.scan_number)[0][0]
+        for each_index in range(first_index_for_current_scan+left,first_index_for_current_scan+right+1):
+            self.app_ctr.data['mask_cv_xrd'][each_index] = False
+            self.app_ctr.data['mask_ctr'][each_index] = False
+        self.updatePlot()
 
     def select_source_for_plot_p2(self):
         self.app_ctr.p2_data_source = self.comboBox_p2.currentText()
@@ -156,7 +184,7 @@ class MyMainWindow(QMainWindow):
 
     def setup_image(self):
         # Interpret image data as row-major instead of col-major
-        global img, roi, roi_bkg, data, p2, isoLine, iso
+        global img, roi, roi_bkg, p2, p2_r, p3_r, p3, p4, p4_r, isoLine, iso
 
         win = self.widget_image
         #win.setWindowTitle('pyqtgraph example: Image Analysis')
@@ -168,10 +196,9 @@ class MyMainWindow(QMainWindow):
 
         # A plot area (ViewBox + axes) for displaying the image
         p1 = win.addPlot(row=0,col=2,rowspan=1,colspan=2)
-        
         # Item for displaying image data
         img = pg.ImageItem()
-        p1.getViewBox().invertY(True)
+        p1.getViewBox().invertY(False)
         
         self.img_pyqtgraph = img
         
@@ -216,24 +243,74 @@ class MyMainWindow(QMainWindow):
 
         # Another plot area for displaying ROI data
         #win.nextRow()
-        p2 = win.addPlot(row=1,col=1,colspan=2,rowspan=1, title = 'Strain/size profile')
+        p2 = win.addPlot(row=1,col=1,colspan=2,rowspan=1, title = 'Strain (left,white) and size (right,blue)')
         #p2.setMaximumHeight(200)
         #p2.setLabel('left','', units='')
         p2.setLabel('bottom','frame_number')
-
+        # p2.showAxis('right')
+        # p2.setLabel('right','grain_size', pen = "b")
+        
         #p2.setLogMode(y = True)
+        p2_r = pg.ViewBox()
+        p2.showAxis('right')
+        p2.scene().addItem(p2_r)
+        p2.getAxis('right').linkToView(p2_r)
+        p2_r.setXLink(p2)
+        # p2.getAxis('right').setLabel('grain_size', color='b')
+        ## Handle view resizing
+        def updateViews_p2():
+            ## view has resized; update auxiliary views to match
+            p2_r.setGeometry(p2.vb.sceneBoundingRect())
+            ## need to re-update linked axes since this was called
+            ## incorrectly while views had different shapes.
+            ## (probably this should be handled in ViewBox.resizeEvent)
+            p2_r.linkedViewChanged(p2.vb, p2_r.XAxis)
+        updateViews_p2()
+        p2.vb.sigResized.connect(updateViews_p2)
+        
 
 
         # plot to show intensity over time
-        #win.nextRow()
-        p3 = win.addPlot(row=2,col=1,colspan=2,rowspan=1,title = 'Peak intensity CTR/bkg')
-        #p3.setMaximumHeight(200)
-        p3.setLabel('left','Integrated Intensity', units='c/s')
+        p3 = win.addPlot(row=2,col=1,colspan=2,rowspan=1,title = 'Peak intensity(left,white) and bkg intensity (right,blue)')
+        #p3.setLabel('left','Integrated Intensity', units='c/s')
+        p3_r = pg.ViewBox()
+        p3.showAxis('right')
+        p3.scene().addItem(p3_r)
+        p3.getAxis('right').linkToView(p3_r)
+        p3_r.setXLink(p3)
+        #p3.getAxis('right').setLabel('bkg', color='b')
+        ## Handle view resizing
+        def updateViews_p3():
+            ## view has resized; update auxiliary views to match
+            p3_r.setGeometry(p3.vb.sceneBoundingRect())
+            ## need to re-update linked axes since this was called
+            ## incorrectly while views had different shapes.
+            ## (probably this should be handled in ViewBox.resizeEvent)
+            p3_r.linkedViewChanged(p3.vb, p3_r.XAxis)
+        updateViews_p3()
+        p3.vb.sigResized.connect(updateViews_p3)
 
         # plot to show current/potential over time
-        p4 = win.addPlot(row=3,col=1,colspan=2,rowspan=1, title = 'current or potential')
+        p4 = win.addPlot(row=3,col=1,colspan=2,rowspan=1, title = 'Potential (left,white) and current(right,blue)')
         #p4.setMaximumHeight(200)
         p4.setLabel('bottom','frame number')
+
+        p4_r = pg.ViewBox()
+        p4.showAxis('right')
+        p4.scene().addItem(p4_r)
+        p4.getAxis('right').linkToView(p4_r)
+        p4_r.setXLink(p4)
+        #p4.getAxis('right').setLabel('bkg', color='b')
+        ## Handle view resizing
+        def updateViews_p4():
+            ## view has resized; update auxiliary views to match
+            p4_r.setGeometry(p4.vb.sceneBoundingRect())
+            ## need to re-update linked axes since this was called
+            ## incorrectly while views had different shapes.
+            ## (probably this should be handled in ViewBox.resizeEvent)
+            p4_r.linkedViewChanged(p4.vb, p4_r.XAxis)
+        updateViews_p4()
+        p4.vb.sigResized.connect(updateViews_p4)
 
         #plot the peak fit results(horizontally)
         p5 = win.addPlot(row=1,col=0,colspan=1,rowspan=1,title = 'peak fit result_horz')
@@ -242,13 +319,19 @@ class MyMainWindow(QMainWindow):
         p6.setLabel('bottom','q')
         p7 = win.addPlot(row=3,col=0,colspan=1,rowspan=1,title = 'Peak intensity')
         p7.setLabel('bottom','pixel index')
-        p7.setLabel('left','bkg subtracted peak intensity')
-
+        #p7.setLabel('left','bkg subtracted peak intensity')
+        self.region_abnormal = pg.LinearRegionItem(orientation=pg.LinearRegionItem.Vertical)
+        self.region_abnormal.setZValue(100)
+        self.region_abnormal.setRegion([0, 5])
+        p5.addItem(self.region_abnormal, ignoreBounds = True)
         # zoom to fit imageo
         self.p1 = p1
         self.p2 = p2
+        self.p2_r = p2_r
         self.p3 = p3
+        self.p3_r = p3_r
         self.p4 = p4
+        self.p4_r = p4_r
         self.p5 = p5
         self.p6 = p6
         self.p7 = p7
@@ -257,7 +340,7 @@ class MyMainWindow(QMainWindow):
 
         def update_bkg_signal():
             selected = roi_bkg.getArrayRegion(self.app_ctr.img, self.img_pyqtgraph)
-            self.bkg_intensity = selected.mean()
+            self.bkg_intensity = selected.sum()
             #self.bkg_clip_image = selected
             #self.app_ctr.bkg_clip_image = selected
 
@@ -270,9 +353,11 @@ class MyMainWindow(QMainWindow):
             except:
                 #selected = roi.getArrayRegion(data, self.img_pyqtgraph)
                 pass
-            self.p2.setLabel('left',self.comboBox_p2.currentText())
-            self.p3.setLabel('left',self.comboBox_p3.currentText())
-            self.p4.setLabel('left',self.comboBox_p4.currentText())
+            #self.p2.setLabel('left',"strain_"+self.comboBox_p2.currentText())
+            # self.p2.getAxis("right").setLabel("grain_size")
+            # self.p2.setLabels(right = {"label","w"}, left ={"left","g"})
+            #self.p3.setLabel('left',self.comboBox_p3.currentText())
+            #self.p4.setLabel('left',self.comboBox_p4.currentText())
 
             #p2.plot(selected.sum(axis=0), clear=True)
             self.reset_peak_center_and_width()
@@ -292,7 +377,10 @@ class MyMainWindow(QMainWindow):
                 pass
             #print(isoLine.value(),self.current_image_no)
             #plot others
-            plot_xrv_gui_pyqtgraph(self.p1,self.p2, self.p3, self.p4,self.p5, self.p6, self.p7,self.app_ctr)
+            plot_xrv_gui_pyqtgraph(self.p1,[self.p2,self.p2_r], [self.p3,self.p3_r], [self.p4,self.p4_r],self.p5, self.p6, self.p7,self.app_ctr)
+            self.p2.addItem(self.region_abnormal, ignoreBounds = True)
+
+            
             self.lcdNumber_potential.display(self.app_ctr.data['potential'][-1])
             self.lcdNumber_current.display(self.app_ctr.data['current'][-1])
             self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-1])
@@ -319,7 +407,7 @@ class MyMainWindow(QMainWindow):
                 pass
             #print(isoLine.value(),self.current_image_no)
             #plot others
-            plot_xrv_gui_pyqtgraph(self.p1,self.p2, self.p3, self.p4,self.p5, self.p6, self.p7, self.app_ctr)
+            plot_xrv_gui_pyqtgraph(self.p1,[self.p2,self.p2_r], [self.p3,self.p3_r], [self.p4,self.p4_r],self.p5, self.p6, self.p7,self.app_ctr)
             self.lcdNumber_potential.display(self.app_ctr.data['potential'][-2])
             self.lcdNumber_current.display(self.app_ctr.data['current'][-2])
             self.lcdNumber_intensity.display(self.app_ctr.data['peak_intensity'][-2])
@@ -401,7 +489,8 @@ class MyMainWindow(QMainWindow):
             self.timer_save_data.stop()
             self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
             self.plot_()
-            self.launch.setEnabled(False)
+            # self.launch.setEnabled(False)
+            self.launch.setText("Relaunch")
             self.statusbar.showMessage('Initialization succeed!')
         except:
             self.statusbar.showMessage('Initialization failed!')
@@ -446,12 +535,24 @@ class MyMainWindow(QMainWindow):
                 self.img_pyqtgraph.setImage(self.app_ctr.bkg_sub.img)
                 self.region_cut_hor.setRegion(cut_values_hoz)
                 self.region_cut_ver.setRegion(cut_values_ver)
+
                 #set roi
                 size_of_roi = self.roi.size()
                 self.roi.setPos([self.app_ctr.peak_fitting_instance.peak_center[0]-size_of_roi[0]/2.,self.app_ctr.peak_fitting_instance.peak_center[1]-size_of_roi[1]/2.])
                 #self.p1.plot([0,400],[200,200])
                 if self.app_ctr.img_loader.frame_number == 0:
                     self.p1.autoRange() 
+                    #relabel the axis
+                    q_par = self.app_ctr.rsp_instance.q['grid_q_par'][0]
+                    q_ver = self.app_ctr.rsp_instance.q['grid_q_perp'][:,0]
+                    scale_ver = (max(q_ver)-min(q_ver))/(len(q_ver)-1)
+                    shift_ver = min(q_ver)
+                    scale_hor = (max(q_par)-min(q_par))/(len(q_par)-1)
+                    shift_hor = min(q_par)
+                    ax_item_img_ver = pixel_to_q(scale = scale_ver, shift = shift_ver, orientation = 'left')
+                    ax_item_img_hor = pixel_to_q(scale =scale_hor, shift =shift_hor, orientation = 'bottom')
+                    ax_item_img_hor.attachToPlotItem(self.p1)
+                    ax_item_img_ver.attachToPlotItem(self.p1)
                 self.hist.setLevels(self.app_ctr.bkg_sub.img.min(), self.app_ctr.bkg_sub.img.mean()*10)
                 self.updatePlot()
 

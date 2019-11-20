@@ -265,14 +265,14 @@ def plot_xrv_gui_pyqtgraph(p1,p2, p3, p4, p5, p6, p7, app_ctr):
     # if app_ctr.p3_data_source == 'peak_intensity':
     p3.plot(img_number,np.array(data['peak_intensity'])[index_list],clear = True)
     p3_r.clear()
-    p3_r.addItem(pg.PlotCurveItem(np.array(data['bkg'])[index_list], pen='b',clear = True))
+    p3_r.addItem(pg.PlotCurveItem(img_number,np.array(data['bkg'])[index_list], pen='b',clear = True))
     # elif app_ctr.p3_data_source == 'bkg_intensity':
         # p3.plot(img_number,np.array(data['bkg'])[index_list],clear = True)
 
     # if app_ctr.p4_data_source == 'current':
     p4.plot(img_number,np.array(data['potential'])[index_list],clear = True)
     p4_r.clear()
-    p4_r.addItem(pg.PlotCurveItem(np.array(data['current'])[index_list], pen='b',clear = True))
+    p4_r.addItem(pg.PlotCurveItem(img_number, np.array(data['current'])[index_list], pen='b',clear = True))
     # elif app_ctr.p4_data_source == 'potential':
         # p4.plot(img_number,np.array(data['potential'])[index_list],clear = True)
     
@@ -356,11 +356,12 @@ def plot_pxrd_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_strain, ax_pot,app_ctr):
                 y = app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_{}'.format(app_ctr.p4_data_source)]
                 ax_strain.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],y,pen=app_ctr.kwarg_peak_fit['colors'][i],name = app_ctr.kwarg_peak_fit['peak_ids'][i],clear=clear)
                 clear = False
-
+        clear = True
         if app_ctr.p3_data_source == 'peak_intensity':
             for i in range(len(app_ctr.kwarg_peak_fit['peak_ids'])):
                 if app_ctr.kwarg_peak_fit['peak_fit'][i]:
-                    ax_ctr.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity'],name=app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity',pen=app_ctr.kwarg_peak_fit['colors'][i],clear = i==0)
+                    ax_ctr.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number][app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity'],name=app_ctr.kwarg_peak_fit['peak_ids'][i]+'_intensity',pen=app_ctr.kwarg_peak_fit['colors'][i],clear = clear)
+                    clear = False
         elif app_ctr.p3_data_source == 'bkg_intensity':
             ax_ctr.plot(app_ctr.data[app_ctr.img_loader.scan_number]['frame_number'],app_ctr.data[app_ctr.img_loader.scan_number]['bkg'],name='bkg_intensity',pen='g',clear = True)
 

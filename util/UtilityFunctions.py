@@ -27,6 +27,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 DaFy_Path = os.path.dirname(currentdir)
 sys.path.append(os.path.join(DaFy_Path,'EnginePool'))
 import FitEnginePool
+import matplotlib.pyplot as pyplot
 #make compatibility of py 2 and py 3#
 if (sys.version_info > (3, 0)):
     raw_input = input
@@ -438,6 +439,30 @@ def cal_UB_p23(lattice_constants=[2.8837,2.8837,7.0636,90,90,120],energy=18.739,
     ub_substrate.calculateU()
     return ub_substrate.getUB()
 
+def cal_UB_p23_2(kwarg):
+    # or0_angles=[0.4,15.4,22.43,-30.9,0.,0.]
+    # or1_angles=[0.4,7.61,13.63,-38.,0.,0.]
+    # or0_hkl=[1.0009,1.-1.0009,4.0359]
+    # or1_hkl=[0.0,-0.5045,2.5225]
+    # energy=18.739
+    lattice_constants = kwarg['lattice_constants']
+    substrate = Crystal(lattice_constants[0:3],lattice_constants[3:])
+    energy = kwarg['energy']
+    or0_angles = kwarg['or0_angles']
+    or1_angles = kwarg['or1_angles']
+    or0_hkl = kwarg['or0_hkl']
+    or1_hkl = kwarg['or1_hkl']
+
+    ub_substrate=UBCalculator(substrate,energy)
+    or0_angles=np.deg2rad(or0_angles)
+    or1_angles=np.deg2rad(or1_angles)
+    or0_angles = vliegDiffracAngles(or0_angles)
+    or1_angles = vliegDiffracAngles(or1_angles)
+    ub_substrate.setPrimaryReflection(or0_angles,or0_hkl)
+    ub_substrate.setSecondayReflection(or1_angles,or1_hkl)
+    ub_substrate.calculateU()
+    return ub_substrate.getUB()
+
 def cal_UB_id03(spec_file_name, scan_no):
     scan = specfilewrapper.Specfile(spec_file_name).select('{}.1'.format(scan_no))
     return np.array(scan.header('G')[2].split(' ')[-9:],dtype = np.float)
@@ -544,6 +569,153 @@ class nexus_image_loader_diffabs(object):
         energy = np.array(scan[e_counter])[frame_number]
         self.current_energy = energy
         return energy
+
+    def load_frame_from_path(self,img_path,frame_number = 0,flip=True):
+        try:
+            #if one frame one nxs file
+            data=nxload(img_path)
+            img=np.array(data.entry.instrument.detector.data.nxdata[0])
+        except:
+            #if all frames in one nxs file
+            data=nxload(img_path)
+            img=np.array(data.entry.instrument.detector.data[frame_number])
+        if flip:
+            return np.flip(img.T,1)
+        else:
+            return img
+
+    def show_frame(self,scan_number,frame_number,one_frame_in_one_nxs=True,flip=True):
+        img=self.load_frame(scan_number,frame_number,one_frame_in_one_nxs,flip)
+        fig,ax=pyplot.subplots()
+        pyplot.imshow(img,cmap='jet')
+        if flip:
+            pyplot.colorbar(extend='both',orientation='vertical')
+        else:
+            pyplot.colorbar(extend='both',orientation='horizontal')
+        pyplot.clim(0,205)
+        # pyplot.show()
+        return img
+
+    def find_dead_pix(self,scan_number=666,img_end=100):
+        dead_pix_container=self.load_frame(scan_number,0)==self.load_frame(scan_number,1)
+        dead_pix_container=np.where(dead_pix_container==True)
+        dead_pix_container=zip(tuple(dead_pix_container[0]),tuple(dead_pix_container[1]))
+        img0= self.load_frame(scan_number,0)
+        print(len(dead_pix_container))
+        for i in range(2,img_end):
+            print('Processing img_',i)
+            img = self.load_frame(scan_number,i)
+            temp= img != img0
+            temp= np.where(temp==True)
+            temp= zip(tuple(temp[0]),tuple(temp[1]))
+            for each in temp:
+                if each in dead_pix_container:
+                    dead_pix_container.remove(each)
+        return dead_pix_container
+
+class nexus_image_loader_old(object):
+    def __init__(self, clip_boundary, FioFile, kwarg):
+        # self.fio_path=fio_path
+        # self.nexus_path=nexus_path
+        # self.frame_prefix=frame_prefix
+        # self.spec = Fio.FioFile(fio_path)
+        # self.motor_angles = motor_angles
+        # self.get_frame_number()
+        self.abnormal_range = [0,0]
+        self.FioFile = FioFile
+        self.scan_number = None
+        self.frame_number = None
+        self.img_structure = 'one'#by default all images saved in one nexus file
+        self.potential = None
+        self.current = None
+        self.hkl = None
+        self.clip_boundary = clip_boundary
+        self.potential_profile_cal = None
+        self.potential_profile = None
+        self.potential_cal = None
+        for key in kwarg:
+            setattr(self, key, kwarg[key])
+
+    def get_frame_number(self):
+        total_img_number = len(os.listdir(self.nexus_path))
+        if total_img_number ==1:
+            img_name = os.listdir(self.nexus_path)[0]
+            img_path=os.path.join(self.nexus_path,img_name)
+            data=nxload(img_path)
+            total_img_number = len(np.array(data.entry.instrument.detector.data))
+        self.total_frame_number = total_img_number
+        return self.total_frame_number
+
+    def update_scan_info(self,scan_number):
+        self.fio_path = os.path.join(self.nexus_path,'startup','{}_{:0>5}.fio'.format(self.frame_prefix,scan_number))
+        self.spec = self.FioFile(self.fio_path)
+        img_path = os.path.join(self.nexus_path,'{}_{:0>5}/lmbd'.format(self.frame_prefix,scan_number))
+        self.scan_number = scan_number
+        print('\nRunning scan {} now...'.format(scan_number))
+        img_name='{}_{:0>5}.nxs'.format(self.frame_prefix,scan_number)
+        img_name_1='{}_{:0>5}_00000.nxs'.format(self.frame_prefix,scan_number)
+        # img_path=os.path.join(self.nexus_path,img_name)
+        img_path_1=os.path.join(self.nexus_path,img_name.replace(".nxs",""),'lmbd',img_name_1)
+        # self.nexus_data = nxload(img_path)
+        self.nexus_data_1 = nxload(img_path_1)
+        self.get_frame_number()
+        if abs(self.total_frame_number - self.nexus_data_1.entry.instrument.detector.data.shape[0])>2:
+            self.img_structure = 'multiple'#means each image correspond to one nexus fle
+        self.extract_pot_profile()
+
+    def extract_pot_profile(self):
+        results = self.spec.extract_pot_profile(self.scan_number)
+        self.potential_profile = results
+        self.potential_profile_cal = FitEnginePool.fit_pot_profile(list(range(len(results))),results, show_fig = False)
+
+    def extract_motor_angles(self, frame_number):
+        self.motor_angles = self.spec.extract_motor_angle(self.motor_angles,self.scan_number,frame_number,['mu','delta','gamma','omega_t'])
+        self.motor_angles['mon'] = 1
+        self.motor_angles['transm'] = 1
+        self.motor_angles['time'] = self.spec.get_col('timestamp')[frame_number] 
+        return self.motor_angles
+
+    def extract_pot_current(self, frame_number):
+        results = self.spec.extract_pot_current(self.scan_number, frame_number)
+        self.potential, self.current = results
+        try:
+            self.potential_cal = self.potential_profile_cal[frame_number]
+        except:
+            self.potential_cal = results[0]
+            print('Use real potential for the potential_cal')
+        return results
+
+    def extract_HKL(self, frame_number):
+        self.hkl = (0,0,0)
+        return 0,0,0
+
+    def load_frame(self,frame_number,flip=True):
+        while frame_number < self.total_frame_number:
+            if self.img_structure == 'multiple':
+                #if one frame one nxs file
+                folder_name = '{}_{:0>5}'.format(self.frame_prefix,self.scan_number)
+                img_name='{}_{:0>5}_{:0>5}.nxs'.format(self.frame_prefix,self.scan_number,frame_number)
+                img_path=os.path.join(self.nexus_path,folder_name, 'lmbd', img_name)
+                data=nxload(img_path)
+                img=np.array(data.entry.instrument.detector.data.nxdata[0])
+            else:
+                #if all frames in one nxs file
+                folder_name = '{}_{:0>5}'.format(self.frame_prefix,self.scan_number)
+                img_name='{}_{:0>5}.nxs'.format(self.frame_prefix,self.scan_number)
+                img_path=os.path.join(self.nexus_path,folder_name, 'lmbd', img_name)
+                data=nxload(img_path)
+                img=np.array(data.entry.instrument.detector.data[frame_number])
+            self.extract_motor_angles(frame_number)
+            self.extract_pot_current(frame_number)
+            self.extract_HKL(frame_number)
+            self.frame_number = frame_number
+            if flip:
+                img = np.flip(img.T,1)
+            img = img[self.clip_boundary['ver'][0]:self.clip_boundary['ver'][1],
+                    self.clip_boundary['hor'][0]:self.clip_boundary['hor'][1]]
+            #yield img/self.motor_angles['mon']/self.motor_angles['transm']
+            yield img
+            frame_number +=1
 
     def load_frame_from_path(self,img_path,frame_number = 0,flip=True):
         try:

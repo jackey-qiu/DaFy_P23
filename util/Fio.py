@@ -74,6 +74,10 @@ class FioFile(object):
             results.append(self.get_col(label)[frame_number])
         return results
 
+    def extract_pot_profile(self,scan_number,label = 'p23/pilcvfcadc/dev.01/value'):
+        results = self.get_col(label)
+        return results
+
 class SpecFile(object):
     def __init__(self, spec_file='/home/qiu/data/ma4171/sixcvertical.spec'):
         self.spec_file = spec_file

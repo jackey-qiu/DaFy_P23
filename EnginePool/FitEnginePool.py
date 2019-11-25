@@ -628,6 +628,8 @@ class Reciprocal_Space_Mapping():
         d.setUB(self.ub)
         Q = d.getQSurface(theta=th_, chi=chi_, phi=phi_, mu=mu_, delta=delta_range, gamma=gamma_range, gamma_first=False)
         shape =  gamma_range.size,delta_range.size
+        # print(shape)
+        # print(self.vlieg_angles)
         qx = Q[0,:].reshape(shape)
         qy = Q[1,:].reshape(shape)
         qz = Q[2,:].reshape(shape)

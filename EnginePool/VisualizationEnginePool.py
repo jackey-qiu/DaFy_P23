@@ -270,7 +270,7 @@ def plot_xrv_gui_pyqtgraph(p1,p2, p3, p4, p5, p6, p7, app_ctr):
         # p3.plot(img_number,np.array(data['bkg'])[index_list],clear = True)
 
     # if app_ctr.p4_data_source == 'current':
-    p4.plot(img_number,np.array(data['potential'])[index_list],clear = True)
+    p4.plot(img_number,0.205+np.array(data['potential'])[index_list]+0.059*np.array(data['phs'])[index_list],clear = True)
     p4_r.clear()
     p4_r.addItem(pg.PlotCurveItem(img_number, np.array(data['current'])[index_list], pen='b',clear = True))
     # elif app_ctr.p4_data_source == 'potential':

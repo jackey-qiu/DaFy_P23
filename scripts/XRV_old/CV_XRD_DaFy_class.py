@@ -24,13 +24,17 @@ from FitEnginePool import XRD_Peak_Fitting
 from FitEnginePool import background_subtraction_single_img
 from util.XRD_tools import reciprocal_space_v3 as rsp
 from util.UtilityFunctions import image_generator
+from util.UtilityFunctions import cal_UB_p23_2
 from util.UtilityFunctions import scan_generator
-from util.UtilityFunctions import nexus_image_loader
+from util.UtilityFunctions import nexus_image_loader_old
 from util.UtilityFunctions import find_boundary
 from util.UtilityFunctions import extract_global_vars_from_string
 from util.UtilityFunctions import extract_vars_from_config
 from util.UtilityFunctions import get_console_size
+from util.Fio import FioFile
 from functools import wraps
+import matplotlib.pyplot as pyplot
+import time
 
 class run_app(object):
     def __init__(self):
@@ -39,7 +43,6 @@ class run_app(object):
         self.data = {}
         self.model = model
         self.data_path = os.path.join(DaFy_path, 'data')
-
 
     def run(self, config):
         self.conf_file = config
@@ -53,6 +56,7 @@ class run_app(object):
         self.kwarg_film = extract_vars_from_config(self.conf_file, section_var ='Film_Lattice')
         self.kwarg_data = extract_vars_from_config(self.conf_file, section_var ='Data_Storage')
         self.kwarg_peak_fit = extract_vars_from_config(self.conf_file, section_var = 'Peak_Fit')
+        self.kwarg_UB = extract_vars_from_config(self.conf_file, section_var = 'UB_setup')
         self.kwarg_rsp = extract_vars_from_config(self.conf_file, section_var = 'Reciprocal_Mapping')
         self.kwarg_image = extract_vars_from_config(self.conf_file, section_var = 'Image_Loader')
         self.kwarg_mask = extract_vars_from_config(self.conf_file,section_var = 'Mask')
@@ -65,12 +69,17 @@ class run_app(object):
         #data file
         for key in self.data_keys:
             self.data[key]=[]
+        self.kwarg_UB['energy'] = self.kwarg_rsp['e_kev']
+        UB = cal_UB_p23_2(self.kwarg_UB)
+        #update ub
+        self.kwarg_rsp['ub'] = UB
+        # print(UB)
 
         #init peak fit, bkg subtraction and reciprocal space and image loader instance
         self.bkg_sub = background_subtraction_single_img(self.cen_clip, self.conf_file, sections = ['Background_Subtraction'])
         self.peak_fitting_instance = XRD_Peak_Fitting(img = None, cen=self.cen_clip, kwarg = self.kwarg_peak_fit)
         self.rsp_instance = Reciprocal_Space_Mapping(img =None, cen=self.cen_clip, kwarg = self.kwarg_rsp)
-        self.img_loader = nexus_image_loader(clip_boundary = self.clip_boundary, kwarg = self.kwarg_image)
+        self.img_loader = nexus_image_loader_old(clip_boundary = self.clip_boundary, FioFile = FioFile, kwarg = self.kwarg_image)
         self.create_mask_new = create_mask(kwarg = self.kwarg_mask)
         self.lattice_skin = rsp.lattice.from_cif(os.path.join(DaFy_path, 'util','cif',"{}".format(self.kwarg_film['film_material_cif'])),
                                             HKL_normal=self.kwarg_film['film_hkl_normal'],\
@@ -92,6 +101,8 @@ class run_app(object):
                 setattr(self,'current_scan_number',self.img_loader.scan_number)
             self.current_frame = self.img_loader.frame_number
             self.img = img
+            # pyplot.imshow(img,cmap = 'jet')
+            # pyplot.show()
             self.peak_fitting_instance.reset_fit(img, check = False)
             self.bkg_sub.fit_background(None, img, plot_live = False, freeze_sf = True)
             self.data = merge_data(self.data, self.img_loader, self.peak_fitting_instance, self.bkg_sub, self.kwarg_global, tweak = False)
@@ -139,5 +150,7 @@ class run_app(object):
                             )
 
 if __name__ == "__main__":
-    run_app()
+    test = run_app()
+    test.run('C:\\apps\\DaFy_P23\\scripts\\XRV_old\\config_file_XRV.ini')
+    test.run_script()
 

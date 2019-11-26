@@ -637,7 +637,8 @@ class nexus_image_loader_old(object):
             setattr(self, key, kwarg[key])
 
     def get_frame_number(self):
-        total_img_number = len(os.listdir(self.nexus_path))
+        image_path = os.path.join(self.nexus_path,'{}_{:0>5}/lmbd'.format(self.frame_prefix,self.scan_number))
+        total_img_number = len(os.listdir(image_path))
         if total_img_number ==1:
             img_name = os.listdir(self.nexus_path)[0]
             img_path=os.path.join(self.nexus_path,img_name)

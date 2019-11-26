@@ -110,7 +110,7 @@ class run_app(object):
             self.data['bkg'].append(bkg_intensity)
             return True
         except StopIteration:
-            self.save_data_file(self.data_path)
+            self.save_data_file(self.data_path, save_plot_config = True)
             return False
 
     def run_update(self, bkg_intensity = 0):
@@ -120,7 +120,7 @@ class run_app(object):
         self.data = cal_strain_and_grain(self.data,HKL = self.kwarg_film['film_hkl_bragg_peak'][0], lattice = self.lattice_skin)
         self.data['bkg'][-1] = bkg_intensity
 
-    def save_data_file(self, path):
+    def save_data_file(self, path, save_plot_config = False):
         if hasattr(self,'writer'):
             pass
         else:
@@ -136,18 +136,19 @@ class run_app(object):
         df = pd.DataFrame(self.data)
         df.to_excel(self.writer,sheet_name='CV_XRD_data',columns =self.kwarg_global['data_keys'])
         self.writer.save()
-        df.to_csv(path.replace('.xlsx','.csv'),index= False)
-        make_data_config_file(
-                            DaFy_path = DaFy_path,
-                            data_folder = os.path.join(DaFy_path,'data'),
-                            data = df,
-                            film_material_cif=self.kwarg_film['film_material_cif'],
-                            hkls=self.kwarg_film['film_hkl_bragg_peak'],
-                            pot_step = self.kwarg_peak_fit['pot_step_scan'],
-                            beamline=self.name,
-                            beamtime=self.beamtime,
-                            kwarg = self.kwarg_data
-                            )
+        df.to_csv(path.replace('.xlsx','.csv'), index= False)
+        if save_plot_config:
+            make_data_config_file(
+                                DaFy_path = DaFy_path,
+                                data_folder = os.path.join(DaFy_path,'data'),
+                                data = df,
+                                film_material_cif=self.kwarg_film['film_material_cif'],
+                                hkls=self.kwarg_film['film_hkl_bragg_peak'],
+                                pot_step = self.kwarg_peak_fit['pot_step_scan'],
+                                beamline=self.name,
+                                beamtime=self.beamtime,
+                                kwarg = self.kwarg_data
+                                )
 
 if __name__ == "__main__":
     test = run_app()

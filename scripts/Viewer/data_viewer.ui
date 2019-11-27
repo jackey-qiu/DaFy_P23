@@ -173,10 +173,18 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLineEdit" name="lineEdit_y"/>
+          <widget class="QLineEdit" name="lineEdit_y">
+           <property name="text">
+            <string>current,strain_ip,strain_oop,grain_size_ip,grain_size_oop</string>
+           </property>
+          </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QLineEdit" name="lineEdit_x"/>
+          <widget class="QLineEdit" name="lineEdit_x">
+           <property name="text">
+            <string>potential</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>
@@ -199,7 +207,11 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="scan_numbers_append"/>
+          <widget class="QLineEdit" name="scan_numbers_append">
+           <property name="text">
+            <string>724,732,805,807</string>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QPushButton" name="PushButton_append_scans">
@@ -221,6 +233,20 @@
          </item>
          <item>
           <widget class="QLineEdit" name="scan_numbers_all"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_8">
+         <item>
+          <widget class="QLabel" name="label_12">
+           <property name="text">
+            <string>Plotting style to use</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_fmt"/>
          </item>
         </layout>
        </item>
@@ -253,10 +279,18 @@
           </widget>
          </item>
          <item row="2" column="1">
-          <widget class="QLineEdit" name="lineEdit_single_scan_number"/>
+          <widget class="QLineEdit" name="lineEdit_scan_numbers">
+           <property name="text">
+            <string>732</string>
+           </property>
+          </widget>
          </item>
          <item row="3" column="1">
-          <widget class="QLineEdit" name="lineEdit_point_range"/>
+          <widget class="QLineEdit" name="lineEdit_point_ranges">
+           <property name="text">
+            <string>140-320</string>
+           </property>
+          </widget>
          </item>
          <item row="4" column="0" colspan="2">
           <widget class="QPushButton" name="apply">

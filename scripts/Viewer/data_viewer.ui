@@ -134,6 +134,20 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QCheckBox" name="checkBox_time_scan">
+           <property name="text">
+            <string>Time scan</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="checkBox_mask">
+           <property name="text">
+            <string>Apply mask</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
        <item>
@@ -209,7 +223,7 @@
          <item>
           <widget class="QLineEdit" name="scan_numbers_append">
            <property name="text">
-            <string>724,732,805,807</string>
+            <string>221,229,231,236,243,244</string>
            </property>
           </widget>
          </item>
@@ -232,7 +246,11 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="scan_numbers_all"/>
+          <widget class="QLineEdit" name="scan_numbers_all">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>
@@ -246,7 +264,11 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEdit_fmt"/>
+          <widget class="QLineEdit" name="lineEdit_fmt">
+           <property name="text">
+            <string>*r,*b,*g,*m</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>

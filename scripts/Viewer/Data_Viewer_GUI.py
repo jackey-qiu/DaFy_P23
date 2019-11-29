@@ -54,8 +54,45 @@ class MyMainWindow(QMainWindow):
         self.radioButton_ctr.clicked.connect(self.set_plot_channels)
         self.radioButton_xrv.clicked.connect(self.set_plot_channels)
         self.checkBox_mask.clicked.connect(self.append_scans)
+        self.pushButton_load_config.clicked.connect(self.load_config)
+        self.pushButton_save_config.clicked.connect(self.save_config)
         self.data = None
        
+    def load_config(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","Data Files (*.ini);;All Files (*.txt)", options=options)
+        with open(fileName,'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                items = line.rstrip().rsplit(':')
+                if len(items)>2:
+                    channel,value = items[0], ':'.join(items[1:])
+                else:
+                    channel,value = items
+                if value=='True':
+                    getattr(self,channel).setChecked(True)
+                elif value=='False':
+                    getattr(self,channel).setChecked(False)
+                else:
+                    getattr(self,channel).setText(value)
+        self._load_file()
+        self.append_scans()
+
+    def save_config(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getSaveFileName(self,"QFileDialog.getSaveFileName()","","config file (*.ini);Text Files (*.txt);all files(*.*)", options=options)
+        with open(fileName,'w') as f:
+            channels = ['lineEdit_data_file','radioButton_ctr','radioButton_xrv','checkBox_time_scan','checkBox_mask','lineEdit_x','lineEdit_y','scan_numbers_append','lineEdit_fmt','lineEdit_labels']
+            for channel in channels:
+                try:
+                    f.write(channel+':'+str(getattr(self,channel).isChecked())+'\n')
+                except:
+                    f.write(channel+':'+getattr(self,channel).text()+'\n')
+            
+
+
     def set_plot_channels(self):
         xrv = self.radioButton_xrv.isChecked()
         time_scan = self.checkBox_time_scan.isChecked()
@@ -73,6 +110,23 @@ class MyMainWindow(QMainWindow):
             else:
                 self.lineEdit_x.setText('L')
                 self.lineEdit_y.setText('peak_intensity') 
+
+    def _load_file(self):
+        fileName = self.lineEdit_data_file.text()
+        self.lineEdit_data_file.setText(fileName)
+        self.data = pd.read_excel(fileName)
+        col_labels = 'col_labels\n'+str(list(self.data.columns))+'\n'
+        scans = list(set(list(self.data['scan_no'])))
+        self.scans_all = scans
+        scans.sort()
+        scan_numbers = 'scan_nos\n'+str(scans)+'\n'
+        # print(list(self.data[self.data['scan_no']==scans[0]]['phs'])[0])
+        if self.radioButton_xrv.isChecked():
+            self.phs_all = [list(self.data[self.data['scan_no']==scan]['phs'])[0] for scan in scans]
+            phs = 'pHs\n'+str(self.phs_all)+'\n'
+        else:
+            phs = ''
+        self.textEdit_summary_data.setText('\n'.join([col_labels,scan_numbers,phs]))
 
     def load_file(self):
         options = QFileDialog.Options()
@@ -92,7 +146,6 @@ class MyMainWindow(QMainWindow):
             phs = 'pHs\n'+str(self.phs_all)+'\n'
         else:
             phs = ''
-        
         self.textEdit_summary_data.setText('\n'.join([col_labels,scan_numbers,phs]))
 
     #to fold or unfold the config file editor
@@ -168,6 +221,11 @@ class MyMainWindow(QMainWindow):
     def plot_figure_ctr(self):
         self.mplwidget.fig.clear()
         col_num=2#two columns only
+        if len(self.scan_numbers_all.text().rsplit('+')) in [1,2]:
+            col_num = 1
+        else:
+            pass
+
         plot_dim = [int(len(self.scan_numbers_all.text().rsplit('+'))/col_num)+int(len(self.scan_numbers_all.text().rsplit('+'))%col_num != 0), col_num]
         for i in range(len(self.scan_numbers_all.text().rsplit('+'))):
             setattr(self,'plot_axis_plot_set{}'.format(i+1),self.mplwidget.canvas.figure.add_subplot(plot_dim[0], plot_dim[1],i+1))

@@ -43,7 +43,6 @@ class MyMainWindow(QMainWindow):
         #self.setupUi(self)
         self.stop = False
         self.open.clicked.connect(self.load_file)
-
         self.launch.clicked.connect(self.launch_file)
         #self.reload.clicked.connect(self.rload_file)
         self.horizontalSlider.valueChanged.connect(self.change_peak_width)

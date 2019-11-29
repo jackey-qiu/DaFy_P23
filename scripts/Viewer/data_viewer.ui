@@ -223,7 +223,7 @@
          <item>
           <widget class="QLineEdit" name="scan_numbers_append">
            <property name="text">
-            <string>221,229,231,236,243,244</string>
+            <string>[1264,1265,1266;1276,1277,1278]+[1279,1280,1281;1267,1268,1269]</string>
            </property>
           </widget>
          </item>
@@ -266,7 +266,25 @@
          <item>
           <widget class="QLineEdit" name="lineEdit_fmt">
            <property name="text">
-            <string>*r,*b,*g,*m</string>
+            <string>[*r;*b]+[*r;*b]</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_9">
+         <item>
+          <widget class="QLabel" name="label_13">
+           <property name="text">
+            <string>Labels for ctr plots  </string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_labels">
+           <property name="text">
+            <string>[1;2]+[3;4]</string>
            </property>
           </widget>
          </item>
@@ -374,22 +392,6 @@
          </property>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QTextEdit" name="textEdit_summary_plot">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>400</width>
-           <height>16777215</height>
-          </size>
          </property>
         </widget>
        </item>

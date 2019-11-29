@@ -47,10 +47,12 @@ class MyMainWindow(QMainWindow):
         plt.rcParams['mathtext.default']='regular'
         self.open.clicked.connect(self.load_file)
         self.plot.clicked.connect(self.plot_figure)
-        self.apply.clicked.connect(self.replot_figure)
+        # self.apply.clicked.connect(self.replot_figure)
         self.PushButton_append_scans.clicked.connect(self.append_scans)
         self.PushButton_fold_or_unfold.clicked.connect(self.fold_or_unfold)
         self.checkBox_time_scan.clicked.connect(self.set_plot_channels)
+        self.radioButton_ctr.clicked.connect(self.set_plot_channels)
+        self.radioButton_xrv.clicked.connect(self.set_plot_channels)
         self.checkBox_mask.clicked.connect(self.append_scans)
         self.data = None
        
@@ -67,10 +69,10 @@ class MyMainWindow(QMainWindow):
         else:
             if time_scan:
                 self.lineEdit_x.setText('image_no')
-                self.lineEdit_y.setText('potential,current,eak_intensity')
+                self.lineEdit_y.setText('peak_intensity,potential')
             else:
-                self.lineEdit_x.setText('potential')
-                self.lineEdit_y.setText('current,eak_intensity') 
+                self.lineEdit_x.setText('L')
+                self.lineEdit_y.setText('peak_intensity') 
 
     def load_file(self):
         options = QFileDialog.Options()
@@ -85,8 +87,11 @@ class MyMainWindow(QMainWindow):
         scans.sort()
         scan_numbers = 'scan_nos\n'+str(scans)+'\n'
         # print(list(self.data[self.data['scan_no']==scans[0]]['phs'])[0])
-        self.phs_all = [list(self.data[self.data['scan_no']==scan]['phs'])[0] for scan in scans]
-        phs = 'pHs\n'+str(self.phs_all)+'\n'
+        if self.radioButton_xrv.isChecked():
+            self.phs_all = [list(self.data[self.data['scan_no']==scan]['phs'])[0] for scan in scans]
+            phs = 'pHs\n'+str(self.phs_all)+'\n'
+        else:
+            phs = ''
         
         self.textEdit_summary_data.setText('\n'.join([col_labels,scan_numbers,phs]))
 
@@ -162,18 +167,59 @@ class MyMainWindow(QMainWindow):
 
     def plot_figure_ctr(self):
         self.mplwidget.fig.clear()
-        col_num=2
-        plot_dim = [int(len(self.scan_numbers_all.text().rsplit('+'))/col_num)+len(self.scan_numbers_all.text().rsplit('+'))%col_num, col_num]
+        col_num=2#two columns only
+        plot_dim = [int(len(self.scan_numbers_all.text().rsplit('+'))/col_num)+int(len(self.scan_numbers_all.text().rsplit('+'))%col_num != 0), col_num]
         for i in range(len(self.scan_numbers_all.text().rsplit('+'))):
             setattr(self,'plot_axis_plot_set{}'.format(i+1),self.mplwidget.canvas.figure.add_subplot(plot_dim[0], plot_dim[1],i+1))
-            for each in self.scan_numbers_all.rstrip().rsplit('+'):
-                each = each[1:-1]#remove []
-                scan_list_temp = each.rsplit(';')
-                for each_set in scan_list_temp:
-                    sub_scan_list = each_set.rsplit(',')
-                    scans_temp= [int(i) for i in sub_scan_list]
-                    for scan in scans_temp:
-                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y],fmt='?',label ='?')
+            each = self.scan_numbers_all.text().rsplit('+')[i]
+            each = each[1:-1]#remove []
+            scan_list_temp = each.rsplit(';')
+            for each_set in scan_list_temp:
+                j = scan_list_temp.index(each_set)
+                sub_scan_list = each_set.rsplit(',')
+                scans_temp= [int(i) for i in sub_scan_list]
+                for scan in scans_temp:
+                    fmt = self.lineEdit_fmt.text().rsplit('+')[i].rsplit(';')[j]
+                    if scan == scans_temp[0]:
+                        label = self.lineEdit_labels.text().rsplit('+')[i].rsplit(';')[j]
+                    else:
+                        label = None
+                    #remove [ or ] in the fmt and label
+                    if ('[' in fmt) and (']' in fmt):
+                        fmt = fmt[1:-1]
+                    elif '[' in fmt:
+                        fmt = fmt[1:]
+                    elif ']' in fmt:
+                        fmt = fmt[0:-1]
+                    else:
+                        pass
+                    if label != None:
+                        if ('[' in label) and (']' in label):
+                            label = label[1:-1]
+                        elif '[' in label:
+                            label = label[1:]
+                        elif ']' in label:
+                            label = label[0:-1]
+                        else:
+                            pass
+                    if self.checkBox_time_scan.isChecked():
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[0]],fmt,label =label)
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_xlabel(self.plot_label_x)
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_ylabel('Intensity')
+                        pot_ax = getattr(self,'plot_axis_plot_set{}'.format(i+1)).twinx()
+                        pot_ax.plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[1]],'b-',label = None)
+                        pot_ax.set_ylabel(self.plot_labels_y[1],color = 'b')
+                        pot_ax.tick_params(axis = 'y', labelcolor = 'b')
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).legend()
+                    else:
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[0]],fmt,label =label)
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_ylabel('Intensity')
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_xlabel('L')
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_title('{}{}L'.format(int(round(list(self.data[self.data['scan_no']==scan]['H'])[0],0)),int(round(list(self.data[self.data['scan_no']==scan]['K'])[0],0))))
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_yscale('log')
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).legend()
+        self.mplwidget.fig.tight_layout()
+        self.mplwidget.canvas.draw()
 
     def prepare_data_to_plot_xrv(self,plot_label_list, scan_number):
         scans_ = [int(each) for each in self.lineEdit_scan_numbers.text().rsplit(',')]
@@ -227,8 +273,10 @@ class MyMainWindow(QMainWindow):
             if each=='current':#RHE potential
                 self.data_to_plot[scan_number][each] = -np.array(self.data[condition][each])[l:r]
                 #self.data_to_plot[scan_number][each] = 0.205+np.array(self.data[condition][each])[l:r]+0.059*np.array(self.data[self.data['scan_no'] == scan_number]['phs'])[0]               
+            else:
+                self.data_to_plot[scan_number][each] = np.array(self.data[condition][each])[l:r]
 
-    def append_scan(self):
+    def append_scans(self):
         if self.radioButton_xrv.isChecked():
             self.append_scans_xrv()
         else:
@@ -260,7 +308,7 @@ class MyMainWindow(QMainWindow):
     def append_scans_ctr(self):
         text = self.scan_numbers_append.text()
         text_original = self.scan_numbers_all.text()
-        if text_original!='':
+        if (text_original!='') and (text not in text_original):
             text_new = '+'.join([text_original, text])
         else:
             text_new = text
@@ -272,7 +320,7 @@ class MyMainWindow(QMainWindow):
                 sub_scan_list = each_set.rsplit(',')
                 scans+= [int(i) for i in sub_scan_list]
 
-        scans = list(set([int(each) for each in text_new.rstrip().rsplit('+')]))
+        # scans = list(set([int(each) for each in text_new.rstrip().rsplit('+')]))
         #scans.sort()
         self.scan_numbers_all.setText(text_new)
         assert (self.lineEdit_x.text()!='' and self.lineEdit_y.text()!=''), 'No channels for plotting have been selected!'

@@ -367,6 +367,7 @@ class create_mask():
         if remove_pix!=None:
             for each in remove_pix:
                 mask[tuple(each)] = 0
+                print('remove pix at',each)
         return mask*mask_ip_q*mask_oop_q*img
 
 

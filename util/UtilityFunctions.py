@@ -128,9 +128,14 @@ def image_generator_bkg(scans,img_loader,mask_creator):
     for scan in scans:
         img_loader.update_scan_info(scan)
         current_image_no = 0
+        img_index_ver, img_index_hor = None, None
         for image in img_loader.load_frame(frame_number=0, flip=True):
-            yield mask_creator.create_mask_new(img = image, img_q_ver = image,
-                                  img_q_par = image, mon = img_loader.motor_angles['mon']*img_loader.motor_angles['transm'])
+            if current_image_no==0:
+                img_index_hor, img_index_ver = np.meshgrid(range(image.shape[1]),range(image.shape[0]))
+            else:
+                pass
+            yield mask_creator.create_mask_new(img = image, img_q_ver = img_index_ver,
+                                  img_q_par = img_index_hor, mon = img_loader.motor_angles['mon']*img_loader.motor_angles['transm'])
             current_image_no +=1
 
 def extract_vars_from_config(config_file, section_var):

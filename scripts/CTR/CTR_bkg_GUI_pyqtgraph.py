@@ -369,7 +369,7 @@ class MyMainWindow(QMainWindow):
     def load_file(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
+        fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","Conf Files (*.ini);;text Files (*.txt)", options=options)
         if fileName:
             self.lineEdit.setText(fileName)
             #self.app_ctr.run(self.lineEdit.text())

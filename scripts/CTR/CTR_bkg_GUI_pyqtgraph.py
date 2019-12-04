@@ -68,6 +68,11 @@ class MyMainWindow(QMainWindow):
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
             each.toggled.connect(self.update_cost_func)
         self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
+        self.pushButton_left.clicked.connect(self.move_roi_left)
+        self.pushButton_right.clicked.connect(self.move_roi_right)
+        self.pushButton_up.clicked.connect(self.move_roi_up)
+        self.pushButton_down.clicked.connect(self.move_roi_down)
+
         self.doubleSpinBox_ss_factor.valueChanged.connect(self.update_ss_factor)
 
         self.comboBox_p3.activated.connect(self.select_source_for_plot_p3)
@@ -146,6 +151,23 @@ class MyMainWindow(QMainWindow):
             self.updatePlot()
         except:
             pass
+
+    def move_roi_left(self):
+        pos = self.roi.pos()
+        self.roi.setPos(pos[0]-int(self.lineEdit_roi_offset.text()), pos[1])
+
+    def move_roi_right(self):
+        pos = self.roi.pos()
+        self.roi.setPos(pos[0]+int(self.lineEdit_roi_offset.text()), pos[1])
+
+    def move_roi_down(self):
+        pos = self.roi.pos()
+        self.roi.setPos(pos[0], pos[1]-int(self.lineEdit_roi_offset.text()))
+
+    def move_roi_up(self):
+        pos = self.roi.pos()
+        self.roi.setPos(pos[0], pos[1] + int(self.lineEdit_roi_offset.text()))
+
 
     def setup_image(self):
         # Interpret image data as row-major instead of col-major

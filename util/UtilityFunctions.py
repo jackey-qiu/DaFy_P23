@@ -810,10 +810,16 @@ class nexus_image_loader(object):
         self.nexus_data = nxload(img_path)
         self.nexus_data_1 = nxload(img_path_1)
         self.get_frame_number()
-        if abs(self.total_frame_number - self.nexus_data_1.entry.instrument.detector.data.shape[0])>2:
-            self.img_structure = 'multiple'#means each image correspond to one nexus fle
-            #print(abs(self.total_frame_number - self.nexus_data_1.entry.instrument.detector.data.shape[0]))
-            #print(self.img_structure)
+        if len(os.listdir(os.path.join(self.nexus_path,img_name.replace(".nxs",""),'lmbd'))) == 1:
+            self.img_structure = 'one'
+            #update the total frame_number to whichever smaller
+            self.total_frame_number =min(self.total_frame_number, self.nexus_data_1.entry.instrument.detector.data.shape[0])
+        else:
+            self.img_structure = 'multiple'
+            #update the total frame_number to whichever smaller
+            self.total_frame_number = min(self.total_frame_number, len(os.listdir(os.path.join(self.nexus_path,img_name.replace(".nxs",""),'lmbd'))))
+        # if abs(self.total_frame_number - self.nexus_data_1.entry.instrument.detector.data.shape[0])>2:
+            # self.img_structure = 'multiple'#means each image correspond to one nexus fle
         self.extract_pot_profile()
         if self.check_abnormality:
             self.abnormal_range = remove_abnormality_2(mon = self.extract_beam_mon_ct(),left_offset = self.left_offset, right_offset = self.right_offset)

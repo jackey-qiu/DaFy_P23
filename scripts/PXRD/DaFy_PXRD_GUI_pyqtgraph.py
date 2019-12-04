@@ -380,7 +380,7 @@ class MyMainWindow(QMainWindow):
     def load_file(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","Config Files (*.ini);All Files (*)", options=options)
+        fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","Config Files (*.ini);;text Files (*.txt)", options=options)
         if fileName:
             self.lineEdit.setText(fileName)
             #self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)

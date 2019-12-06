@@ -30,6 +30,7 @@ class MyMainWindow(QMainWindow):
         # plt.style.use('ggplot')
         self.setWindowTitle('XRV and CTR data Viewer')
         self.set_plot_channels()
+        self.data_to_save = {}
         matplotlib.rc('xtick', labelsize=10)
         matplotlib.rc('ytick', labelsize=10)
         plt.rcParams.update({'axes.labelsize': 10})
@@ -49,6 +50,7 @@ class MyMainWindow(QMainWindow):
         self.plot.clicked.connect(self.plot_figure)
         # self.apply.clicked.connect(self.replot_figure)
         self.PushButton_append_scans.clicked.connect(self.append_scans)
+        self.pushButton_filePath.clicked.connect(self.locate_data_folder)
         self.PushButton_fold_or_unfold.clicked.connect(self.fold_or_unfold)
         self.checkBox_time_scan.clicked.connect(self.set_plot_channels)
         self.radioButton_ctr.clicked.connect(self.set_plot_channels)
@@ -56,8 +58,25 @@ class MyMainWindow(QMainWindow):
         self.checkBox_mask.clicked.connect(self.append_scans)
         self.pushButton_load_config.clicked.connect(self.load_config)
         self.pushButton_save_config.clicked.connect(self.save_config)
+        self.pushButton_save_data.clicked.connect(self.save_data_method)
         self.data = None
        
+    def locate_data_folder(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
+        if fileName:
+            self.lineEdit_data_file_path.setText(os.path.dirname(fileName)) 
+
+    def save_data_method(self):
+        print(self.data_to_save.keys())
+        for each in self.data_to_save:
+            print(self.data_to_save[each])
+            np.savetxt(os.path.join(self.lineEdit_data_file_path.text(), self.lineEdit_data_file_name.text()+'_{}'.format(each)), self.data_to_save[each],\
+                       header = 'L H K 0 I I_err BL dL',fmt='%f')
+
+
+
     def load_config(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -227,6 +246,7 @@ class MyMainWindow(QMainWindow):
             pass
 
         plot_dim = [int(len(self.scan_numbers_all.text().rsplit('+'))/col_num)+int(len(self.scan_numbers_all.text().rsplit('+'))%col_num != 0), col_num]
+        self.data_to_save
         for i in range(len(self.scan_numbers_all.text().rsplit('+'))):
             setattr(self,'plot_axis_plot_set{}'.format(i+1),self.mplwidget.canvas.figure.add_subplot(plot_dim[0], plot_dim[1],i+1))
             each = self.scan_numbers_all.text().rsplit('+')[i]
@@ -242,6 +262,17 @@ class MyMainWindow(QMainWindow):
                         label = self.lineEdit_labels.text().rsplit('+')[i].rsplit(';')[j]
                     else:
                         label = None
+                    #append data to save
+                    map_BL = {'00':0,'20':0,'11':1,'13':1,'31':1}
+                    BL=map_BL['{}{}'.format(int(round(self.data_to_plot[scan]['H'][0],0)),int(round(self.data_to_plot[scan]['K'][0],0)))]
+                    temp_key = self.lineEdit_labels.text().rsplit('+')[i].rsplit(';')[j]
+                    if temp_key not in self.data_to_save.keys():
+                        self.data_to_save[temp_key] = np.zeros([1,8])[0:0]
+                    else:
+                        pass
+                    self.data_to_save[temp_key] = np.append(self.data_to_save[temp_key],[[self.data_to_plot[scan]['L'],self.data_to_plot[scan]['H'],\
+                                                                                          self.data_to_plot[scan]['K'],0,self.data_to_plot[scan]['peak_intensity'],\
+                                                                                          self.data_to_plot[scan]['peak_intensity_error'],BL ,2]])
                     #remove [ or ] in the fmt and label
                     if ('[' in fmt) and (']' in fmt):
                         fmt = fmt[1:-1]

@@ -342,7 +342,7 @@
          <item row="3" column="1">
           <widget class="QLineEdit" name="lineEdit_point_ranges">
            <property name="text">
-            <string/>
+            <string>1-2</string>
            </property>
           </widget>
          </item>
@@ -538,23 +538,9 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_5">
          <item>
-          <widget class="QLabel" name="label_7">
+          <widget class="QPushButton" name="pushButton_save_data">
            <property name="text">
-            <string>Save data file every</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="spinBox_save_frequency">
-           <property name="value">
-            <number>60</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_8">
-           <property name="text">
-            <string>  seconds</string>
+            <string>Save Data</string>
            </property>
           </widget>
          </item>

@@ -69,11 +69,10 @@ class MyMainWindow(QMainWindow):
             self.lineEdit_data_file_path.setText(os.path.dirname(fileName)) 
 
     def save_data_method(self):
-        print(self.data_to_save.keys())
+        # print(self.data_to_save.keys())
         for each in self.data_to_save:
-            print(self.data_to_save[each])
-            np.savetxt(os.path.join(self.lineEdit_data_file_path.text(), self.lineEdit_data_file_name.text()+'_{}'.format(each)), self.data_to_save[each],\
-                       header = 'L H K 0 I I_err BL dL',fmt='%f')
+            # print(self.data_to_save[each])
+            self.data_to_save[each].to_csv(os.path.join(self.lineEdit_data_file_path.text(), self.lineEdit_data_file_name.text()+'_{}.csv'.format(each)))
 
 
 
@@ -267,12 +266,13 @@ class MyMainWindow(QMainWindow):
                     BL=map_BL['{}{}'.format(int(round(self.data_to_plot[scan]['H'][0],0)),int(round(self.data_to_plot[scan]['K'][0],0)))]
                     temp_key = self.lineEdit_labels.text().rsplit('+')[i].rsplit(';')[j]
                     if temp_key not in self.data_to_save.keys():
-                        self.data_to_save[temp_key] = np.zeros([1,8])[0:0]
+                        self.data_to_save[temp_key] = pd.DataFrame(np.zeros([1,8])[0:0],columns=["L","H","K","na","I","I_err","BL","dL"])
                     else:
                         pass
-                    self.data_to_save[temp_key] = np.append(self.data_to_save[temp_key],[[self.data_to_plot[scan]['L'],self.data_to_plot[scan]['H'],\
-                                                                                          self.data_to_plot[scan]['K'],0,self.data_to_plot[scan]['peak_intensity'],\
-                                                                                          self.data_to_plot[scan]['peak_intensity_error'],BL ,2]])
+                    len_data = len(self.data_to_plot[scan]['L'])
+                    self.data_to_save[temp_key] = self.data_to_save[temp_key].append(pd.DataFrame({"L":self.data_to_plot[scan]['L'],"H":self.data_to_plot[scan]['H'],\
+                                                                                     "K":self.data_to_plot[scan]['K'],"na":[0]*len_data,"I":self.data_to_plot[scan]['peak_intensity'],\
+                                                                                     "I_err":self.data_to_plot[scan]['peak_intensity_error'],"BL":[BL]*len_data ,"dL":[2]*len_data}))
                     #remove [ or ] in the fmt and label
                     if ('[' in fmt) and (']' in fmt):
                         fmt = fmt[1:-1]
@@ -426,6 +426,7 @@ class MyMainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    QApplication.setStyle("windows")
     app = QApplication(sys.argv)
     myWin = MyMainWindow()
     myWin.show()

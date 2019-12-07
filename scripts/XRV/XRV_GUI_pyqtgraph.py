@@ -489,6 +489,7 @@ class MyMainWindow(QMainWindow):
         self.app_ctr.bkg_sub.col_width = roi_size[0]
 
 if __name__ == "__main__":
+    QApplication.setStyle("windows")
     app = QApplication(sys.argv)
     myWin = MyMainWindow()
     myWin.show()

@@ -520,6 +520,7 @@ class MyMainWindow(QMainWindow):
         self.update_plot()
 
 if __name__ == "__main__":
+    QApplication.setStyle("windows")
     app = QApplication(sys.argv)
     myWin = MyMainWindow()
     myWin.show()

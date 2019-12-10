@@ -72,7 +72,7 @@ class MyMainWindow(QMainWindow):
         # print(self.data_to_save.keys())
         for each in self.data_to_save:
             # print(self.data_to_save[each])
-            self.data_to_save[each].to_csv(os.path.join(self.lineEdit_data_file_path.text(), self.lineEdit_data_file_name.text()+'_{}.csv'.format(each)))
+            self.data_to_save[each].to_csv(os.path.join(self.lineEdit_data_file_path.text(), self.lineEdit_data_file_name.text()+'_{}.csv'.format(each)),header = False, sep =' ',index=False)
 
 
 

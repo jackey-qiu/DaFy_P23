@@ -20,12 +20,15 @@ import pandas as pd
 import time
 import matplotlib
 matplotlib.use("Qt5Agg")
+from scipy import signal
+# import scipy.signal.savgol_filter as savgol_filter
+
 #from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as NavigationToolbar)
 
 class MyMainWindow(QMainWindow):
     def __init__(self, parent = None):
         super(MyMainWindow, self).__init__(parent)
-        uic.loadUi(os.path.join(DaFy_path,'scripts','Viewer','data_viewer.ui'),self)
+        uic.loadUi(os.path.join(DaFy_path,'scripts','Viewer','data_viewer_new.ui'),self)
         # self.setupUi(self)
         # plt.style.use('ggplot')
         self.setWindowTitle('XRV and CTR data Viewer')
@@ -59,7 +62,12 @@ class MyMainWindow(QMainWindow):
         self.pushButton_load_config.clicked.connect(self.load_config)
         self.pushButton_save_config.clicked.connect(self.save_config)
         self.pushButton_save_data.clicked.connect(self.save_data_method)
+        self.pushButton_plot_datasummary.clicked.connect(self.plot_data_summary_xrv)
         self.data = None
+        self.data_summary = {} 
+        self.data_range = None
+        self.pot_range = None
+        self.potential = []
        
     def locate_data_folder(self):
         options = QFileDialog.Options()
@@ -182,6 +190,47 @@ class MyMainWindow(QMainWindow):
         else:
             self.plot_figure_ctr()
 
+    def plot_data_summary_xrv(self):
+        if self.radioButton_xrv.isChecked() and self.plot_data_summary_xrv!={}:
+            self.mplwidget2.fig.clear()
+            y_label_map = {'potential':'E / V$_{RHE}$',
+                        'current':r'j / mAcm$^{-2}$',
+                        'strain_ip':r'$\Delta\varepsilon_\parallel$  (%)',
+                        'strain_oop':r'$\Delta\varepsilon_\perp$  (%)',
+                        'grain_size_oop':r'$\Delta d_\perp$ / nm',
+                        'grain_size_ip':r'$\Delta d_\parallel$ / nm',
+                        'peak_intensity':r'Intensity / a.u.'}
+            colors_bar = self.lineEdit_colors_bar.text().rsplit(',')
+            if len(colors_bar) == 1:
+                colors_bar = colors_bar*len(self.scans)
+            else:
+                assert len(colors_bar) == len(self.scans)
+            plot_y_labels = [each for each in list(self.data_summary[self.scans[0]].keys()) if each in ['strain_ip','strain_oop','grain_size_ip','grain_size_oop']]
+            for each in plot_y_labels:
+                for each_pot in self.pot_range:
+                    # plot_data_y = np.array([[self.data_summary[each_scan][each][self.pot_range.index(each_pot)],self.data_summary[each_scan][each][-1]] for each_scan in self.scans])
+                    plot_data_y = np.array([[self.data_summary[each_scan][each][self.pot_range.index(each_pot)*2],self.data_summary[each_scan][each][self.pot_range.index(each_pot)*2+1]] for each_scan in self.scans])
+                    plot_data_x = np.arange(len(plot_data_y))
+                    labels = ['pH {}'.format(self.phs[self.scans.index(each_scan)]) for each_scan in self.scans]
+                    ax_temp = self.mplwidget2.canvas.figure.add_subplot(len(plot_y_labels), len(self.pot_range), self.pot_range.index(each_pot)+1+len(self.pot_range)*plot_y_labels.index(each))
+                    ax_temp.bar(plot_data_x,plot_data_y[:,0],0.5, yerr = plot_data_y[:,-1], color = colors_bar)
+                    if each_pot == self.pot_range[0]:
+                        ax_temp.set_ylabel(y_label_map[each])
+                    else:
+                        pass
+                    if each == plot_y_labels[0]:
+                        ax_temp.set_title('E range:{:4.2f}-{:4.2f} V'.format(*each_pot))
+                    if each != plot_y_labels[-1]:
+                        ax_temp.set_xticklabels([])
+                    else:
+                        ax_temp.set_xticks(plot_data_x)
+                        ax_temp.set_xticklabels(labels)
+                        
+                    # ax_temp.set_xticklabels(plot_data_x,labels)
+            self.mplwidget2.fig.subplots_adjust(hspace=0.04)
+            self.mplwidget2.canvas.draw()
+        else:
+            pass
 
     def plot_figure_xrv(self):
         self.mplwidget.fig.clear()
@@ -192,22 +241,75 @@ class MyMainWindow(QMainWindow):
             for i in range(plot_dim[0]):
                 getattr(self,'plot_axis_scan{}'.format(scan)).append(self.mplwidget.canvas.figure.add_subplot(plot_dim[0], plot_dim[1],j+plot_dim[1]*i))
         y_max_values,y_min_values = [-100000000]*len(self.plot_labels_y),[100000000]*len(self.plot_labels_y)
+
+        #prepare ranges for viewing datasummary
+        data_range = self.lineEdit_data_range.text().rsplit(',')
+        if len(data_range) == 1:
+            data_range = [list(map(int,data_range[0].rsplit('-')))]*len(self.scans)
+        else:
+            assert len(data_range) == len(self.scans)
+            data_range = [list(map(int,each.rsplit('-'))) for each in data_range]
+        self.data_range = data_range
+
+        pot_range = self.lineEdit_potential_range.text().rsplit(',')
+        pot_range = [list(map(float,each.rsplit('-'))) for each in pot_range]
+        self.pot_range = pot_range
+
         for scan in self.scans:
-            for each in self.plot_labels_y:
-                i = self.plot_labels_y.index(each)
+            self.data_summary[scan] = {}
+            if 'potential' in self.plot_labels_y and self.plot_label_x == 'potential':
+                plot_labels_y = [each for each in self.plot_labels_y if each!='potential']
+            else:
+                plot_labels_y = self.plot_labels_y
+            for each in plot_labels_y:
+                self.data_summary[scan][each] = []
+                i = plot_labels_y.index(each)
                 try:
                     fmt = self.lineEdit_fmt.text().rsplit(',')[self.scans.index(scan)]
                 except:
                     fmt = 'b-'
-                getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[i]],fmt,markersize = 3)
+                y = self.data_to_plot[scan][plot_labels_y[i]]
+                y_smooth_temp = signal.savgol_filter(self.data_to_plot[scan][plot_labels_y[i]],41,2)
+                std_val = np.sum(np.abs(y_smooth_temp - y))/len(self.data_to_plot[scan][self.plot_label_x])
+                marker_index_container = []
+                for ii in range(len(self.pot_range)):
+                    pot_range_temp = self.pot_range[ii]
+                    data_range_temp = self.data_range[self.scans.index(scan)]
+                    #print(list(self.data_to_plot.keys()))
+                    assert 'potential' in list(self.data_to_plot[scan].keys())
+                    index_left = np.argmin(np.abs(self.data_to_plot[scan]['potential'][data_range_temp[0]:data_range_temp[1]] - pot_range_temp[0])) + data_range_temp[0]
+                    index_right = np.argmin(np.abs(self.data_to_plot[scan]['potential'][data_range_temp[0]:data_range_temp[1]] - pot_range_temp[1])) + data_range_temp[0]
+                    marker_index_container.append(index_left)
+                    marker_index_container.append(index_right)
+
+                    pot_offset = abs(self.data_to_plot[scan]['potential'][index_left]-self.data_to_plot[scan]['potential'][index_right])
+                    #data_temp = [(y_smooth_temp[index_left] - y_smooth_temp[index_right])/pot_offset,std_val/pot_offset]
+                    self.data_summary[scan][each].append((y_smooth_temp[index_left] - y_smooth_temp[index_right])/pot_offset)
+                    self.data_summary[scan][each].append(std_val/pot_offset)
+                    #self.data_summary[scan][each].append((y_smooth_temp[index_left] - y_smooth_temp[index_right])/abs(self.data_to_plot[scan]['potential'][index_left]-self.data_to_plot[scan]['potential'][index_right]))
+                    #last value is the standard deviation
+                    #self.data_summary[scan][each].append(std_val/abs(self.data_to_plot[scan]['potential'][index_left]-self.data_to_plot[scan]['potential'][index_right]))
+                # print(scan, each, 'standard deviation = ',std_val)
+                
+                #plot the results
+                if self.plot_label_x == 'image_no':
+                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(np.arange(len(y)),y,fmt,markersize = 3)
+                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(np.arange(len(y)),y_smooth_temp,'-')
+                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot([np.arange(len(y))[iii] for iii in marker_index_container],[y_smooth_temp[iii] for iii in marker_index_container],'k*')
+                else:
+                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(self.data_to_plot[scan][self.plot_label_x],y,fmt,markersize = 3)
+                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(self.data_to_plot[scan][self.plot_label_x],y_smooth_temp,'-')
+                    # print([self.data_to_plot[scan][self.plot_label_x][iii] for iii in marker_index_container])
+                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot([self.data_to_plot[scan][self.plot_label_x][iii] for iii in marker_index_container],[y_smooth_temp[iii] for iii in marker_index_container],'k*')
+                
                 if i==0:
                     getattr(self,'plot_axis_scan{}'.format(scan))[i].set_title(r'pH {}_scan{}'.format(self.phs[self.scans.index(scan)],scan),fontsize=10)
-                temp_max, temp_min = max(list(self.data_to_plot[scan][self.plot_labels_y[i]])),min(list(self.data_to_plot[scan][self.plot_labels_y[i]]))
+                temp_max, temp_min = max(list(self.data_to_plot[scan][plot_labels_y[i]])),min(list(self.data_to_plot[scan][plot_labels_y[i]]))
                 if y_max_values[i]<temp_max:
                     y_max_values[i] = temp_max
                 if y_min_values[i]>temp_min:
                     y_min_values[i] = temp_min
-                if i!=(len(self.plot_labels_y)-1):
+                if i!=(len(plot_labels_y)-1):
                     ax = getattr(self,'plot_axis_scan{}'.format(scan))[i]
                     ax.set_xticklabels([])
                 else:
@@ -232,7 +334,8 @@ class MyMainWindow(QMainWindow):
             for each in self.plot_labels_y:
                 i = self.plot_labels_y.index(each)
                 getattr(self,'plot_axis_scan{}'.format(scan))[i].set_ylim(y_min_values[i],y_max_values[i])
-        # self.mplwidget.fig.tight_layout()
+        self.mplwidget.fig.tight_layout()
+        # print(self.data_summary)
         self.mplwidget.fig.subplots_adjust(wspace=0.04,hspace=0.04)
         self.mplwidget.canvas.draw()
 
@@ -263,7 +366,10 @@ class MyMainWindow(QMainWindow):
                         label = None
                     #append data to save
                     map_BL = {'00':0,'20':0,'11':1,'13':1,'31':1}
-                    BL=map_BL['{}{}'.format(int(round(self.data_to_plot[scan]['H'][0],0)),int(round(self.data_to_plot[scan]['K'][0],0)))]
+                    try:
+                        BL=map_BL['{}{}'.format(int(round(self.data_to_plot[scan]['H'][0],0)),int(round(self.data_to_plot[scan]['K'][0],0)))]
+                    except:
+                        BL = 0
                     temp_key = self.lineEdit_labels.text().rsplit('+')[i].rsplit(';')[j]
                     if temp_key not in self.data_to_save.keys():
                         self.data_to_save[temp_key] = pd.DataFrame(np.zeros([1,8])[0:0],columns=["L","H","K","na","I","I_err","BL","dL"])
@@ -328,9 +434,11 @@ class MyMainWindow(QMainWindow):
             condition = (self.data['mask_cv_xrd'] == True)&(self.data['scan_no'] == scan_number)
         else:
             condition = self.data['scan_no'] == scan_number
+        #RHE potential, potential always in the y dataset
+        self.data_to_plot[scan_number]['potential'] = 0.205+np.array(self.data[condition]['potential'])[l:r]+0.059*np.array(self.data[self.data['scan_no'] == scan_number]['phs'])[0]
         for each in plot_label_list:
-            if each=='potential':#RHE potential
-                self.data_to_plot[scan_number][each] = 0.205+np.array(self.data[condition][each])[l:r]+0.059*np.array(self.data[self.data['scan_no'] == scan_number]['phs'])[0]
+            if each == 'potential':
+                pass
             elif each=='current':#RHE potential
                 self.data_to_plot[scan_number][each] = -np.array(self.data[condition][each])[l:r]
             else:

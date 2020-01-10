@@ -1294,7 +1294,7 @@
   <customwidget>
    <class>GraphicsLayoutWidget</class>
    <extends>QWidget</extends>
-   <header>pyqtgraph.h</header>
+   <header location="global">pyqtgraph.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

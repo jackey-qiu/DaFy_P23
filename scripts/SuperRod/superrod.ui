@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1182</width>
-    <height>1003</height>
+    <width>1039</width>
+    <height>718</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,7 +20,7 @@
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="QTabWidget" name="tabWidget_3">
+      <widget class="QTabWidget" name="tabWidget_data">
        <property name="styleSheet">
         <string notr="true"/>
        </property>
@@ -41,28 +41,35 @@
             <enum>QLayout::SetFixedSize</enum>
            </property>
            <item>
-            <widget class="QPushButton" name="pushButton_2">
+            <widget class="QPushButton" name="pushButton_load_data">
              <property name="text">
               <string>LoadData</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton">
+            <widget class="QPushButton" name="pushButton_append_data">
              <property name="text">
               <string>AppendData</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_4">
+            <widget class="QPushButton" name="pushButton_delete_data">
              <property name="text">
               <string>DeleteData</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_3">
+            <widget class="QPushButton" name="pushButton_save_data">
+             <property name="text">
+              <string>SaveData</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_calculate">
              <property name="text">
               <string>Calculate</string>
              </property>
@@ -71,7 +78,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QTableView" name="tableView"/>
+          <widget class="QTableWidget" name="tableWidget_data"/>
          </item>
         </layout>
        </widget>
@@ -96,12 +103,12 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="comboBox"/>
+            <widget class="QComboBox" name="comboBox_dataset"/>
            </item>
           </layout>
          </item>
          <item>
-          <widget class="QTableWidget" name="tableWidget_2"/>
+          <widget class="QTableWidget" name="tableWidget_data_view"/>
          </item>
         </layout>
        </widget>
@@ -144,7 +151,7 @@
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_5">
+           <widget class="QPushButton" name="pushButton_plot_style">
             <property name="text">
              <string>PlotStyle</string>
             </property>
@@ -171,7 +178,7 @@
             <enum>QTabWidget::South</enum>
            </property>
            <property name="currentIndex">
-            <number>0</number>
+            <number>3</number>
            </property>
            <widget class="QWidget" name="tab">
             <attribute name="title">
@@ -179,7 +186,7 @@
             </attribute>
             <layout class="QHBoxLayout" name="horizontalLayout_5">
              <item>
-              <widget class="GraphicsLayoutWidget" name="widget" native="true"/>
+              <widget class="GraphicsLayoutWidget" name="widget_data" native="true"/>
              </item>
             </layout>
            </widget>
@@ -189,7 +196,7 @@
             </attribute>
             <layout class="QHBoxLayout" name="horizontalLayout_6">
              <item>
-              <widget class="GraphicsLayoutWidget" name="widget_2" native="true"/>
+              <widget class="GraphicsLayoutWidget" name="widget_fom" native="true"/>
              </item>
             </layout>
            </widget>
@@ -199,7 +206,7 @@
             </attribute>
             <layout class="QHBoxLayout" name="horizontalLayout_7">
              <item>
-              <widget class="GraphicsLayoutWidget" name="widget_3" native="true"/>
+              <widget class="GraphicsLayoutWidget" name="widget_pars" native="true"/>
              </item>
             </layout>
            </widget>
@@ -209,7 +216,7 @@
             </attribute>
             <layout class="QHBoxLayout" name="horizontalLayout_8">
              <item>
-              <widget class="GraphicsLayoutWidget" name="widget_4" native="true"/>
+              <widget class="GraphicsLayoutWidget" name="widget_fom_scan" native="true"/>
              </item>
             </layout>
            </widget>
@@ -219,7 +226,7 @@
             </attribute>
             <layout class="QHBoxLayout" name="horizontalLayout_9">
              <item>
-              <widget class="GraphicsLayoutWidget" name="widget_5" native="true"/>
+              <widget class="GLViewWidget_cum" name="widget_edp" native="true"/>
              </item>
             </layout>
            </widget>
@@ -246,19 +253,19 @@
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_4">
              <item>
-              <widget class="QTableWidget" name="tableWidget"/>
+              <widget class="QTableWidget" name="tableWidget_pars"/>
              </item>
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_11">
                <item>
-                <widget class="QPushButton" name="pushButton_8">
+                <widget class="QPushButton" name="pushButton_load_table">
                  <property name="text">
                   <string>LoadTable</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="pushButton_9">
+                <widget class="QPushButton" name="pushButton_save_table">
                  <property name="text">
                   <string>SaveTable</string>
                  </property>
@@ -274,19 +281,19 @@
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_5">
              <item>
-              <widget class="QPlainTextEdit" name="plainTextEdit"/>
+              <widget class="QCodeEditor" name="plainTextEdit_script"/>
              </item>
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_4">
                <item>
-                <widget class="QPushButton" name="pushButton_6">
+                <widget class="QPushButton" name="pushButton_load_script">
                  <property name="text">
                   <string>LoadScript</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="pushButton_7">
+                <widget class="QPushButton" name="pushButton_save_script">
                  <property name="text">
                   <string>SaveScript</string>
                  </property>
@@ -310,7 +317,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1182</width>
+     <width>1039</width>
      <height>21</height>
     </rect>
    </property>
@@ -415,6 +422,17 @@
    <class>GraphicsLayoutWidget</class>
    <extends>QWidget</extends>
    <header location="global">pyqtgraph.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QCodeEditor</class>
+   <extends>QPlainTextEdit</extends>
+   <header>code_editor.h</header>
+  </customwidget>
+  <customwidget>
+   <class>GLViewWidget_cum</class>
+   <extends>QWidget</extends>
+   <header>glview.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

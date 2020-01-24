@@ -110,7 +110,8 @@ class MyMainWindow(QMainWindow):
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getSaveFileName(self,"QFileDialog.getSaveFileName()","","config file (*.ini);Text Files (*.txt);all files(*.*)", options=options)
         with open(fileName,'w') as f:
-            channels = ['lineEdit_data_file','radioButton_ctr','radioButton_xrv','checkBox_time_scan','checkBox_mask','lineEdit_x','lineEdit_y','scan_numbers_append','lineEdit_fmt','lineEdit_labels']
+            channels = ['lineEdit_data_file','radioButton_ctr','radioButton_xrv','checkBox_time_scan','checkBox_mask','lineEdit_x','lineEdit_y','scan_numbers_append','lineEdit_fmt','lineEdit_labels',\
+                        'lineEdit_potential_range', 'lineEdit_data_range','lineEdit_colors_bar']
             for channel in channels:
                 try:
                     f.write(channel+':'+str(getattr(self,channel).isChecked())+'\n')
@@ -195,10 +196,10 @@ class MyMainWindow(QMainWindow):
             self.mplwidget2.fig.clear()
             y_label_map = {'potential':'E / V$_{RHE}$',
                         'current':r'j / mAcm$^{-2}$',
-                        'strain_ip':r'$\Delta\varepsilon_\parallel$  (%)',
-                        'strain_oop':r'$\Delta\varepsilon_\perp$  (%)',
-                        'grain_size_oop':r'$\Delta d_\perp$ / nm',
-                        'grain_size_ip':r'$\Delta d_\parallel$ / nm',
+                        'strain_ip':r'$\Delta\varepsilon_\parallel$  (%/V)',
+                        'strain_oop':r'$\Delta\varepsilon_\perp$  (%/V)',
+                        'grain_size_oop':r'$\Delta d_\perp$  (nm/V)',
+                        'grain_size_ip':r'$\Delta d_\parallel$  (nm/V)',
                         'peak_intensity':r'Intensity / a.u.'}
             colors_bar = self.lineEdit_colors_bar.text().rsplit(',')
             if len(colors_bar) == 1:
@@ -206,6 +207,8 @@ class MyMainWindow(QMainWindow):
             else:
                 assert len(colors_bar) == len(self.scans)
             plot_y_labels = [each for each in list(self.data_summary[self.scans[0]].keys()) if each in ['strain_ip','strain_oop','grain_size_ip','grain_size_oop']]
+            #TODO this has to be changed to set the y_max automatically in different cases.
+            lim_y_temp = {'strain_ip':0.18,'strain_oop':0.4,'grain_size_ip':1.2,'grain_size_oop':1.4}
             for each in plot_y_labels:
                 for each_pot in self.pot_range:
                     # plot_data_y = np.array([[self.data_summary[each_scan][each][self.pot_range.index(each_pot)],self.data_summary[each_scan][each][-1]] for each_scan in self.scans])
@@ -216,8 +219,9 @@ class MyMainWindow(QMainWindow):
                     ax_temp.bar(plot_data_x,plot_data_y[:,0],0.5, yerr = plot_data_y[:,-1], color = colors_bar)
                     if each_pot == self.pot_range[0]:
                         ax_temp.set_ylabel(y_label_map[each])
+                        ax_temp.set_ylim([0,lim_y_temp[each]])
                     else:
-                        pass
+                        ax_temp.set_ylim([0,lim_y_temp[each]])
                     if each == plot_y_labels[0]:
                         ax_temp.set_title('E range:{:4.2f}-{:4.2f} V'.format(*each_pot))
                     if each != plot_y_labels[-1]:
@@ -348,7 +352,6 @@ class MyMainWindow(QMainWindow):
             pass
 
         plot_dim = [int(len(self.scan_numbers_all.text().rsplit('+'))/col_num)+int(len(self.scan_numbers_all.text().rsplit('+'))%col_num != 0), col_num]
-        self.data_to_save
         for i in range(len(self.scan_numbers_all.text().rsplit('+'))):
             setattr(self,'plot_axis_plot_set{}'.format(i+1),self.mplwidget.canvas.figure.add_subplot(plot_dim[0], plot_dim[1],i+1))
             each = self.scan_numbers_all.text().rsplit('+')[i]
@@ -371,14 +374,22 @@ class MyMainWindow(QMainWindow):
                     except:
                         BL = 0
                     temp_key = self.lineEdit_labels.text().rsplit('+')[i].rsplit(';')[j]
+                    if '[' in temp_key:
+                        temp_key = temp_key[1:]
+                    if ']' in temp_key:
+                        temp_key = temp_key[0:len(temp_key)-1]
                     if temp_key not in self.data_to_save.keys():
                         self.data_to_save[temp_key] = pd.DataFrame(np.zeros([1,8])[0:0],columns=["L","H","K","na","I","I_err","BL","dL"])
                     else:
                         pass
                     len_data = len(self.data_to_plot[scan]['L'])
+                    #Lorentz factor calculation, refer to Vlieg 1997, J.Appl.Cryst. Equation 16
+                    lorentz_ft = np.sin(np.deg2rad(self.data_to_plot[scan]['delta']))*np.cos(np.deg2rad(self.data_to_plot[scan]['omega_t']))*np.cos(np.deg2rad(self.data_to_plot[scan]['gamma']))
+                    #footprint area correction factor (take effect only for specular rod)
+                    area_ft = np.sin(np.deg2rad(self.data_to_plot[scan]['omega_t']))
                     self.data_to_save[temp_key] = self.data_to_save[temp_key].append(pd.DataFrame({"L":self.data_to_plot[scan]['L'],"H":self.data_to_plot[scan]['H'],\
-                                                                                     "K":self.data_to_plot[scan]['K'],"na":[0]*len_data,"I":self.data_to_plot[scan]['peak_intensity'],\
-                                                                                     "I_err":self.data_to_plot[scan]['peak_intensity_error'],"BL":[BL]*len_data ,"dL":[2]*len_data}))
+                                                                                     "K":self.data_to_plot[scan]['K'],"na":[0]*len_data,"I":self.data_to_plot[scan]['peak_intensity']*lorentz_ft*area_ft,\
+                                                                                     "I_err":self.data_to_plot[scan]['peak_intensity_error']*lorentz_ft*area_ft,"BL":[BL]*len_data ,"dL":[2]*len_data}))
                     #remove [ or ] in the fmt and label
                     if ('[' in fmt) and (']' in fmt):
                         fmt = fmt[1:-1]
@@ -398,16 +409,16 @@ class MyMainWindow(QMainWindow):
                         else:
                             pass
                     if self.checkBox_time_scan.isChecked():
-                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[0]],fmt,label =label)
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[0]]*lorentz_ft*area_ft,fmt,label =label)
                         getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_xlabel(self.plot_label_x)
                         getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_ylabel('Intensity')
                         pot_ax = getattr(self,'plot_axis_plot_set{}'.format(i+1)).twinx()
-                        pot_ax.plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[1]],'b-',label = None)
+                        pot_ax.plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[1]]*lorentz_ft*area_ft,'b-',label = None)
                         pot_ax.set_ylabel(self.plot_labels_y[1],color = 'b')
                         pot_ax.tick_params(axis = 'y', labelcolor = 'b')
                         getattr(self,'plot_axis_plot_set{}'.format(i+1)).legend()
                     else:
-                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[0]],fmt,label =label)
+                        getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(self.data_to_plot[scan][self.plot_label_x],self.data_to_plot[scan][self.plot_labels_y[0]]*lorentz_ft*area_ft,fmt,label =label)
                         getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_ylabel('Intensity')
                         getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_xlabel('L')
                         getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_title('{}{}L'.format(int(round(list(self.data[self.data['scan_no']==scan]['H'])[0],0)),int(round(list(self.data[self.data['scan_no']==scan]['K'])[0],0))))
@@ -466,6 +477,15 @@ class MyMainWindow(QMainWindow):
             condition = (self.data['mask_ctr'] == True)&(self.data['scan_no'] == scan_number)
         else:
             condition = self.data['scan_no'] == scan_number
+        if 'gamma' not in plot_label_list:
+            plot_label_list.append('gamma')
+        
+        if 'delta' not in plot_label_list:
+            plot_label_list.append('delta')
+
+        if 'omega_t' not in plot_label_list:
+            plot_label_list.append('omega_t')
+
         for each in plot_label_list:
             if each=='current':#RHE potential
                 self.data_to_plot[scan_number][each] = -np.array(self.data[condition][each])[l:r]

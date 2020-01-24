@@ -20,9 +20,11 @@ import time
 import matplotlib
 matplotlib.use("Qt5Agg")
 import pyqtgraph as pg
+import pyqtgraph.exporters
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QCheckBox, QRadioButton
 from PyQt5.QtGui import QTransform
+from pyqtgraph.Qt import QtGui
 
 #from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as NavigationToolbar)
 
@@ -174,6 +176,7 @@ class MyMainWindow(QMainWindow):
         global img, roi, roi_bkg, data, p2, isoLine, iso
 
         win = self.widget_image
+        # print(dir(win))
         win.setWindowTitle('pyqtgraph example: Image Analysis')
 
         # A plot area (ViewBox + axes) for displaying the image
@@ -456,8 +459,13 @@ class MyMainWindow(QMainWindow):
                 self.img_pyqtgraph.setImage(self.app_ctr.bkg_sub.img)
                 if self.app_ctr.img_loader.frame_number == 0:
                     self.p1.autoRange() 
-                self.hist.setLevels(self.app_ctr.bkg_sub.img.min(), self.app_ctr.bkg_sub.img.mean()*10)
+                # self.hist.setLevels(self.app_ctr.bkg_sub.img.min(), self.app_ctr.bkg_sub.img.mean()*10)
+                self.hist.setLevels(0, 0.0005)
                 self.updatePlot()
+                #if you want to save the images, then uncomment the following three lines
+                #QtGui.QApplication.processEvents()
+                #exporter = pg.exporters.ImageExporter(self.widget_image.scene())
+                #exporter.export(os.path.join(DaFy_path,'temp','temp_frames','scan{}_frame{}.png'.format(self.app_ctr.img_loader.scan_number,self.app_ctr.img_loader.frame_number+1)))
 
             if return_value:
                 self.statusbar.clearMessage()

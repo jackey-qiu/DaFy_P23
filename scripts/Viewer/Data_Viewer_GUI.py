@@ -208,7 +208,7 @@ class MyMainWindow(QMainWindow):
                 assert len(colors_bar) == len(self.scans)
             plot_y_labels = [each for each in list(self.data_summary[self.scans[0]].keys()) if each in ['strain_ip','strain_oop','grain_size_ip','grain_size_oop']]
             #TODO this has to be changed to set the y_max automatically in different cases.
-            lim_y_temp = {'strain_ip':0.18,'strain_oop':0.4,'grain_size_ip':1.2,'grain_size_oop':1.4}
+            lim_y_temp = {'strain_ip':-0.18,'strain_oop':-0.4,'grain_size_ip':-1.2,'grain_size_oop':-1.4}
             for each in plot_y_labels:
                 for each_pot in self.pot_range:
                     # plot_data_y = np.array([[self.data_summary[each_scan][each][self.pot_range.index(each_pot)],self.data_summary[each_scan][each][-1]] for each_scan in self.scans])
@@ -216,19 +216,21 @@ class MyMainWindow(QMainWindow):
                     plot_data_x = np.arange(len(plot_data_y))
                     labels = ['pH {}'.format(self.phs[self.scans.index(each_scan)]) for each_scan in self.scans]
                     ax_temp = self.mplwidget2.canvas.figure.add_subplot(len(plot_y_labels), len(self.pot_range), self.pot_range.index(each_pot)+1+len(self.pot_range)*plot_y_labels.index(each))
-                    ax_temp.bar(plot_data_x,plot_data_y[:,0],0.5, yerr = plot_data_y[:,-1], color = colors_bar)
+                    ax_temp.bar(plot_data_x,-plot_data_y[:,0],0.5, yerr = plot_data_y[:,-1], color = colors_bar)
                     if each_pot == self.pot_range[0]:
-                        ax_temp.set_ylabel(y_label_map[each])
-                        ax_temp.set_ylim([0,lim_y_temp[each]])
+                        ax_temp.set_ylabel(y_label_map[each],fontsize=13)
+                        ax_temp.set_ylim([lim_y_temp[each],0])
                     else:
-                        ax_temp.set_ylim([0,lim_y_temp[each]])
+                        ax_temp.set_ylim([lim_y_temp[each],0])
                     if each == plot_y_labels[0]:
-                        ax_temp.set_title('E range:{:4.2f}-{:4.2f} V'.format(*each_pot))
+                        ax_temp.set_title('E range:{:4.2f}-->{:4.2f} V'.format(*each_pot), fontsize=13)
                     if each != plot_y_labels[-1]:
                         ax_temp.set_xticklabels([])
                     else:
                         ax_temp.set_xticks(plot_data_x)
-                        ax_temp.set_xticklabels(labels)
+                        ax_temp.set_xticklabels(labels,fontsize=13)
+                    if each_pot!=self.pot_range[0]:
+                        ax_temp.set_yticklabels([])
                         
                     # ax_temp.set_xticklabels(plot_data_x,labels)
             self.mplwidget2.fig.subplots_adjust(hspace=0.04)
@@ -297,17 +299,25 @@ class MyMainWindow(QMainWindow):
                 
                 #plot the results
                 if self.plot_label_x == 'image_no':
-                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(np.arange(len(y)),y,fmt,markersize = 3)
-                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(np.arange(len(y)),y_smooth_temp,'-')
-                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot([np.arange(len(y))[iii] for iii in marker_index_container],[y_smooth_temp[iii] for iii in marker_index_container],'k*')
+                    if each != 'current':
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(np.arange(len(y)),y,fmt,markersize = 3)
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(np.arange(len(y)),y_smooth_temp,'-')
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot([np.arange(len(y))[iii] for iii in marker_index_container],[y_smooth_temp[iii] for iii in marker_index_container],'k*')
+                    else:
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(np.arange(len(y)),y,fmt+'-',markersize = 3)
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot([np.arange(len(y))[iii] for iii in marker_index_container],[y[iii] for iii in marker_index_container],'k*')
                 else:
-                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(self.data_to_plot[scan][self.plot_label_x],y,fmt,markersize = 3)
-                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(self.data_to_plot[scan][self.plot_label_x],y_smooth_temp,'-')
-                    # print([self.data_to_plot[scan][self.plot_label_x][iii] for iii in marker_index_container])
-                    getattr(self,'plot_axis_scan{}'.format(scan))[i].plot([self.data_to_plot[scan][self.plot_label_x][iii] for iii in marker_index_container],[y_smooth_temp[iii] for iii in marker_index_container],'k*')
-                
+                    if each!='current':
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(self.data_to_plot[scan][self.plot_label_x],y,fmt,markersize = 3)
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(self.data_to_plot[scan][self.plot_label_x],y_smooth_temp,'-')
+                        # print([self.data_to_plot[scan][self.plot_label_x][iii] for iii in marker_index_container])
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot([self.data_to_plot[scan][self.plot_label_x][iii] for iii in marker_index_container],[y_smooth_temp[iii] for iii in marker_index_container],'k*')
+                    else:
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot(self.data_to_plot[scan][self.plot_label_x],y,fmt+'-',markersize = 3)
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].plot([self.data_to_plot[scan][self.plot_label_x][iii] for iii in marker_index_container],[y[iii] for iii in marker_index_container],'k*')
                 if i==0:
-                    getattr(self,'plot_axis_scan{}'.format(scan))[i].set_title(r'pH {}_scan{}'.format(self.phs[self.scans.index(scan)],scan),fontsize=10)
+                    # getattr(self,'plot_axis_scan{}'.format(scan))[i].set_title(r'pH {}_scan{}'.format(self.phs[self.scans.index(scan)],scan),fontsize=13)
+                    getattr(self,'plot_axis_scan{}'.format(scan))[i].set_title(r'pH {}'.format(self.phs[self.scans.index(scan)],scan),fontsize=13)
                 temp_max, temp_min = max(list(self.data_to_plot[scan][plot_labels_y[i]])),min(list(self.data_to_plot[scan][plot_labels_y[i]]))
                 if y_max_values[i]<temp_max:
                     y_max_values[i] = temp_max
@@ -319,7 +329,7 @@ class MyMainWindow(QMainWindow):
                 else:
                     ax = getattr(self,'plot_axis_scan{}'.format(scan))[i]
                     x_label = [r'Image_no','E / V$_{RHE}$'][self.plot_label_x=='potential']
-                    ax.set_xlabel(x_label)
+                    ax.set_xlabel(x_label, fontsize = 13)
                 if scan!=self.scans[0]:
                     getattr(self,'plot_axis_scan{}'.format(scan))[i].set_yticklabels([])
                 else:
@@ -331,7 +341,7 @@ class MyMainWindow(QMainWindow):
                                    'grain_size_ip':r'$\Delta d_\parallel$ / nm',
                                    'peak_intensity':r'Intensity / a.u.'}
                     if each in y_label_map:
-                        getattr(self,'plot_axis_scan{}'.format(scan))[i].set_ylabel(y_label_map[each])
+                        getattr(self,'plot_axis_scan{}'.format(scan))[i].set_ylabel(y_label_map[each], fontsize = 13)
                     else:
                         pass
         for scan in self.scans:

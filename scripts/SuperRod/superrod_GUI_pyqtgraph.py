@@ -36,6 +36,22 @@ import syntax_pars
 
 #from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as NavigationToolbar)
 
+class RunFit(QtCore.QObject):
+
+    updateplot = QtCore.pyqtSignal(str,object)
+    def __init__(self,solver):
+        super(RunFit, self).__init__()
+        self.solver = solver
+        self.running = True
+
+    def run(self):
+        if self.running:
+            self.solver.optimizer.stop = False
+            self.solver.StartFit(self.updateplot)
+    
+    def stop(self):
+        self.solver.optimizer.stop = True
+
 class MyMainWindow(QMainWindow):
     def __init__(self, parent = None):
         super(MyMainWindow, self).__init__(parent)
@@ -54,7 +70,17 @@ class MyMainWindow(QMainWindow):
         #script module
         #self.script_module = types.ModuleType('genx_script_module')
         self.model = model.Model()
-        self.solver = solvergui.SolverController(self)
+        # self.solver = solvergui.SolverController(self)
+        self.run_fit = RunFit(solvergui.SolverController(self.model))
+        self.fit_thread = QtCore.QThread()
+        self.run_fit.moveToThread(self.fit_thread)
+        self.run_fit.updateplot.connect(self.update_plot_data_view_upon_simulation)
+        self.run_fit.updateplot.connect(self.update_par_during_fit)
+        self.run_fit.updateplot.connect(self.update_status)
+        # self.run_fit.updateplot.connect(self.update_structure_view)
+
+        self.fit_thread.started.connect(self.run_fit.run)
+
         #tool bar buttons to operate modeling
         self.actionNew.triggered.connect(self.init_new_model)
         self.actionOpen.triggered.connect(self.open_model)
@@ -89,6 +115,7 @@ class MyMainWindow(QMainWindow):
         #self.data = data.DataList()
 
         #table view for parameters set to selecting row basis
+        #self.tableWidget_pars.itemChanged.connect(self.update_par_upon_change)
         self.tableWidget_pars.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_model)
@@ -146,6 +173,7 @@ class MyMainWindow(QMainWindow):
             self.model.save(path)
 
     def simulate_model(self):
+        # self.update_par_upon_change()
         self.model.simulate()
         '''
         self.compile_script()
@@ -168,10 +196,13 @@ class MyMainWindow(QMainWindow):
         self.update_structure_view()
 
     def run_model(self):
-        self.solver.StartFit()
+        # self.solver.StartFit()
+        
+        self.fit_thread.start()
 
     def stop_model(self):
-        pass
+        self.run_fit.stop()
+        self.fit_thread.terminate()
 
     def load_data(self, loader = 'ctr'):
         exec('self.load_data_{}()'.format(loader))
@@ -357,7 +388,7 @@ class MyMainWindow(QMainWindow):
                         check_box.setChecked(item==True)
                         self.tableWidget_pars.setCellWidget(i,2,check_box)
                     else:
-                        qtablewidget = QTableWidgetItem(item)
+                        qtablewidget = QTableWidgetItem(str(item))
                         # qtablewidget.setTextAlignment(Qt.AlignCenter)
                         if j == 0:
                             qtablewidget.setFont(QFont('Times',10,QFont.Bold))
@@ -370,6 +401,7 @@ class MyMainWindow(QMainWindow):
         self.tableWidget_pars.setShowGrid(False)
         self.tableWidget_pars.setVerticalHeaderLabels(vertical_labels)
 
+    
     def load_par(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -423,20 +455,39 @@ class MyMainWindow(QMainWindow):
         self.tableWidget_pars.setShowGrid(False)
         self.tableWidget_pars.setVerticalHeaderLabels(vertical_labels)
 
-    def update_par(self):
+    @QtCore.pyqtSlot(str,object)
+    def update_par_during_fit(self,string,model):
         #labels = [data[0] for each in self.model.parameters.data]
-        for i in range(len(self.model.parameters.data)):
-            if self.model.parameters.data[i][0]!='':
-                #print(self.model.parameters.data[i][0])
+        for i in range(len(model.parameters.data)):
+            if model.parameters.data[i][0]!='':
+                # print(self.model.parameters.data[i][0])
                 #print(len(self.model.parameters.data))
+                print(model.parameters.data[i][0])
                 item_temp = self.tableWidget_pars.item(i,1)
                 #print(type(item_temp))
-                item_temp.setText(str(self.model.parameters.data[i][1]))
+                item_temp.setText(str(model.parameters.data[i][1]))
         self.tableWidget_pars.resizeColumnsToContents()
         self.tableWidget_pars.resizeRowsToContents()
         self.tableWidget_pars.setShowGrid(False)
-
         # self.update_structure_view()
+
+    def update_par_upon_change(self):
+        self.model.parameters.data = []
+        for each_row in range(self.tableWidget_pars.rowCount()):
+            if self.tableWidget_pars.item(each_row,0)==None:
+                items = ['',0,False,0,0,'-']
+            elif self.tableWidget_pars.item(each_row,0).text()=='':
+                items = ['',0,False,0,0,'-']
+            else:
+                # print(each_row,type(self.tableWidget_pars.item(each_row,0)))
+                items = [self.tableWidget_pars.item(each_row,0).text()] + [float(self.tableWidget_pars.item(each_row,i).text()) for i in [1,3,4]] + [self.tableWidget_pars.item(each_row,5).text()]
+                items.insert(2, self.tableWidget_pars.cellWidget(each_row,2).isChecked())
+                self.model.parameters.data.append(items)
+
+    @QtCore.pyqtSlot(str,object)
+    def update_status(self,string,model):
+        self.statusbar.clearMessage()
+        self.statusbar.showMessage(string)
 
     def save_par(self):
         pass

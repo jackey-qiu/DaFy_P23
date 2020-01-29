@@ -23,9 +23,11 @@ from wx.lib.masked import NumCtrl
 import diffev, fom_funcs
 import filehandling as io
 import numpy as np
+from PyQt5.QtCore import QThread
+from PyQt5 import QtCore
 
 #==============================================================================
-class SolverController:
+class SolverController(QtCore.QObject):
     '''
     Class to take care of the GUI - solver interaction.
     Implements dialogboxes for setting parameters and controls
@@ -33,13 +35,13 @@ class SolverController:
     code are used i.e. interfacing the optimization code to the GUI.
     '''
 
-    def __init__(self, parent, config = None):
+    def __init__(self, model, config = None):
         # Create the optimizer we are using. In this case the standard
         # Differential evolution optimizer.
         self.optimizer = diffev.DiffEv()
         # Store the parent we need this to bind the different components to
         # the optimization algorithm.
-        self.parent = parent
+        self.model = model
         self.config = config
 
         # Just storage of the starting values for the paramters before
@@ -207,7 +209,7 @@ class SolverController:
         # Update the configuration if a model has been loaded after
         # the object have been created..
         self.ReadConfig()
-        fom_func_name = self.parent.model.fom_func.__name__
+        fom_func_name = self.model.fom_func.__name__
         if not fom_func_name in fom_funcs.func_names:
             ShowWarningDialog(self.parent, 'The loaded fom function, '\
             + fom_func_name+ ', does not exist ' + \
@@ -264,6 +266,8 @@ class SolverController:
             print('Error in plot output:\n' + repr(e))
         '''
         pass
+        # self.parent.update_plot_data_view_upon_simulation()
+        
 
     def ParameterOutput(self, solver):
         '''ParameterOutput(self, solver) --> none
@@ -282,18 +286,19 @@ class SolverController:
                 desc = 'Parameter Update', update_errors = False,\
                 permanent_change = False)
         wx.PostEvent(self.parent, evt)
-        '''
+       ''' 
         #print(len(solver.best_vec.copy()))
         best_vec = solver.best_vec.copy()
         offset = 0
-        for i in range(len(best_vec)):
-            if self.parent.model.parameters.data[i][2] in [True,'True',1] :
-                self.parent.model.parameters.data[i+offset][1] = best_vec[i]
-            else:
-                offset += 1
+        index_for_update = [i for i in range(len(solver.model.parameters.data)) if solver.model.parameters.data[i][2] in [True,'True',1]]
+        for i in range(len(index_for_update)):
+            solver.model.parameters.data[index_for_update[i]][1] = best_vec[i]
 
-        self.parent.update_par()
-
+        #self.parent.update_par()
+        
+        
+        
+    
     def ModelLoaded(self):
         '''ModelLoaded(self) --> None
 
@@ -331,7 +336,7 @@ class SolverController:
 
         Function that conducts an autosave of the model.
         '''
-        io.save_gx(self.parent.model.get_filename(), self.parent.model, \
+        io.save_gx(self.model.get_filename(), self.model, \
                 self.optimizer, self.config)
         #print 'AutoSaved!'
 
@@ -423,7 +428,7 @@ class SolverController:
         Projects the parameter number parameter on one axis and returns
         the fomvals.
         '''
-        model  = self.parent.model
+        model  = self.model
         row = model.parameters.get_pos_from_row(parameter)
         if self.optimizer.start_guess != None and not self.optimizer.running:
             return self.optimizer.par_evals[:,row],\
@@ -487,17 +492,38 @@ class SolverController:
         self.start_parameter_values = None
 
 
-    def StartFit(self):
+    def StartFit(self, signal = None):
         ''' StartFit(self) --> None
         Function to start running the fit
         '''
         # Make sure that the config of the solver is updated..
         self.ReadConfig()
-        model = self.parent.model
+        model = self.model
         # Reset all the errorbars
         model.parameters.clear_error_pars()
         #self.start_parameter_values = model.get_fit_values()
-        self.optimizer.start_fit(model)
+        self.optimizer.model = model
+        self.optimizer.start_fit(signal)
+
+
+    def StartFit_old(self):
+        ''' StartFit(self) --> None
+        Function to start running the fit
+        '''
+        # Make sure that the config of the solver is updated..
+        
+        self.ReadConfig()
+        model = self.model
+        # Reset all the errorbars
+        self.parent.new_thread = QThread()
+
+        model.parameters.clear_error_pars()
+
+        #self.start_parameter_values = model.get_fit_values()
+        self.optimizer.model = model
+        self.parent.new_thread.started.connect(self.optimizer.start_fit)
+        # self.parent.update_plot_data_view_upon_simulation.moveToThread(self.parent.new_thread)
+        self.parent.new_thread.start()
         #print 'Optimizer starting'
 
     def StopFit(self):
@@ -513,7 +539,7 @@ class SolverController:
         '''
         # Make sure the settings are updated..
         self.ReadConfig()
-        model = self.parent.model
+        model = self.model
         # Remove all previous erros ...
 
         self.optimizer.resume_fit(model)

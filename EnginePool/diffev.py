@@ -13,6 +13,7 @@ import _thread as thread
 import time
 import random as random_mod
 import sys, os, pickle
+from PyQt5 import QtCore
 split_jobs = 1
 
 if MPI_RUN:
@@ -339,7 +340,7 @@ class DiffEv:
             else:
                 self.eval_fom = self.calc_trial_fom
 
-    def start_fit(self, model):
+    def start_fit(self,signal = None):
         '''
         Starts fitting in a seperate thred.
         '''
@@ -347,15 +348,16 @@ class DiffEv:
         if not self.running:
             #Initilize the parameters to fit
             self.reset()
-            self.init_fitting(model)
+            self.init_fitting(self.model)
             self.init_fom_eval()
             self.stop = False
             # Start fitting in a new thread
-            thread.start_new_thread(self.optimize, ())
+            # thread.start_new_thread(self.optimize, ())
+            self.text_output('Starting the fit...')
+            self.optimize(signal = signal)
             # self.optimize()
             # For debugging
             #self.optimize()
-            self.text_output('Starting the fit...')
             #self.running = True
             return True
         else:
@@ -437,7 +439,7 @@ class DiffEv:
 
         #self.parameter_output(self)
 
-    def optimize(self):
+    def optimize(self, signal = None):
         '''
         Method implementing the main loop of the differential evolution
         algorithm. Note that this method does not run in a separate thread.
@@ -523,10 +525,18 @@ class DiffEv:
                 # Update the plot data for any gui or other output
                 self.plot_output(self)
                 self.parameter_output(self)
+                # print('Best vec')
+                # print(self.best_vec)
+                # print('Max par')
+                # print(self.par_max)
+
+
+                # print('update plot signal emitted!')
                 #self.paren
 
                 # Let the optimization sleep for a while
-                time.sleep(self.sleep_time)
+                #time.sleep(self.sleep_time)
+                # QtCore.QThread.msleep(self.sleep_time)
 
                 # Time measurent to track the speed
                 t = time.time() - t_start
@@ -535,10 +545,14 @@ class DiffEv:
                 else:
                     speed = 999999
 
-                print('FOM: %.3f Generation: %d Speed: %.1f'%\
-                                    (self.best_fom, gen, speed))
+                outputtext = 'FOM: %.3f Generation: %d Speed: %.1f'%\
+                                            (self.best_fom, gen, speed)
+
                 self.text_output('FOM: %.3f Generation: %d Speed: %.1f'%\
                                     (self.best_fom, gen, speed))
+                # print('pop_size ={}'.format(self.pop_size))
+                if signal!=None:
+                    signal.emit(outputtext, self.model)
 
                 self.new_best = False
                 # Do an autosave if activated and the interval is coorect

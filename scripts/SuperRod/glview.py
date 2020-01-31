@@ -9,18 +9,33 @@ class GLViewWidget_cum(gl.GLViewWidget):
 
     def show_structure(self, xyz):
         self.setCameraPosition(distance=55, azimuth=-90)
-        for each in xyz:
-            e, x, y, z = each
+        i=0
+        if len(self.items)==0:
             g = gl.GLGridItem()
             g.scale(2,2,1)
             self.addItem(g)
+            for each in xyz:
+                e, x, y, z = each
+                md = gl.MeshData.sphere(rows=10, cols=20)
+                m1 = gl.GLMeshItem(meshdata=md, smooth=True, color=color_lib[e], shader='shaded', glOptions='opaque')
+                # print(dir(m1.metaObject()))
+                m1.translate(x, y, z)
+                m1.scale(0.5, 0.5, 0.5)
+                self.addItem(m1)
+        else:
+            for each in xyz:
+                _,x,y,z = xyz[i]
+                #first item is grid net
+                self.items[i+1].resetTransform()
+                self.items[i+1].translate(x,y,z)
+                i += 1
 
-            md = gl.MeshData.sphere(rows=10, cols=20)
-
-            m1 = gl.GLMeshItem(meshdata=md, smooth=True, color=color_lib[e], shader='shaded', glOptions='opaque')
-            m1.translate(x, y, z)
-            m1.scale(0.5, 0.5, 0.5)
-            self.addItem(m1)
+    def update_structure(self, xyz):
+        for i in range(len(xyz)):
+            _,x,y,z = xyz[i]
+            #first item is grid net
+            self.items[i+1].resetTransform()
+            self.items[i+1].translate(x,y,z)
 
     def setup_view(self):
         self.setCameraPosition(distance=15, azimuth=-90)

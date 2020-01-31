@@ -73,11 +73,13 @@ class MyMainWindow(QMainWindow):
         # self.solver = solvergui.SolverController(self)
         self.run_fit = RunFit(solvergui.SolverController(self.model))
         self.fit_thread = QtCore.QThread()
+        self.structure_view_thread = QtCore.QThread()
+        self.widget_edp.moveToThread(self.structure_view_thread)
         self.run_fit.moveToThread(self.fit_thread)
         self.run_fit.updateplot.connect(self.update_plot_data_view_upon_simulation)
         self.run_fit.updateplot.connect(self.update_par_during_fit)
         self.run_fit.updateplot.connect(self.update_status)
-        # self.run_fit.updateplot.connect(self.update_structure_view)
+        self.run_fit.updateplot.connect(self.update_structure_view)
 
         self.fit_thread.started.connect(self.run_fit.run)
 
@@ -193,11 +195,11 @@ class MyMainWindow(QMainWindow):
         self.evaluate_sim_func()
         '''
         self.update_plot_data_view_upon_simulation()
-        self.update_structure_view()
+        self.init_structure_view()
 
     def run_model(self):
         # self.solver.StartFit()
-        
+        self.structure_view_thread.start()
         self.fit_thread.start()
 
     def stop_model(self):
@@ -316,9 +318,13 @@ class MyMainWindow(QMainWindow):
                     qtablewidget = QTableWidgetItem('True')
                 self.tableWidget_data_view.setItem(i,j,qtablewidget)
     
-    def update_structure_view(self):
+    def init_structure_view(self):
         xyz = self.model.script_module.sample.extract_xyz(1)
         self.widget_edp.show_structure(xyz)
+
+    def update_structure_view(self):
+        xyz = self.model.script_module.sample.extract_xyz(1)
+        self.widget_edp.update_structure(xyz)
 
 
 
@@ -462,7 +468,7 @@ class MyMainWindow(QMainWindow):
             if model.parameters.data[i][0]!='':
                 # print(self.model.parameters.data[i][0])
                 #print(len(self.model.parameters.data))
-                print(model.parameters.data[i][0])
+                # print(model.parameters.data[i][0])
                 item_temp = self.tableWidget_pars.item(i,1)
                 #print(type(item_temp))
                 item_temp.setText(str(model.parameters.data[i][1]))
@@ -488,6 +494,7 @@ class MyMainWindow(QMainWindow):
     def update_status(self,string,model):
         self.statusbar.clearMessage()
         self.statusbar.showMessage(string)
+        self.label_2.setText('FOM {}:{}'.format(self.model.fom_func.__name__,self.run_fit.solver.optimizer.best_fom))
 
     def save_par(self):
         pass

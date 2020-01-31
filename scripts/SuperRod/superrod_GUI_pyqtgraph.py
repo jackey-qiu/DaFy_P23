@@ -140,6 +140,7 @@ class MyMainWindow(QMainWindow):
         self.selected_data_profile.setLogMode(x=False,y=True)
         self.selected_data_profile.autoRange()
 
+
     def update_plot_data_view_upon_simulation(self):
         plot_data_index = []
         for i in range(len(self.model.data)):
@@ -150,6 +151,10 @@ class MyMainWindow(QMainWindow):
                 plot_data_index.append(i)
         self.selected_data_profile.setLogMode(x=False,y=True)
         self.selected_data_profile.autoRange()
+        fom_log = np.array(self.run_fit.solver.optimizer.fom_log)
+        #print(fom_log)
+        self.fom_evolution_profile.plot(fom_log[:,0],fom_log[:,1],pen={'color': 'r', 'width': 2}, clear = True)
+        self.fom_evolution_profile.autoRange()
 
     def update_plot(self):
         pass

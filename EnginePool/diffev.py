@@ -508,6 +508,7 @@ class DiffEv:
                 self.fom_log = r_[self.fom_log,\
                                     [[len(self.fom_log),self.best_fom]]]
 
+                # print(self.fom_log)
                 # Let the model calculate the simulation of the best.
                 sim_fom = self.calc_sim(self.best_vec)
 

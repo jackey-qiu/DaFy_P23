@@ -100,6 +100,11 @@ class MyMainWindow(QMainWindow):
         self.pushButton_delete_data.clicked.connect(self.delete_data)
         self.pushButton_save_data.clicked.connect(self.save_data)
         self.pushButton_calculate.clicked.connect(self.calculate)
+        #pushbuttons for structure view
+        self.pushButton_azimuth_0.clicked.connect(self.azimuth_0)
+        self.pushButton_azimuth_90.clicked.connect(self.azimuth_90)
+        self.pushButton_elevation_0.clicked.connect(self.elevation_0)
+        self.pushButton_elevation_90.clicked.connect(self.elevation_90)
         #pushbutton for changing plotting style
         self.pushButton_plot_style.clicked.connect(self.change_plot_style)
         #pushbutton to load/save script
@@ -130,6 +135,24 @@ class MyMainWindow(QMainWindow):
         self.timer_update_structure = QtCore.QTimer(self)
         self.timer_update_structure.timeout.connect(self.update_structure_view)
         self.setup_plot()
+
+
+    def update_camera_position(self,angle_type="azimuth", angle=0):
+        self.widget_edp.setCameraPosition(pos=None, distance=None, \
+            elevation=[None,angle][int(angle_type=="elevation")], \
+                azimuth=[None,angle][int(angle_type=="azimuth")])
+
+    def azimuth_0(self):
+        self.update_camera_position(angle_type="azimuth", angle=0)
+
+    def azimuth_90(self):
+        self.update_camera_position(angle_type="azimuth", angle=90)
+
+    def elevation_0(self):
+        self.update_camera_position(angle_type="elevation", angle=0)
+
+    def elevation_90(self):
+        self.update_camera_position(angle_type="elevation", angle=90)
 
 
     def setup_plot(self):

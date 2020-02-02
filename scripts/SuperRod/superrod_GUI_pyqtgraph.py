@@ -78,7 +78,7 @@ class MyMainWindow(QMainWindow):
         self.structure_view_thread = QtCore.QThread()
         self.widget_edp.moveToThread(self.structure_view_thread)
         self.run_fit.moveToThread(self.fit_thread)
-        self.run_fit.updateplot.connect(self.update_plot_data_view_upon_simulation)
+        #self.run_fit.updateplot.connect(self.update_plot_data_view_upon_simulation)
         self.run_fit.updateplot.connect(self.update_par_during_fit)
         self.run_fit.updateplot.connect(self.update_status)
         #self.run_fit.updateplot.connect(self.update_structure_view)
@@ -108,6 +108,8 @@ class MyMainWindow(QMainWindow):
         #pushbutton to load/save parameter file
         self.pushButton_load_table.clicked.connect(self.load_par)
         self.pushButton_save_table.clicked.connect(self.save_par)
+        self.pushButton_update_plot.clicked.connect(self.update_structure_view)
+        self.pushButton_update_plot.clicked.connect(self.update_plot_data_view_upon_simulation)
         #select dataset in the viewer
         self.comboBox_dataset.activated.connect(self.update_data_view)
 
@@ -217,14 +219,14 @@ class MyMainWindow(QMainWindow):
 
     def run_model(self):
         # self.solver.StartFit()
-        self.start_timer_structure_view()
-        self.structure_view_thread.start()
+        # self.start_timer_structure_view()
+        # self.structure_view_thread.start()
         self.fit_thread.start()
 
     def stop_model(self):
         self.run_fit.stop()
         self.fit_thread.terminate()
-        self.stop_timer_structure_view()
+        # self.stop_timer_structure_view()
 
     def load_data(self, loader = 'ctr'):
         exec('self.load_data_{}()'.format(loader))

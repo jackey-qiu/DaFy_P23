@@ -151,6 +151,13 @@
            </spacer>
           </item>
           <item>
+           <widget class="QPushButton" name="pushButton_update_plot">
+            <property name="text">
+             <string>UpdatePlot</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="pushButton_plot_style">
             <property name="text">
              <string>PlotStyle</string>
@@ -318,7 +325,7 @@
      <x>0</x>
      <y>0</y>
      <width>1039</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -421,7 +428,7 @@
   <customwidget>
    <class>GraphicsLayoutWidget</class>
    <extends>QWidget</extends>
-   <header location="global">pyqtgraph.h</header>
+   <header>pyqtgraph.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

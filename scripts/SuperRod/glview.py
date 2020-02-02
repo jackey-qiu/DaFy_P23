@@ -176,6 +176,7 @@ class GLViewWidget_cum(gl.GLViewWidget):
                 self.items[i+1+1+1].translate(x,y,z)
                 self.items[i+1+1+1].scale(0.5, 0.5, 0.5)
                 i += 1
+        self.setProjection()
 
     def update_structure(self, xyz):
         for i in range(len(xyz)):

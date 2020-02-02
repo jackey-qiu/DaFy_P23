@@ -35,7 +35,8 @@ from pyqtgraph.Qt import QtGui
 import syntax_pars
 from chemlab.graphics.renderers import AtomRenderer
 from chemlab.db import ChemlabDB
-
+from PyQt5.QtOpenGL import *
+from superrod_new import *
 #from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as NavigationToolbar)
 
 class RunFit(QtCore.QObject):
@@ -54,12 +55,18 @@ class RunFit(QtCore.QObject):
     def stop(self):
         self.solver.optimizer.stop = True
 
-class MyMainWindow(QMainWindow):
+class MyMainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent = None):
         super(MyMainWindow, self).__init__(parent)
+        self.setupUi(self)
+        context = QGLContext(QGLFormat())
+        self.widget_edp = MSViewer(context,self.tab_4)
+        context.makeCurrent()
+        self.widget_edp.setObjectName("widget_edp")
+        self.horizontalLayout_9.addWidget(self.widget_edp)
         pg.setConfigOptions(imageAxisOrder='row-major')
         pg.mkQApp()
-        uic.loadUi(os.path.join(DaFy_path,'scripts','SuperRod','superrod.ui'),self)
+        #uic.loadUi(os.path.join(DaFy_path,'scripts','SuperRod','superrod_new.ui'),self)
         self.setWindowTitle('Data analysis factory: CTR data modeling')
         self.stop = False
         self.show_checkBox_list = []
@@ -128,6 +135,7 @@ class MyMainWindow(QMainWindow):
         self.timer_update_structure = QtCore.QTimer(self)
         self.timer_update_structure.timeout.connect(self.update_structure_view)
         self.setup_plot()
+        print(self.widget_edp.update)
 
 
     def setup_plot(self):
@@ -138,8 +146,12 @@ class MyMainWindow(QMainWindow):
 
         # water = ChemlabDB().get('molecule', 'example.water')
         # ar = AtomRenderer(self.widget_edp, water.r_array, water.type_array)
-        #ar = self.widget_edp.renderers.append(AtomRenderer(self.widget_edp, water.r_array, water.type_array))
+        # ar = self.widget_edp.renderers.append(AtomRenderer(self.widget_edp, water.r_array, water.type_array))
         #self.widget_edp.setup_view()
+
+    def update(self):
+        super(MyMainWindow, self).update()
+        self.widget_edp.update()
 
     def update_plot_data_view(self):
         plot_data_index = []
@@ -339,12 +351,15 @@ class MyMainWindow(QMainWindow):
                 self.tableWidget_data_view.setItem(i,j,qtablewidget)
 
     def init_structure_view(self):
-        xyz = self.model.script_module.sample.extract_xyz(1)
-        self.widget_edp.show_structure(xyz)
+        xyz, e = self.model.script_module.sample.extract_exyz(1)
+        ar = self.widget_edp.renderers.append(AtomRenderer(self.widget_edp, xyz, e))
+        #self.widget_edp.show_structure(xyz)
 
     def update_structure_view(self):
-        xyz = self.model.script_module.sample.extract_xyz(1)
-        self.widget_edp.update_structure(xyz)
+        #xyz = self.model.script_module.sample.extract_xyz(1)
+        xyz, e = self.model.script_module.sample.extract_exyz(1)
+        self.widget_edp.renderers[0].update_positions(xyz)
+        #ar = self.widget_edp.renderers.append(AtomRenderer(self.widget_edp, water.r_array, water.type_array))
 
     def start_timer_structure_view(self):
         self.timer_update_structure.start(2000)

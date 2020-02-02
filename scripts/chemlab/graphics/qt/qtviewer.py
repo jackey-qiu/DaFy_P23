@@ -175,6 +175,7 @@ class QtViewer(QMainWindow):
 
         '''
         return rend in self.widget.renderers
+
     def update(self):
         super(QtViewer, self).update()
         self.widget.update()

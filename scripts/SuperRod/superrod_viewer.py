@@ -64,10 +64,11 @@ class MSViewer(QChemlabWidget):
 
     """
 
-    def __init__(self,parent=None):
-        # context = QGLContext(QGLFormat())
-        # context.makeCurrent()
-        super().__init__(parent)
+    def __init__(self,context,parent=None):
+        #context = QGLContext(QGLFormat())
+        super().__init__(context,parent)
+        self.parent = parent
+        #context.makeCurrent()
         # QChemlabWidget.__init__(self)
         # context = QGLContext(QGLFormat())
         # widget = QChemlabWidget(context, self)
@@ -178,9 +179,11 @@ class MSViewer(QChemlabWidget):
 
         '''
         return rend in self.renderers
-    def update(self):
-        #super(QtViewer, self).update()
-        self.update()
+
+    # def update(self):
+        # super(QChemlabWidget, self).update()
+        # 
+        # self.update()
 
     def add_ui(self, klass, *args, **kwargs):
         '''Add an UI element for the current scene. The approach is

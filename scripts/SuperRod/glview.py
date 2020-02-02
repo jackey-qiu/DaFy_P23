@@ -121,7 +121,8 @@ class GLViewWidget_cum(gl.GLViewWidget):
 
     def show_structure(self, xyz):
         # self.setCameraPosition(distance=55, azimuth=-90)
-        self.setCameraPosition(distance=55, azimuth=0)
+        self.setCameraPosition(distance=55,azimuth=0)
+        self.setProjection()
         i=0
         if len(self.items)==0:
             xgrid = gl.GLGridItem()
@@ -131,19 +132,22 @@ class GLViewWidget_cum(gl.GLViewWidget):
             xgrid.setSize(5,5,5)
             ygrid.setSize(5,5,5)
             zgrid.setSize(5,5,5)
- 
+
+            xgrid.translate(0,0,3.615,True)
+            zgrid.translate(0.,0,2*3.615,True)
+
             self.addItem(xgrid)
             self.addItem(ygrid)
             self.addItem(zgrid)
  
             # Rotate x and y grids to face the correct direction
-            xgrid.rotate(90, 0, 1, 0)
-            ygrid.rotate(90, 1, 0, 0)
+            # xgrid.rotate(90, 0, 1, 0)
+            # ygrid.rotate(90, 1, 0, 0)
  
             # Scale grids to the appropriate dimensions
-            xgrid.scale(3.15, 3.15, 3.15)
-            ygrid.scale(3.15, 3.15, 3.15)
-            zgrid.scale(3.15, 3.15, 3.15)
+            xgrid.scale(3.615, 3.615, 3.615)
+            ygrid.scale(3.615, 3.615, 3.615)
+            zgrid.scale(3.615, 3.615, 3.615)
             """
             g = gl.GLGridItem(size = QtGui.QVector3D(30,30,1))
             g.scale(1,1,1)

@@ -124,22 +124,22 @@ sample = model.Sample(inst, bulk, {'domain1':{'slab':surface_1, 'sorbate':sorbat
 
 def Sim(data,VARS=VARS):
     #co2.make_cif_file('D://test.cif')
-    
+
     #for command in commands:eval(command)
     co2_1.set_coordinate_all(gamma_list=[180+rgh_co2_1.gamma,180+rgh_co2_1.gamma, rgh_co2_1.gamma],delta_list = [0,rgh_co2_1.delta1,rgh_co2_1.delta2], r_list=[rgh_co2_1.r1,rgh_co2_1.r2,rgh_co2_1.r3], new_anchor_list = [None,'C2',None])
     co2_2.set_coordinate_all(gamma_list=[180+rgh_co2_2.gamma,180+rgh_co2_2.gamma,rgh_co2_2.gamma],delta_list = [0,rgh_co2_2.delta1,rgh_co2_2.delta2], r_list=[rgh_co2_2.r1,rgh_co2_2.r2,rgh_co2_2.r3], new_anchor_list = [None,'C2',None])
     #co2_1.make_xyz_file('D://test.xyz')
-    sample.make_xyz_file('D://test.xyz')
+    # sample.make_xyz_file('D://test.xyz')
     sample.domain['domain1']['wt']=rgh_wt.wt_domain1
     if rgh_wt.wt_domain1>1:
         sample.domain['domain2']['wt']=0
     else:
         sample.domain['domain2']['wt']=1-rgh_wt.wt_domain1
-    
+
     for each in sorbate_syms_1:
-        each.set_t([atm_gp_surface_1st_layer_1.getdx(),atm_gp_surface_1st_layer_1.getdy()]) 
+        each.set_t([atm_gp_surface_1st_layer_1.getdx(),atm_gp_surface_1st_layer_1.getdy()])
     for each in sorbate_syms_2:
-        each.set_t([atm_gp_surface_1st_layer_2.getdx(),atm_gp_surface_1st_layer_2.getdy()]) 
+        each.set_t([atm_gp_surface_1st_layer_2.getdx(),atm_gp_surface_1st_layer_2.getdy()])
 
     VARS=VARS
     F =[]
@@ -155,7 +155,7 @@ def Sim(data,VARS=VARS):
     #    vars()['wt_domain'+str(int(i+1))]=VARS['rgh_domain'+str(int(i+1))].wt
     #    total_wt=total_wt+vars()['wt_domain'+str(int(i+1))]
 
-    
+
 
     if COUNT_TIME:t_2=datetime.now()
 

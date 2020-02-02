@@ -48,7 +48,7 @@ class RunFit(QtCore.QObject):
         if self.running:
             self.solver.optimizer.stop = False
             self.solver.StartFit(self.updateplot)
-    
+
     def stop(self):
         self.solver.optimizer.stop = True
 
@@ -109,9 +109,9 @@ class MyMainWindow(QMainWindow):
 
         #syntax highlight
         self.plainTextEdit_script.setStyleSheet("""QPlainTextEdit{
-	                            font-family:'Consolas'; 
+	                            font-family:'Consolas';
                                 font-size:11pt;
-	                            color: #ccc; 
+	                            color: #ccc;
 	                            background-color: #2b2b2b;}""")
         self.plainTextEdit_script.setTabStopWidth(self.plainTextEdit_script.fontMetrics().width(' ')*4)
         #self.data = data.DataList()
@@ -122,7 +122,7 @@ class MyMainWindow(QMainWindow):
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_model)
         self.setup_plot()
-        
+
     def setup_plot(self):
         self.selected_data_profile = self.widget_data.addPlot()
         self.fom_evolution_profile = self.widget_fom.addPlot()
@@ -181,6 +181,7 @@ class MyMainWindow(QMainWindow):
 
     def simulate_model(self):
         # self.update_par_upon_change()
+        self.model.script = (self.plainTextEdit_script.toPlainText())
         self.model.simulate()
         '''
         self.compile_script()
@@ -216,7 +217,7 @@ class MyMainWindow(QMainWindow):
 
     def load_data_ctr(self):
         #8 columns in total
-        #X, H, K, Y, I, eI, LB, dL 
+        #X, H, K, Y, I, eI, LB, dL
         #for CTR data, X column is L column, Y column all 0
         #for RAXR data, X column is energy column, Y column is L column
         # self.data = data.DataList()
@@ -250,7 +251,7 @@ class MyMainWindow(QMainWindow):
                     self.model.data.items[-1].set_extra_data(name = 'Y', value = data_loaded_pd[(data_loaded_pd['h']==h_temp) & (data_loaded_pd['k']==k_temp)]['Y'].to_numpy())
                     self.model.data.items[-1].set_extra_data(name = 'LB', value = data_loaded_pd[(data_loaded_pd['h']==h_temp) & (data_loaded_pd['k']==k_temp)]['LB'].to_numpy())
                     self.model.data.items[-1].set_extra_data(name = 'dL', value = data_loaded_pd[(data_loaded_pd['h']==h_temp) & (data_loaded_pd['k']==k_temp)]['dL'].to_numpy())
-        
+
         #now remove the empty datasets
         empty_data_index = []
         i=0
@@ -322,7 +323,7 @@ class MyMainWindow(QMainWindow):
                 else:
                     qtablewidget = QTableWidgetItem('True')
                 self.tableWidget_data_view.setItem(i,j,qtablewidget)
-    
+
     def init_structure_view(self):
         xyz = self.model.script_module.sample.extract_xyz(1)
         self.widget_edp.show_structure(xyz)
@@ -406,13 +407,13 @@ class MyMainWindow(QMainWindow):
                         elif j == 1:
                             qtablewidget.setForeground(QBrush(QColor(255,0,255)))
                         self.tableWidget_pars.setItem(i,j,qtablewidget)
-                    j += 1 
+                    j += 1
         self.tableWidget_pars.resizeColumnsToContents()
         self.tableWidget_pars.resizeRowsToContents()
         self.tableWidget_pars.setShowGrid(False)
         self.tableWidget_pars.setVerticalHeaderLabels(vertical_labels)
 
-    
+
     def load_par(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -460,7 +461,7 @@ class MyMainWindow(QMainWindow):
                                 elif j == 1:
                                     qtablewidget.setForeground(QBrush(QColor(255,0,255)))
                                 self.tableWidget_pars.setItem(i,j,qtablewidget)
-                            j += 1 
+                            j += 1
         self.tableWidget_pars.resizeColumnsToContents()
         self.tableWidget_pars.resizeRowsToContents()
         self.tableWidget_pars.setShowGrid(False)

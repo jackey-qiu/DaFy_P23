@@ -3,7 +3,7 @@ for fitting.
 Programmed by: Matts Bjorck
 Last changed: 2008 11 23
 '''
-MPI_RUN=True
+MPI_RUN=False
 try:
     from mpi4py import MPI#cautions:this line could be buggy when you have mpi4py installed on your computer
 except:

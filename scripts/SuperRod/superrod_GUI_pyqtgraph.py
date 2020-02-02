@@ -29,7 +29,7 @@ import pyqtgraph as pg
 import pyqtgraph.exporters
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QCheckBox, QRadioButton, QTableWidgetItem, QHeaderView, QAbstractItemView
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QTransform, QFont, QBrush, QColor
 from pyqtgraph.Qt import QtGui
 import syntax_pars
@@ -79,7 +79,9 @@ class MyMainWindow(QMainWindow):
         self.run_fit.updateplot.connect(self.update_plot_data_view_upon_simulation)
         self.run_fit.updateplot.connect(self.update_par_during_fit)
         self.run_fit.updateplot.connect(self.update_status)
-        self.run_fit.updateplot.connect(self.update_structure_view)
+        #self.run_fit.updateplot.connect(self.update_structure_view)
+        self.run_fit.updateplot.connect(self.start_timer_structure_view)
+
 
         self.fit_thread.started.connect(self.run_fit.run)
 
@@ -121,10 +123,9 @@ class MyMainWindow(QMainWindow):
         self.tableWidget_pars.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_model)
+        self.timer_update_structure = QtCore.QTimer(self)
+        self.timer_update_structure.timeout.connect(self.update_structure_view)
         self.setup_plot()
-        from chemlab.graphics.renderers import AtomRenderer
-        from chemlab.db import ChemlabDB
-        water = ChemlabDB().get('molecule', 'example.water')
         # ar = AtomRenderer(self.widget_edp.widget, water.r_array, water.type_array)
         # ar = self.widget_edp.renderers.append(AtomRenderer(self.widget_edp, water.r_array, water.type_array))
 
@@ -182,6 +183,7 @@ class MyMainWindow(QMainWindow):
     def save_model(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "rod file (*.rod);zip files (*.rar)")
         if path:
+            self.model.script = (self.plainTextEdit_script.toPlainText())
             self.model.save(path)
 
     def simulate_model(self):
@@ -216,6 +218,7 @@ class MyMainWindow(QMainWindow):
     def stop_model(self):
         self.run_fit.stop()
         self.fit_thread.terminate()
+        self.stop_timer_structure_view()
 
     def load_data(self, loader = 'ctr'):
         exec('self.load_data_{}()'.format(loader))
@@ -337,6 +340,11 @@ class MyMainWindow(QMainWindow):
         xyz = self.model.script_module.sample.extract_xyz(1)
         self.widget_edp.update_structure(xyz)
 
+    def start_timer_structure_view(self):
+        self.timer_update_structure.start(2000)
+
+    def stop_timer_structure_view(self):
+        self.timer_update_structure.stop()
 
 
     def append_data(self):

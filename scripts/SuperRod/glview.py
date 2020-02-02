@@ -170,6 +170,7 @@ class GLViewWidget_cum(gl.GLViewWidget):
                 #first item is grid net
                 self.items[i+1+1+1].resetTransform()
                 self.items[i+1+1+1].translate(x,y,z)
+                self.items[i+1+1+1].scale(0.5, 0.5, 0.5)
                 i += 1
 
     def update_structure(self, xyz):

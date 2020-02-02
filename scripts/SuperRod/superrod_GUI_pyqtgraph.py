@@ -122,6 +122,11 @@ class MyMainWindow(QMainWindow):
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_model)
         self.setup_plot()
+        from chemlab.graphics.renderers import AtomRenderer
+        from chemlab.db import ChemlabDB
+        water = ChemlabDB().get('molecule', 'example.water')
+        # ar = AtomRenderer(self.widget_edp.widget, water.r_array, water.type_array)
+        # ar = self.widget_edp.renderers.append(AtomRenderer(self.widget_edp, water.r_array, water.type_array))
 
     def setup_plot(self):
         self.selected_data_profile = self.widget_data.addPlot()

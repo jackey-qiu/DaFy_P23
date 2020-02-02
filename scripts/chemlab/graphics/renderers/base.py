@@ -2,10 +2,13 @@ from OpenGL.GL import (shaders,
                        GL_VERTEX_SHADER, GL_FRAGMENT_SHADER,
                        glUseProgram, GL_FALSE, GLfloat, GL_TRUE)
 from ctypes import POINTER
-
+from OpenGL.GL import (glGenVertexArrays,glBindVertexArray,glVertexAttribPointer,glEnableVertexAttribArray)
 from ..shaders import set_uniform, compileShader
 import numpy as np
 import pkgutil
+
+# VAO = glGenVertexArrays(1)
+# glBindVertexArray(VAO)
 
 
 
@@ -86,7 +89,17 @@ class ShaderBaseRenderer(AbstractRenderer):
                                GL_VERTEX_SHADER)
         fragment = compileShader(self.FRAGMENT_SHADER,
                                  GL_FRAGMENT_SHADER)
-        
+        """
+        glVertexAttribPointer(
+                position,  # attribute 0. No particular reason for 0, but must match the layout in the shader.
+                3,  # size
+                GL_FLOAT,  # type
+                GL_FALSE,  # normalized
+                0,  # stride
+                None  # array buffer offset
+                            )
+        glEnableVertexAttribArray(vertex)
+        """
         self.shader = shaders.compileProgram(vertex, fragment)
         
     def setup_shader(self):

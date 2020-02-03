@@ -221,6 +221,7 @@ class MyMainWindow(QMainWindow):
         self.model.script = (self.plainTextEdit_script.toPlainText())
         self.widget_solver.update_parameter_in_solver(self)
         self.model.simulate()
+        self.label_2.setText('FOM {}:{}'.format(self.model.fom_func.__name__,self.model.fom))
         '''
         self.compile_script()
         # self.update_pars()

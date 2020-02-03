@@ -427,6 +427,10 @@
    <addaction name="actionStop"/>
   </widget>
   <action name="actionSimulate">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/simulate.png</normaloff>icons/simulate.png</iconset>
+   </property>
    <property name="text">
     <string>Simulate</string>
    </property>
@@ -438,6 +442,10 @@
    </property>
   </action>
   <action name="actionRun">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/run.png</normaloff>icons/run.png</iconset>
+   </property>
    <property name="text">
     <string>Run</string>
    </property>
@@ -446,21 +454,37 @@
    </property>
   </action>
   <action name="actionStop">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/stop.png</normaloff>icons/stop.png</iconset>
+   </property>
    <property name="text">
     <string>Stop</string>
    </property>
   </action>
   <action name="actionNew">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/open.png</normaloff>icons/open.png</iconset>
+   </property>
    <property name="text">
     <string>New</string>
    </property>
   </action>
   <action name="actionOpen">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/load.png</normaloff>icons/load.png</iconset>
+   </property>
    <property name="text">
     <string>Open</string>
    </property>
   </action>
   <action name="actionSave">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/save.png</normaloff>icons/save.png</iconset>
+   </property>
    <property name="text">
     <string>Save</string>
    </property>

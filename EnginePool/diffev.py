@@ -86,12 +86,12 @@ class DiffEv:
         self.pop_size = 10 # Set the pop_size only
 
         # Flag to choose between the two alternatives below
-        self.use_max_generations = False
+        self.use_max_generations = True
         self.max_generations = 500 # Use a fixed # of iterations
         self.max_generation_mult = 6 # A mult const for max number of iter
 
         # Flag to choose whether or not to use a starting guess
-        self.use_start_guess = True
+        self.use_start_guess = False
         # Flag to choose wheter or not to use the boundaries
         self.use_boundaries = True
 

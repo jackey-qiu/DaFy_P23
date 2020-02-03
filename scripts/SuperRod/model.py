@@ -706,7 +706,10 @@ class Model:
         Set the fucntion that calculates the figure of merit between the model
         and the data.
         '''
-        self.fom_func = fom_func
+        if type(fom_func)==str:
+            self.fom_func = getattr(fom_funcs,fom_func)
+        else:
+            self.fom_func = fom_func
 
     def is_compiled(self):
         '''is_compiled(self) --> compiled [boolean]

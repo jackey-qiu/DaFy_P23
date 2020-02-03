@@ -118,11 +118,15 @@ color_lib = {
 class GLViewWidget_cum(gl.GLViewWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        #set a near ortho projection (i.e. non-projective view)
+        #if need a projective view, comment out the following two lines
+        self.opts['distance'] = 2000
+        self.opts['fov'] = 1
 
     def show_structure(self, xyz):
         # self.setCameraPosition(distance=55, azimuth=-90)
-        self.setCameraPosition(distance=55,azimuth=0)
-        self.setProjection()
+        # self.setCameraPosition(azimuth=0)
+        # self.setProjection()
         i=0
         if len(self.items)==0:
             xgrid = gl.GLGridItem()

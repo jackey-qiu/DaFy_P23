@@ -219,6 +219,7 @@ class MyMainWindow(QMainWindow):
     def simulate_model(self):
         # self.update_par_upon_change()
         self.model.script = (self.plainTextEdit_script.toPlainText())
+        self.widget_solver.update_parameter_in_solver(self)
         self.model.simulate()
         '''
         self.compile_script()
@@ -239,11 +240,14 @@ class MyMainWindow(QMainWindow):
         '''
         self.update_plot_data_view_upon_simulation()
         self.init_structure_view()
+        #print(self.widget_solver.par.param("Fitting").param("start guess").value())
+        #print(self.widget_solver.par.param("Fitting").param("Population size").value())
 
     def run_model(self):
         # self.solver.StartFit()
         # self.start_timer_structure_view()
         # self.structure_view_thread.start()
+        self.widget_solver.update_parameter_in_solver(self)
         self.fit_thread.start()
 
     def stop_model(self):

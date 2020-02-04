@@ -161,8 +161,8 @@ class MyMainWindow(QMainWindow):
     def setup_plot(self):
         self.selected_data_profile = self.widget_data.addPlot()
         self.fom_evolution_profile = self.widget_fom.addPlot()
-        # self.par_profile = self.widget_pars.addPlot()
-        self.fom_scan_profile = self.widget_fom_scan.addPlot()
+        self.par_profile = self.widget_pars.addPlot()
+        self.fom_scan_profile = self.widget_fom_scan.addPlot().plot()
 
         # water = ChemlabDB().get('molecule', 'example.water')
         # ar = AtomRenderer(self.widget_edp, water.r_array, water.type_array)
@@ -207,8 +207,8 @@ class MyMainWindow(QMainWindow):
         for i in range(len(par_max)):
             trial_vec_min.append((np.min(pop_vec[:,i])-par_min[i])/(par_max[i]-par_min[i]))
             trial_vec_max.append((np.max(pop_vec[:,i])-par_min[i])/(par_max[i]-par_min[i]))
-        bg = pg.BarGraphItem(x=len(vec_best), y=trial_vec_min, height=trial_vec_max, brush='b')
-        self.widget_pars.addItem(bg)
+        bg = pg.BarGraphItem(x=range(len(vec_best)), y=trial_vec_min, height=trial_vec_max, brush='b', width = 0.2)
+        self.par_profile.addItem(bg)
 
         
         

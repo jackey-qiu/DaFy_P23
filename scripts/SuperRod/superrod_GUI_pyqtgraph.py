@@ -17,6 +17,7 @@ sys.path.append(os.path.join(DaFy_path,'dump_files'))
 sys.path.append(os.path.join(DaFy_path,'EnginePool'))
 sys.path.append(os.path.join(DaFy_path,'FilterPool'))
 sys.path.append(os.path.join(DaFy_path,'util'))
+sys.path.append(os.path.join(DaFy_path,'scripts'))
 from fom_funcs import *
 import parameters
 import data_superrod as data
@@ -33,8 +34,8 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QTransform, QFont, QBrush, QColor, QIcon
 from pyqtgraph.Qt import QtGui
 import syntax_pars
-from chemlab.graphics.renderers import AtomRenderer
-from chemlab.db import ChemlabDB
+# from chemlab.graphics.renderers import AtomRenderer
+# from chemlab.db import ChemlabDB
 
 #from matplotlib.backends.backend_qt5agg import (NavigationToolbar2QT as NavigationToolbar)
 
@@ -44,14 +45,15 @@ class RunFit(QtCore.QObject):
     def __init__(self,solver):
         super(RunFit, self).__init__()
         self.solver = solver
-        self.running = True
+        self.running = False
 
     def run(self):
-        if self.running:
-            self.solver.optimizer.stop = False
-            self.solver.StartFit(self.updateplot)
+        self.running = True
+        self.solver.optimizer.stop = False
+        self.solver.StartFit(self.updateplot)
 
     def stop(self):
+        self.running = False
         self.solver.optimizer.stop = True
 
 class MyMainWindow(QMainWindow):
@@ -162,8 +164,11 @@ class MyMainWindow(QMainWindow):
         self.selected_data_profile = self.widget_data.addPlot()
         self.fom_evolution_profile = self.widget_fom.addPlot()
         self.par_profile = self.widget_pars.addPlot()
-        self.fom_scan_profile = self.widget_fom_scan.addPlot().plot()
-
+        self.fom_scan_profile = self.widget_fom_scan.addPlot()
+        # self.bar = pg.BarGraphItem(x=[],y=[],height = [], width = 0.2)
+        # self.par_profile.addItem(self.bar)
+        # print(dir(self.bar))
+        # print(self.bar.opts.get('x'))
         # water = ChemlabDB().get('molecule', 'example.water')
         # ar = AtomRenderer(self.widget_edp, water.r_array, water.type_array)
         #ar = self.widget_edp.renderers.append(AtomRenderer(self.widget_edp, water.r_array, water.type_array))
@@ -196,25 +201,34 @@ class MyMainWindow(QMainWindow):
         self.fom_evolution_profile.autoRange()
         
     def update_par_bar_during_fit(self):
-        par_max = self.run_fit.solver.optimizer.par_max
-        par_min = self.run_fit.solver.optimizer.par_min
-        vec_best = copy.deepcopy(self.run_fit.solver.optimizer.best_vec)
-        vec_best = vec_best/(par_max-par_min)
-        pop_vec = np.array(copy.deepcopy(self.run_fit.solver.optimizer.pop_vec))
+        if self.run_fit.running:
+            par_max = self.run_fit.solver.optimizer.par_max
+            par_min = self.run_fit.solver.optimizer.par_min
+            vec_best = copy.deepcopy(self.run_fit.solver.optimizer.best_vec)
+            vec_best = (vec_best-par_min)/(par_max-par_min)
+            pop_vec = np.array(copy.deepcopy(self.run_fit.solver.optimizer.pop_vec))
 
-        trial_vec_min =[]
-        trial_vec_max =[]
-        for i in range(len(par_max)):
-            trial_vec_min.append((np.min(pop_vec[:,i])-par_min[i])/(par_max[i]-par_min[i]))
-            trial_vec_max.append((np.max(pop_vec[:,i])-par_min[i])/(par_max[i]-par_min[i]))
-        bg = pg.BarGraphItem(x=range(len(vec_best)), y=trial_vec_min, height=trial_vec_max, brush='b', width = 0.2)
-        self.par_profile.addItem(bg)
-
-        
-        
-
-
-
+            trial_vec_min =[]
+            trial_vec_max =[]
+            for i in range(len(par_max)):
+                trial_vec_min.append((np.min(pop_vec[:,i])-par_min[i])/(par_max[i]-par_min[i]))
+                trial_vec_max.append((np.max(pop_vec[:,i])-par_min[i])/(par_max[i]-par_min[i]))
+            trial_vec_min = np.array(trial_vec_min)
+            trial_vec_max = np.array(trial_vec_max)
+            bg = pg.BarGraphItem(x=range(len(vec_best)), y=(trial_vec_max + trial_vec_min)/2, height=(trial_vec_max - trial_vec_min)/2, brush='b', width = 0.8)
+            # best_ = pg.ScatterPlotItem(size=10, pen=(200,200,200), brush=pg.mkBrush(255, 255, 255, 120))
+            # best_.addPoints([{'pos':range(len(vec_best)),'data':vec_best}])
+            # print(trial_vec_min)
+            # print(trial_vec_max)
+            # print(par_min)
+            # print(par_max)
+            self.par_profile.clear()
+            self.par_profile.addItem(bg)
+            # self.par_profile.addItem(best_)
+            # p1 = self.par_profile.addPlot()
+            self.par_profile.plot(vec_best, pen=(0,0,0), symbolBrush=(255,0,0), symbolPen='w')
+        else:
+            pass
 
     def update_plot(self):
         pass
@@ -328,14 +342,14 @@ class MyMainWindow(QMainWindow):
         # self.start_timer_structure_view()
         # self.structure_view_thread.start()
         #button will be clicked every 2 second to update figures
-        # self.timer_update_structure.start(2000)
+        self.timer_update_structure.start(2000)
         self.widget_solver.update_parameter_in_solver(self)
         self.fit_thread.start()
 
     def stop_model(self):
         self.run_fit.stop()
         self.fit_thread.terminate()
-        # self.timer_update_structure.stop()
+        self.timer_update_structure.stop()
         # self.stop_timer_structure_view()
 
     def load_data(self, loader = 'ctr'):

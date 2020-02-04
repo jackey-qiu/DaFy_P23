@@ -4,7 +4,7 @@ from PyQt5 import uic
 import random
 import numpy as np
 import pandas as pd
-import types
+import types,copy
 import matplotlib.pyplot as plt
 try:
     from . import locate_path
@@ -30,7 +30,7 @@ import pyqtgraph.exporters
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QCheckBox, QRadioButton, QTableWidgetItem, QHeaderView, QAbstractItemView
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QTransform, QFont, QBrush, QColor
+from PyQt5.QtGui import QTransform, QFont, QBrush, QColor, QIcon
 from pyqtgraph.Qt import QtGui
 import syntax_pars
 from chemlab.graphics.renderers import AtomRenderer
@@ -61,6 +61,8 @@ class MyMainWindow(QMainWindow):
         pg.mkQApp()
         uic.loadUi(os.path.join(DaFy_path,'scripts','SuperRod','superrod.ui'),self)
         self.setWindowTitle('Data analysis factory: CTR data modeling')
+        self.setWindowIcon(QIcon(os.path.join(script_path,"DAFY.png")))
+        self.show()
         self.stop = False
         self.show_checkBox_list = []
         #set fom_func
@@ -75,8 +77,8 @@ class MyMainWindow(QMainWindow):
         # self.solver = solvergui.SolverController(self)
         self.run_fit = RunFit(solvergui.SolverController(self.model))
         self.fit_thread = QtCore.QThread()
-        self.structure_view_thread = QtCore.QThread()
-        self.widget_edp.moveToThread(self.structure_view_thread)
+        # self.structure_view_thread = QtCore.QThread()
+        # self.widget_edp.moveToThread(self.structure_view_thread)
         self.run_fit.moveToThread(self.fit_thread)
         #self.run_fit.updateplot.connect(self.update_plot_data_view_upon_simulation)
         self.run_fit.updateplot.connect(self.update_par_during_fit)
@@ -115,25 +117,26 @@ class MyMainWindow(QMainWindow):
         self.pushButton_save_table.clicked.connect(self.save_par)
         self.pushButton_update_plot.clicked.connect(self.update_structure_view)
         self.pushButton_update_plot.clicked.connect(self.update_plot_data_view_upon_simulation)
+        self.pushButton_update_plot.clicked.connect(self.update_par_bar_during_fit)
         #select dataset in the viewer
         self.comboBox_dataset.activated.connect(self.update_data_view)
 
         #syntax highlight
         self.plainTextEdit_script.setStyleSheet("""QPlainTextEdit{
 	                            font-family:'Consolas';
-                                font-size:11pt;
+                                font-size:14pt;
 	                            color: #ccc;
 	                            background-color: #2b2b2b;}""")
         self.plainTextEdit_script.setTabStopWidth(self.plainTextEdit_script.fontMetrics().width(' ')*4)
         #self.data = data.DataList()
 
         #table view for parameters set to selecting row basis
-        #self.tableWidget_pars.itemChanged.connect(self.update_par_upon_change)
+        # self.tableWidget_pars.itemChanged.connect(self.update_par_upon_change)
         self.tableWidget_pars.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_model)
         self.timer_update_structure = QtCore.QTimer(self)
-        self.timer_update_structure.timeout.connect(self.update_structure_view)
+        self.timer_update_structure.timeout.connect(self.pushButton_update_plot.click)
         self.setup_plot()
 
 
@@ -158,7 +161,7 @@ class MyMainWindow(QMainWindow):
     def setup_plot(self):
         self.selected_data_profile = self.widget_data.addPlot()
         self.fom_evolution_profile = self.widget_fom.addPlot()
-        self.par_profile = self.widget_pars.addPlot()
+        # self.par_profile = self.widget_pars.addPlot()
         self.fom_scan_profile = self.widget_fom_scan.addPlot()
 
         # water = ChemlabDB().get('molecule', 'example.water')
@@ -191,6 +194,27 @@ class MyMainWindow(QMainWindow):
         #print(fom_log)
         self.fom_evolution_profile.plot(fom_log[:,0],fom_log[:,1],pen={'color': 'r', 'width': 2}, clear = True)
         self.fom_evolution_profile.autoRange()
+        
+    def update_par_bar_during_fit(self):
+        par_max = self.run_fit.solver.optimizer.par_max
+        par_min = self.run_fit.solver.optimizer.par_min
+        vec_best = copy.deepcopy(self.run_fit.solver.optimizer.best_vec)
+        vec_best = vec_best/(par_max-par_min)
+        pop_vec = np.array(copy.deepcopy(self.run_fit.solver.optimizer.pop_vec))
+
+        trial_vec_min =[]
+        trial_vec_max =[]
+        for i in range(len(par_max)):
+            trial_vec_min.append((np.min(pop_vec[:,i])-par_min[i])/(par_max[i]-par_min[i]))
+            trial_vec_max.append((np.max(pop_vec[:,i])-par_min[i])/(par_max[i]-par_min[i]))
+        bg = pg.BarGraphItem(x=len(vec_best), y=trial_vec_min, height=trial_vec_max, brush='b')
+        self.widget_pars.addItem(bg)
+
+        
+        
+
+
+
 
     def update_plot(self):
         pass
@@ -202,22 +226,75 @@ class MyMainWindow(QMainWindow):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","rod file (*.rod);;zip Files (*.rar)", options=options)
+        load_add_ = 'success'
         if fileName:
             self.model.load(fileName)
+            try:
+                self.load_addition()
+            except:
+                load_add_ = 'failure'
         self.update_table_widget_data()
         self.update_combo_box_dataset()
         self.update_plot_data_view()
         self.update_par_upon_load()
         self.update_script_upon_load()
 
+        self.statusbar.clearMessage()
+        self.statusbar.showMessage("Model is loaded, and {} in config loading".format(load_add_))
+
     def save_model(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "rod file (*.rod);zip files (*.rar)")
+        path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "rod file (*.rod);;zip files (*.rar)")
         if path:
             self.model.script = (self.plainTextEdit_script.toPlainText())
             self.model.save(path)
+            save_add_ = 'success'
+            try:
+                self.save_addition()
+            except:
+                save_add_ = "failure"
+            self.statusbar.clearMessage()
+            self.statusbar.showMessage("Model is saved, and {} in config saving".format(save_add_))
+
+    #here save also the config pars for diffev solver
+    def save_addition(self):
+        values=\
+                [self.widget_solver.par.param('Diff.Ev.').param('k_m').value(),
+                self.widget_solver.par.param('Diff.Ev.').param('k_r').value(),
+                self.widget_solver.par.param('Diff.Ev.').param('Method').value(),
+                self.widget_solver.par.param('FOM').param('Figure of merit').value(),
+                self.widget_solver.par.param('FOM').param('Auto save, interval').value(),
+                self.widget_solver.par.param('Fitting').param('start guess').value(),
+                self.widget_solver.par.param('Fitting').param('Generation size').value(),
+                self.widget_solver.par.param('Fitting').param('Population size').value()]
+        pars = ['k_m','k_r','Method','Figure of merit','Auto save, interval','start guess','Generation size','Population size']
+        for i in range(len(pars)):
+            self.model.save_addition(pars[i],str(values[i]))
+    
+    def load_addition(self):
+            funcs=\
+                [self.widget_solver.par.param('Diff.Ev.').param('k_m').setValue,
+                self.widget_solver.par.param('Diff.Ev.').param('k_r').setValue,
+                self.widget_solver.par.param('Diff.Ev.').param('Method').setValue,
+                self.widget_solver.par.param('FOM').param('Figure of merit').setValue,
+                self.widget_solver.par.param('FOM').param('Auto save, interval').setValue,
+                self.widget_solver.par.param('Fitting').param('start guess').setValue,
+                self.widget_solver.par.param('Fitting').param('Generation size').setValue,
+                self.widget_solver.par.param('Fitting').param('Population size').setValue]
+
+            types= [float,float,str,str,int,bool,int,int]
+            pars = ['k_m','k_r','Method','Figure of merit','Auto save, interval','start guess','Generation size','Population size']
+            for i in range(len(pars)):
+                type_ = types[i]
+                if type_ == float:
+                    value = np.round(float(self.model.load_addition(pars[i])),2)
+                elif type_==str:
+                    value = self.model.load_addition(pars[i]).decode("utf-8")
+                else:
+                    value = type_(self.model.load_addition(pars[i]))
+                funcs[i](value)
 
     def simulate_model(self):
-        # self.update_par_upon_change()
+        self.update_par_upon_change()
         self.model.script = (self.plainTextEdit_script.toPlainText())
         self.widget_solver.update_parameter_in_solver(self)
         self.model.simulate()
@@ -241,6 +318,8 @@ class MyMainWindow(QMainWindow):
         '''
         self.update_plot_data_view_upon_simulation()
         self.init_structure_view()
+        self.statusbar.clearMessage()
+        self.statusbar.showMessage("Model is simulated successfully!")
         #print(self.widget_solver.par.param("Fitting").param("start guess").value())
         #print(self.widget_solver.par.param("Fitting").param("Population size").value())
 
@@ -248,12 +327,15 @@ class MyMainWindow(QMainWindow):
         # self.solver.StartFit()
         # self.start_timer_structure_view()
         # self.structure_view_thread.start()
+        #button will be clicked every 2 second to update figures
+        # self.timer_update_structure.start(2000)
         self.widget_solver.update_parameter_in_solver(self)
         self.fit_thread.start()
 
     def stop_model(self):
         self.run_fit.stop()
         self.fit_thread.terminate()
+        # self.timer_update_structure.stop()
         # self.stop_timer_structure_view()
 
     def load_data(self, loader = 'ctr'):
@@ -533,6 +615,7 @@ class MyMainWindow(QMainWindow):
         # self.update_structure_view()
 
     def update_par_upon_change(self):
+        #print("before update:{}".format(len(self.model.parameters.data)))
         self.model.parameters.data = []
         for each_row in range(self.tableWidget_pars.rowCount()):
             if self.tableWidget_pars.item(each_row,0)==None:
@@ -543,7 +626,8 @@ class MyMainWindow(QMainWindow):
                 # print(each_row,type(self.tableWidget_pars.item(each_row,0)))
                 items = [self.tableWidget_pars.item(each_row,0).text()] + [float(self.tableWidget_pars.item(each_row,i).text()) for i in [1,3,4]] + [self.tableWidget_pars.item(each_row,5).text()]
                 items.insert(2, self.tableWidget_pars.cellWidget(each_row,2).isChecked())
-                self.model.parameters.data.append(items)
+            self.model.parameters.data.append(items)
+        #print("after update:{}".format(len(self.model.parameters.data)))
 
     @QtCore.pyqtSlot(str,object)
     def update_status(self,string,model):

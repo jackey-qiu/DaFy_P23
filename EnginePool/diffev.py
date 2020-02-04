@@ -559,6 +559,9 @@ class DiffEv:
                 # Do an autosave if activated and the interval is coorect
                 if gen%self.autosave_interval == 0 and self.use_autosave:
                     self.autosave()
+                # print('par_max',type(self.par_max),len(self.par_max))
+                # print('best_Vec',type(self.best_vec),len(self.best_vec))
+                # print('pop_vec',type(self.pop_vec),len(self.pop_vec))
 
             if not self.error:
                 self.text_output('Stopped at Generation: %d after %d fom evaluations...'%(gen, self.n_fom))

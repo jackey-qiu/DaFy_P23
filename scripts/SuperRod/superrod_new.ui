@@ -432,7 +432,7 @@
   <customwidget>
    <class>MSViewer</class>
    <extends>QWidget</extends>
-   <header location="global">superrod_viewer.h</header>
+   <header>superrod_viewer.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

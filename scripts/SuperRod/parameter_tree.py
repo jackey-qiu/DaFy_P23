@@ -11,7 +11,7 @@ params = [
         {'name': 'Method', 'type': 'list', 'values':["best_1_bin","rand_1_bin","best_either_or","rand_eithor_or",'jade_best','simplex_best_1_bin'],'value': "best_1_bin"},
     ]},
     {'name': 'FOM', 'type': 'group', 'children': [
-        {'name': 'Figure of merit', 'type': 'list', 'value': 'log', 'values':foms_label},
+        {'name': 'Figure of merit', 'type': 'list', 'value': 'chi2bars_2', 'values':foms_label},
         {'name':'Error bar level','type':'float','value':1.05},
         {'name':'Auto save, interval','type':'int','value':50},
         {'name':'save evals, buffer','type':'int','value':100000},
@@ -20,7 +20,7 @@ params = [
         
     ]},
     {'name': 'Fitting', 'type': 'group', 'children': [
-        {"name":"start guess","type":"bool","value":True},
+        {"name":"start guess","type":"bool","value":False},
         {"name":"Use (Max, Min)","type":"bool","value":True},
         {"name":"Population size","type":"int","value":20},
         {"name":"Generation size","type":"int","value":2000000},
@@ -48,7 +48,6 @@ class SolverParameters(ParameterTree):
         diffev_solver.set_create_trial(self.par.param('Diff.Ev.').param('Method').value())
         parent.model.set_fom_func(self.par.param('FOM').param('Figure of merit').value())
         diffev_solver.set_autosave_interval(self.par.param('FOM').param('Auto save, interval').value())
-        diffev_solver.set_use_start_guess(self.par.param('Fitting').param('start guess').value())
         diffev_solver.set_use_start_guess(self.par.param('Fitting').param('start guess').value())
         diffev_solver.set_max_generations(self.par.param('Fitting').param('Generation size').value())
         diffev_solver.set_pop_size(self.par.param('Fitting').param('Population size').value())

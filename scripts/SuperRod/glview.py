@@ -120,9 +120,9 @@ class GLViewWidget_cum(gl.GLViewWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         #set a near ortho projection (i.e. non-projective view)
-        #if need a projective view, comment out the following two lines
-        # self.opts['distance'] = 2000
-        # self.opts['fov'] = 1
+        #if need a parallel view, set dis=2000, fov=1
+        self.opts['distance'] = 25
+        self.opts['fov'] = 60
 
     def show_structure(self, xyz, a = 3.615, grid_num = 15):
         # self.setCameraPosition(distance=55, azimuth=-90)

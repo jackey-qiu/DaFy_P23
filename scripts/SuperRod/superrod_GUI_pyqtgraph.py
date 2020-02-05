@@ -59,14 +59,15 @@ class RunFit(QtCore.QObject):
 class MyMainWindow(QMainWindow):
     def __init__(self, parent = None):
         super(MyMainWindow, self).__init__(parent)
-        pg.setConfigOptions(imageAxisOrder='row-major')
+        pg.setConfigOptions(imageAxisOrder='row-major', background = 'k')
         pg.mkQApp()
-        uic.loadUi(os.path.join(DaFy_path,'scripts','SuperRod','superrod.ui'),self)
+        uic.loadUi(os.path.join(DaFy_path,'scripts','SuperRod','superrod2.ui'),self)
         self.setWindowTitle('Data analysis factory: CTR data modeling')
         self.setWindowIcon(QIcon(os.path.join(script_path,"DAFY.png")))
         self.show()
         self.stop = False
         self.show_checkBox_list = []
+        self.domain_tag = 1
         #set fom_func
         #self.fom_func = chi2bars_2
         #parameters
@@ -109,14 +110,19 @@ class MyMainWindow(QMainWindow):
         self.pushButton_azimuth_90.clicked.connect(self.azimuth_90)
         self.pushButton_elevation_0.clicked.connect(self.elevation_0)
         self.pushButton_elevation_90.clicked.connect(self.elevation_90)
+        #spinBox to save the domain_tag
+        self.spinBox_domain.valueChanged.connect(self.update_domain_index)
+
         #pushbutton for changing plotting style
-        self.pushButton_plot_style.clicked.connect(self.change_plot_style)
+        # self.pushButton_toggle_bkg_color.clicked.connect(self.change_plot_style)
         #pushbutton to load/save script
         self.pushButton_load_script.clicked.connect(self.load_script)
         self.pushButton_save_script.clicked.connect(self.save_script)
         #pushbutton to load/save parameter file
         self.pushButton_load_table.clicked.connect(self.load_par)
         self.pushButton_save_table.clicked.connect(self.save_par)
+        self.pushButton_remove_rows.clicked.connect(self.remove_selected_rows)
+        self.pushButton_add_one_row.clicked.connect(self.append_one_row)
         self.pushButton_update_plot.clicked.connect(self.update_structure_view)
         self.pushButton_update_plot.clicked.connect(self.update_plot_data_view_upon_simulation)
         self.pushButton_update_plot.clicked.connect(self.update_par_bar_during_fit)
@@ -126,7 +132,7 @@ class MyMainWindow(QMainWindow):
         #syntax highlight
         self.plainTextEdit_script.setStyleSheet("""QPlainTextEdit{
 	                            font-family:'Consolas';
-                                font-size:14pt;
+                                font-size:12pt;
 	                            color: #ccc;
 	                            background-color: #2b2b2b;}""")
         self.plainTextEdit_script.setTabStopWidth(self.plainTextEdit_script.fontMetrics().width(' ')*4)
@@ -141,9 +147,18 @@ class MyMainWindow(QMainWindow):
         self.timer_update_structure.timeout.connect(self.pushButton_update_plot.click)
         self.setup_plot()
 
+    def update_domain_index(self):
+        self.domain_tag = int(self.spinBox_domain.text())
+        if self.model.compiled:
+            self.widget_edp.items = []
+            self.widget_msv_top.items = []
+            self.init_structure_view()
+        else:
+            pass
 
-    def update_camera_position(self,angle_type="azimuth", angle=0):
-        self.widget_edp.setCameraPosition(pos=None, distance=None, \
+    def update_camera_position(self,widget_name = 'widget_edp', angle_type="azimuth", angle=0):
+        #getattr(self,widget_name)
+        getattr(self,widget_name).setCameraPosition(pos=None, distance=None, \
             elevation=[None,angle][int(angle_type=="elevation")], \
                 azimuth=[None,angle][int(angle_type=="azimuth")])
 
@@ -192,9 +207,14 @@ class MyMainWindow(QMainWindow):
         else:
             plot_data_index = []
             for i in range(len(self.model.data)):
+
                 if self.tableWidget_data.cellWidget(i,1).isChecked():
+                    fmt = self.tableWidget_data.item(i,4).text()
+                    fmt_symbol = list(fmt.rstrip().rsplit(';')[0].rsplit(':')[1])
+                    #line_symbol = list(fmt.rstrip().rsplit(';')[1])
                     # self.selected_data_profile.plot(self.data[i].x, self.data[i].y, clear = True)
-                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 1},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
+                    # self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 0},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
+                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[1], clear = (len(plot_data_index) == 0))
                     plot_data_index.append(i)
             self.selected_data_profile.setLogMode(x=False,y=True)
             self.selected_data_profile.autoRange()
@@ -203,10 +223,14 @@ class MyMainWindow(QMainWindow):
         plot_data_index = []
         for i in range(len(self.model.data)):
             if self.tableWidget_data.cellWidget(i,1).isChecked():
+                fmt = self.tableWidget_data.item(i,4).text()
+                fmt_symbol = list(fmt.rstrip().rsplit(';')[0].rsplit(':')[1])
+                line_symbol = list(fmt.rstrip().rsplit(';')[1].rsplit(':')[1])
                 # self.selected_data_profile.plot(self.data[i].x, self.data[i].y, clear = True)
-                self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 0},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
+                # self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 0},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
+                self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[1], clear = (len(plot_data_index) == 0))
                 if self.tableWidget_data.cellWidget(i,2).isChecked():
-                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y_sim,pen={'color': 'r', 'width': 2},  clear = False)
+                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y_sim,pen={'color': line_symbol[1], 'width': int(line_symbol[0])},  clear = False)
                 else:
                     pass
                 plot_data_index.append(i)
@@ -433,15 +457,18 @@ class MyMainWindow(QMainWindow):
     def update_table_widget_data(self):
         self.tableWidget_data.clear()
         self.tableWidget_data.setRowCount(len(self.model.data))
-        self.tableWidget_data.setColumnCount(4)
-        self.tableWidget_data.setHorizontalHeaderLabels(['DataID','Show','Use','Errors'])
+        self.tableWidget_data.setColumnCount(5)
+        self.tableWidget_data.setHorizontalHeaderLabels(['DataID','Show','Use','Errors','fmt'])
         # self.tableWidget_pars.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         for i in range(len(self.model.data)):
             current_data = self.model.data[i]
             name = current_data.name
-            for j in range(4):
+            for j in range(5):
                 if j == 0:
                     qtablewidget = QTableWidgetItem(name)
+                    self.tableWidget_data.setItem(i,j,qtablewidget)
+                elif j == 4:
+                    qtablewidget = QTableWidgetItem('sym:6yr;l:2g')
                     self.tableWidget_data.setItem(i,j,qtablewidget)
                 else:
                     #note j=1 to j=3 corresponds to data.show, data.use, data.use_error
@@ -484,12 +511,34 @@ class MyMainWindow(QMainWindow):
                 self.tableWidget_data_view.setItem(i,j,qtablewidget)
 
     def init_structure_view(self):
-        xyz = self.model.script_module.sample.extract_xyz(1)
+        domain_tag = int(self.spinBox_domain.text())
+        size_domain = len(self.model.script_module.sample.domain)
+        if size_domain<(1+domain_tag):
+            domain_tag = size_domain -1
+        else:
+            pass
+        # print(domain_tag)
+        xyz = self.model.script_module.sample.extract_xyz(domain_tag)
         self.widget_edp.show_structure(xyz)
+        self.update_camera_position(widget_name = 'widget_edp', angle_type="azimuth", angle=0)
+        self.update_camera_position(widget_name = 'widget_edp', angle_type = 'elevation', angle = 0)
+        xyz = self.model.script_module.sample.extract_xyz_top(domain_tag)
+        self.widget_msv_top.show_structure(xyz)
+        self.update_camera_position(widget_name = 'widget_msv_top', angle_type="azimuth", angle=0)
+        self.update_camera_position(widget_name = 'widget_msv_top', angle_type = 'elevation', angle = 90)
 
     def update_structure_view(self):
-        xyz = self.model.script_module.sample.extract_xyz(1)
+        domain_tag = int(self.spinBox_domain.text())
+        size_domain = len(self.model.script_module.sample.domain)
+        if size_domain<(1+domain_tag):
+            domain_tag = size_domain -1
+        else:
+            pass        
+        # print(size_domain,domain_tag)
+        xyz = self.model.script_module.sample.extract_xyz(domain_tag)
         self.widget_edp.update_structure(xyz)
+        xyz = self.model.script_module.sample.extract_xyz_top(domain_tag)
+        self.widget_msv_top.update_structure(xyz)
 
     def start_timer_structure_view(self):
         self.timer_update_structure.start(2000)
@@ -510,8 +559,18 @@ class MyMainWindow(QMainWindow):
     def calculate(self):
         pass
 
+    #not implemented!
     def change_plot_style(self):
-        pass
+        if self.background_color == 'w':
+            self.widget_data.getViewBox().setBackgroundColor('k')
+            self.widget_edp.getViewBox().setBackgroundColor('k')
+            self.widget_msv_top.getViewBox().setBackgroundColor('k')
+            self.background_color = 'k'
+        else:
+            self.widget_data.getViewBox().setBackgroundColor('w')
+            self.widget_edp.getViewBox().setBackgroundColor('w')
+            self.widget_msv_top.getViewBox().setBackgroundColor('w')
+            self.background_color = 'w'
 
     def load_script(self):
         options = QFileDialog.Options()
@@ -528,6 +587,61 @@ class MyMainWindow(QMainWindow):
 
     def save_script(self):
         pass
+
+    def remove_selected_rows(self):
+        # Delete the selected mytable lines
+        self._deleteRows(self.tableWidget_pars.selectionModel().selectedRows(), self.tableWidget_pars)
+        self.update_model_parameter()
+
+    # DeleteRows function
+    def _deleteRows(self, rows, table):
+            # Get all row index
+            indexes = []
+            for row in rows:
+                indexes.append(row.row())
+
+            # Reverse sort rows indexes
+            indexes = sorted(indexes, reverse=True)
+
+            # Delete rows
+            for rowidx in indexes:
+                table.removeRow(rowidx)
+
+    def append_one_row(self):
+        rows = self.tableWidget_pars.selectionModel().selectedRows()
+        if len(rows) == 0:
+            row_index = self.tableWidget_pars.rowCount()
+        else:
+            row_index = rows[-1].row()
+        self.tableWidget_pars.insertRow(row_index)
+        for i in range(6):
+            if i==2:
+                check_box = QCheckBox()
+                check_box.setChecked(False)
+                self.tableWidget_pars.setCellWidget(row_index,2,check_box)
+            else:
+                qtablewidget = QTableWidgetItem()
+                self.tableWidget_pars.setItem(row_index,i,qtablewidget)
+        self.update_model_parameter()
+
+    def update_model_parameter(self):
+        self.model.parameters.data = []
+        vertical_label = []
+        label_tag=1
+        for i in range(self.tableWidget_pars.rowCount()):
+            if self.tableWidget_pars.item(i,0)==None:
+                items = ['',0,False,0,0,'-']
+                vertical_label.append('')
+            elif self.tableWidget_pars.item(i,0).text()=='':
+                items = ['',0,False,0,0,'-']
+                vertical_label.append('')
+            else:
+                items = [self.tableWidget_pars.item(i,0).text(),float(self.tableWidget_pars.item(i,1).text()),self.tableWidget_pars.cellWidget(i,2).isChecked(),\
+                         float(self.tableWidget_pars.item(i,3).text()), float(self.tableWidget_pars.item(i,4).text()), self.tableWidget_pars.item(i,5).text()]
+                self.model.parameters.data.append(items)
+                vertical_label.append(str(label_tag))
+                label_tag += 1
+        self.tableWidget_pars.setVerticalHeaderLabels(vertical_label)
 
     def update_par_upon_load(self):
 

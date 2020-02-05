@@ -313,6 +313,37 @@ class Sample:
                 pass
         return xyz_list
 
+    #only substrate atoms at the top layer for top view show
+    def extract_xyz_top(self, which_domain = 0):
+        xyz_list = []
+        which_key = list(self.domain.keys())[which_domain]
+        for key in self.domain.keys():
+            #print(key)
+            if key == which_key:
+                z_list_temp = np.array(self.domain[key]['slab'].z) + self.domain[key]['slab'].dz1 + self.domain[key]['slab'].dz2 + self.domain[key]['slab'].dz3 + self.domain[key]['slab'].dz4
+                z_max = z_list_temp.max()*self.unit_cell.c
+                for i in range(len(self.domain[key]['slab'].id)):
+                    el = self.domain[key]['slab'].el[i]
+                    x_, y_, z_ = self._extract_coord(self.domain[key]['slab'], self.domain[key]['slab'].id[i])*np.array([self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]) 
+                    if z_ == z_max:
+                        translation_offsets = [np.array([0,0,0]),np.array([1,0,0]),np.array([-1,0,0]),np.array([0,1,0]),np.array([0,-1,0]),np.array([1,-1,0]),np.array([-1,1,0]),np.array([1,1,0]),np.array([-1,-1,0])]
+                        for each in translation_offsets:
+                            x, y, z = np.array([x_, y_, z_]) + each * [self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]
+                            xyz_list.append((el, x, y, z))
+                    else:
+                        pass
+                for i in range(len(self.domain[key]['sorbate'].id)):
+                    el = self.domain[key]['sorbate'].el[i]
+                    x_, y_, z_ = self._extract_coord(self.domain[key]['sorbate'], self.domain[key]['sorbate'].id[i])*np.array([self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]) 
+                    # translation_offsets = [np.array([0,0,0]),np.array([1,0,0]),np.array([-1,0,0]),np.array([0,1,0]),np.array([0,-1,0]),np.array([1,-1,0]),np.array([-1,1,0]),np.array([1,1,0]),np.array([-1,-1,0])]
+                    translation_offsets = [np.array([0,0,0])]#only show one symmetry copy on the top view for clarity
+                    for each in translation_offsets:
+                        x, y, z = np.array([x_, y_, z_]) + each * [self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]
+                        xyz_list.append((el, x, y, z))
+            else:
+                pass
+        return xyz_list
+
     def extract_exyz(self, which_domain = 0):
         xyz_list = []
         e_list = []

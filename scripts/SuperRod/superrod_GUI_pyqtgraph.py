@@ -174,16 +174,30 @@ class MyMainWindow(QMainWindow):
         #ar = self.widget_edp.renderers.append(AtomRenderer(self.widget_edp, water.r_array, water.type_array))
         #self.widget_edp.setup_view()
 
-    def update_plot_data_view(self):
-        plot_data_index = []
+    def update_data_check_attr(self):
+        re_simulate = False
         for i in range(len(self.model.data)):
-            if self.tableWidget_data.cellWidget(i,1).isChecked():
-                # self.selected_data_profile.plot(self.data[i].x, self.data[i].y, clear = True)
-                self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 1},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
-                plot_data_index.append(i)
-        self.selected_data_profile.setLogMode(x=False,y=True)
-        self.selected_data_profile.autoRange()
+            self.model.data[i].show = self.tableWidget_data.cellWidget(i,1).isChecked()
+            self.model.data[i].use_error = self.tableWidget_data.cellWidget(i,3).isChecked()
+            if self.model.data[i].use!=self.tableWidget_data.cellWidget(i,2).isChecked():
+                re_simulate = True
+                self.model.data[i].use = self.tableWidget_data.cellWidget(i,2).isChecked()
+        if re_simulate:
+            self.simulate_model()
 
+    def update_plot_data_view(self):
+        if self.model.compiled:
+            self.update_data_check_attr()
+            self.update_plot_data_view_upon_simulation()
+        else:
+            plot_data_index = []
+            for i in range(len(self.model.data)):
+                if self.tableWidget_data.cellWidget(i,1).isChecked():
+                    # self.selected_data_profile.plot(self.data[i].x, self.data[i].y, clear = True)
+                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 1},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
+                    plot_data_index.append(i)
+            self.selected_data_profile.setLogMode(x=False,y=True)
+            self.selected_data_profile.autoRange()
 
     def update_plot_data_view_upon_simulation(self):
         plot_data_index = []
@@ -191,7 +205,10 @@ class MyMainWindow(QMainWindow):
             if self.tableWidget_data.cellWidget(i,1).isChecked():
                 # self.selected_data_profile.plot(self.data[i].x, self.data[i].y, clear = True)
                 self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 0},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
-                self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y_sim,pen={'color': 'r', 'width': 2},  clear = False)
+                if self.tableWidget_data.cellWidget(i,2).isChecked():
+                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y_sim,pen={'color': 'r', 'width': 2},  clear = False)
+                else:
+                    pass
                 plot_data_index.append(i)
         self.selected_data_profile.setLogMode(x=False,y=True)
         self.selected_data_profile.autoRange()
@@ -427,9 +444,11 @@ class MyMainWindow(QMainWindow):
                     qtablewidget = QTableWidgetItem(name)
                     self.tableWidget_data.setItem(i,j,qtablewidget)
                 else:
+                    #note j=1 to j=3 corresponds to data.show, data.use, data.use_error
+                    check = getattr(current_data, ['show', 'use', 'use_error'][j-1])
                     check_box = QCheckBox()
                     #self.show_checkBox_list.append(check_box)
-                    check_box.setChecked(True)
+                    check_box.setChecked(check)
                     check_box.stateChanged.connect(self.update_plot_data_view)
                     self.tableWidget_data.setCellWidget(i,j,check_box)
 

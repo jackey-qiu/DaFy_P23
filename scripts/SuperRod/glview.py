@@ -2,6 +2,7 @@ import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 import numpy as np
 from pyqtgraph.Qt import QtGui
+import copy
 
 #color_lib = {'C':(1,0,0,1),'O':(0,1,0,1),'Cu':(1,0,1,1)}
 # color_lib = {'C':0xFFFFFF,'O':(0,1,0,1),'Cu':(1,0,1,1)}
@@ -120,50 +121,36 @@ class GLViewWidget_cum(gl.GLViewWidget):
         super().__init__(parent)
         #set a near ortho projection (i.e. non-projective view)
         #if need a projective view, comment out the following two lines
-        self.opts['distance'] = 2000
-        self.opts['fov'] = 1
+        # self.opts['distance'] = 2000
+        # self.opts['fov'] = 1
 
-    def show_structure(self, xyz):
+    def show_structure(self, xyz, a = 3.615, grid_num = 15):
         # self.setCameraPosition(distance=55, azimuth=-90)
         # self.setCameraPosition(azimuth=0)
         # self.setProjection()
-        i=0
+        ii=0
         if len(self.items)==0:
-            xgrid = gl.GLGridItem()
-            ygrid = gl.GLGridItem()
-            zgrid = gl.GLGridItem()
+            for i in range(5):
+                new_xgrid, new_ygrid, new_zgrid = gl.GLGridItem(),gl.GLGridItem(),gl.GLGridItem()
+                new_xgrid.setSize(4,4,4)
+                new_ygrid.setSize(4,4,4)
+                new_zgrid.setSize(4,4,4)
 
-            xgrid.setSize(5,5,5)
-            ygrid.setSize(5,5,5)
-            zgrid.setSize(5,5,5)
+                # Rotate x and y grids to face the correct direction
+                new_xgrid.rotate(90, 0, 1, 0)
+                new_ygrid.rotate(90, 1, 0, 0)
+    
+                # Scale grids to the appropriate dimensions
+                new_xgrid.scale(a, a, a)
+                new_ygrid.scale(a, a, a)
+                new_zgrid.scale(a, a, a)
+                new_xgrid.translate((-2+i)*a,0,0)
+                new_ygrid.translate(0,(-2+i)*a,0)
+                new_zgrid.translate(0,0,(-2+i)*a)
+                self.addItem(new_xgrid)
+                self.addItem(new_ygrid)
+                self.addItem(new_zgrid)
 
-            xgrid.translate(0,0,3.615,True)
-            zgrid.translate(0.,0,2*3.615,True)
-
-            self.addItem(xgrid)
-            self.addItem(ygrid)
-            self.addItem(zgrid)
- 
-            # Rotate x and y grids to face the correct direction
-            # xgrid.rotate(90, 0, 1, 0)
-            # ygrid.rotate(90, 1, 0, 0)
- 
-            # Scale grids to the appropriate dimensions
-            xgrid.scale(3.615, 3.615, 3.615)
-            ygrid.scale(3.615, 3.615, 3.615)
-            zgrid.scale(3.615, 3.615, 3.615)
-            """
-            g = gl.GLGridItem(size = QtGui.QVector3D(30,30,1))
-            g.scale(1,1,1)
-            # g.setSpacing(3.54,3.54,3.54)
-            g.rotate(90,1,0,0)
-            self.addItem(g)
-            g1 = gl.GLGridItem(size = QtGui.QVector3D(30,30,1))
-            g1.scale(1,1,1)
-            g1.setSpacing(3.54,3.54,3.54)
-            #g1.rotate(90,1,0,0)
-            self.addItem(g1)
-            """
             for each in xyz:
                 e, x, y, z = each
                 md = gl.MeshData.sphere(rows=10, cols=20)
@@ -174,21 +161,21 @@ class GLViewWidget_cum(gl.GLViewWidget):
                 self.addItem(m1)
         else:
             for each in xyz:
-                _,x,y,z = xyz[i]
+                _,x,y,z = each
                 #first item is grid net
-                self.items[i+1+1+1].resetTransform()
-                self.items[i+1+1+1].translate(x,y,z)
-                self.items[i+1+1+1].scale(0.5, 0.5, 0.5)
-                i += 1
+                self.items[ii+grid_num].resetTransform()
+                self.items[ii+grid_num].translate(x,y,z)
+                self.items[ii+grid_num].scale(0.5, 0.5, 0.5)
+                ii += 1
         self.setProjection()
 
-    def update_structure(self, xyz):
+    def update_structure(self, xyz,grid_number=15):
         for i in range(len(xyz)):
             _,x,y,z = xyz[i]
             #first item is grid net
-            self.items[i+1+1+1].resetTransform()
-            self.items[i+1+1+1].translate(x,y,z)
-            self.items[i+1+1+1].scale(0.5, 0.5, 0.5)
+            self.items[i+grid_number].resetTransform()
+            self.items[i+grid_number].translate(x,y,z)
+            self.items[i+grid_number].scale(0.5, 0.5, 0.5)
 
     def setup_view(self):
         self.setCameraPosition(distance=15, azimuth=-90)

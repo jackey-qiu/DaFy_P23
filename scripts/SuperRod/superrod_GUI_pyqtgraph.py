@@ -105,11 +105,15 @@ class MyMainWindow(QMainWindow):
         self.pushButton_delete_data.clicked.connect(self.delete_data)
         self.pushButton_save_data.clicked.connect(self.save_data)
         self.pushButton_calculate.clicked.connect(self.calculate)
+
         #pushbuttons for structure view
         self.pushButton_azimuth_0.clicked.connect(self.azimuth_0)
         self.pushButton_azimuth_90.clicked.connect(self.azimuth_90)
         self.pushButton_elevation_0.clicked.connect(self.elevation_0)
         self.pushButton_elevation_90.clicked.connect(self.elevation_90)
+        self.pushButton_parallel.clicked.connect(self.parallel_projection)
+        self.pushButton_projective.clicked.connect(self.projective_projection)
+
         #spinBox to save the domain_tag
         self.spinBox_domain.valueChanged.connect(self.update_domain_index)
 
@@ -155,6 +159,21 @@ class MyMainWindow(QMainWindow):
             self.init_structure_view()
         else:
             pass
+
+    def parallel_projection(self):
+        self.widget_edp.opts['distance'] = 2000
+        self.widget_edp.opts['fov'] = 1
+        self.widget_msv_top.opts['distance'] = 2000
+        self.widget_msv_top.opts['fov'] = 1
+        self.update_structure_view()
+
+
+    def projective_projection(self):
+        self.widget_edp.opts['distance'] = 25
+        self.widget_edp.opts['fov'] = 60
+        self.widget_msv_top.opts['distance'] = 25
+        self.widget_msv_top.opts['fov'] = 60
+        self.update_structure_view()
 
     def update_camera_position(self,widget_name = 'widget_edp', angle_type="azimuth", angle=0):
         #getattr(self,widget_name)

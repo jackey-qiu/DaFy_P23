@@ -40,7 +40,7 @@
         <enum>QTabWidget::South</enum>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="tab_5">
         <attribute name="title">
@@ -141,7 +141,33 @@
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="comboBox_dataset"/>
+            <widget class="QComboBox" name="comboBox_dataset">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>150</width>
+               <height>0</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_update_mask">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>update_mask</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
@@ -516,7 +542,7 @@
      <x>0</x>
      <y>0</y>
      <width>1413</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

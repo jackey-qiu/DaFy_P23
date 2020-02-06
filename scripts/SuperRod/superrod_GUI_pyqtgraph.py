@@ -105,6 +105,7 @@ class MyMainWindow(QMainWindow):
         self.pushButton_delete_data.clicked.connect(self.delete_data)
         self.pushButton_save_data.clicked.connect(self.save_data)
         self.pushButton_calculate.clicked.connect(self.calculate)
+        self.pushButton_update_mask.clicked.connect(self.update_mask_info_in_data)
 
         #pushbuttons for structure view
         self.pushButton_azimuth_0.clicked.connect(self.azimuth_0)
@@ -226,7 +227,10 @@ class MyMainWindow(QMainWindow):
         else:
             plot_data_index = []
             for i in range(len(self.model.data)):
-
+                # if hasattr(self.model.data[i],'mask'):
+                    # mask_index = (self.model.data[i].mask==True)
+                # else:
+                    # mask_index = np.array([True]*len(self.model.data[i].x))
                 if self.tableWidget_data.cellWidget(i,1).isChecked():
                     fmt = self.tableWidget_data.item(i,4).text()
                     fmt_symbol = list(fmt.rstrip().rsplit(';')[0].rsplit(':')[1])
@@ -241,6 +245,10 @@ class MyMainWindow(QMainWindow):
     def update_plot_data_view_upon_simulation(self):
         plot_data_index = []
         for i in range(len(self.model.data)):
+            # if hasattr(self.model.data[i],'mask'):
+                # mask_index = (self.model.data[i].mask==True)
+            # else:
+                # mask_index = np.array([True]*len(self.model.data[i].x))
             if self.tableWidget_data.cellWidget(i,1).isChecked():
                 fmt = self.tableWidget_data.item(i,4).text()
                 fmt_symbol = list(fmt.rstrip().rsplit(';')[0].rsplit(':')[1])
@@ -307,6 +315,14 @@ class MyMainWindow(QMainWindow):
                 self.load_addition()
             except:
                 load_add_ = 'failure'
+        #add a mask attribute to each dataset
+        for each in self.model.data_original:
+            if not hasattr(each,'mask'):
+                each.mask = np.array([True]*len(each.x))
+        for each in self.model.data:
+            if not hasattr(each,'mask'):
+                each.mask = np.array([True]*len(each.x))
+
         self.update_table_widget_data()
         self.update_combo_box_dataset()
         self.update_plot_data_view()
@@ -315,6 +331,8 @@ class MyMainWindow(QMainWindow):
 
         self.statusbar.clearMessage()
         self.statusbar.showMessage("Model is loaded, and {} in config loading".format(load_add_))
+        # self.update_mask_info_in_data()
+        self.init_mask_info_in_data_upon_loading_model()
 
     def save_model(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "rod file (*.rod);;zip files (*.rar)")
@@ -506,13 +524,13 @@ class MyMainWindow(QMainWindow):
     def update_data_view(self):
         dataset_name = self.comboBox_dataset.currentText()
         dataset = None
-        for each in self.model.data:
+        for each in self.model.data_original:
             if each.name == dataset_name:
                 dataset = each
                 break
             else:
                 pass
-        column_labels_main = ['x','y','error']
+        column_labels_main = ['x','y','error','mask']
         extra_labels = ['h', 'k', 'dL', 'LB']
         all_labels = ['x','y','error','h','k','dL','LB','mask']
         self.tableWidget_data_view.setRowCount(len(dataset.x))
@@ -528,6 +546,26 @@ class MyMainWindow(QMainWindow):
                 else:
                     qtablewidget = QTableWidgetItem('True')
                 self.tableWidget_data_view.setItem(i,j,qtablewidget)
+
+    def update_mask_info_in_data(self):
+        dataset_name = self.comboBox_dataset.currentText()
+        dataset = None
+        for each in self.model.data_original:
+            if each.name == dataset_name:
+                dataset = each
+                break
+            else:
+                pass
+        for i in range(len(dataset.x)):
+            dataset.mask[i] = (self.tableWidget_data_view.item(i,7).text() == 'True')
+        self.model.data = copy.deepcopy(self.model.data_original)
+        [each.apply_mask() for each in self.model.data]
+        self.simulate_model()
+
+    def init_mask_info_in_data_upon_loading_model(self):
+        self.model.data = copy.deepcopy(self.model.data_original)
+        [each.apply_mask() for each in self.model.data]
+        self.simulate_model()
 
     def init_structure_view(self):
         domain_tag = int(self.spinBox_domain.text())
@@ -572,8 +610,28 @@ class MyMainWindow(QMainWindow):
     def delete_data(self):
         pass
 
+    #save data plus best fit profile
     def save_data(self):
-        pass
+        path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "model file (*.*)")
+        keys_attri = ['x','y','y_sim','error']
+        keys_extra = ['h','k']
+        lib_map = {'x': 'L', 'y':'I','y_sim':'I_model','error':'error','h':'H','k':'K'}
+        export_data = {}
+        for key in ['x','h','k','y','y_sim','error']:
+            export_data[lib_map[key]] = []
+        for each in self.model.data:
+            if each.use:
+                for key in ['x','h','k','y','y_sim','error']:
+                    if key in keys_attri:
+                        export_data[lib_map[key]] = np.append(export_data[lib_map[key]], getattr(each,key))
+                    elif key in keys_extra:
+                        export_data[lib_map[key]] = np.append(export_data[lib_map[key]], each.extra_data[key])
+        df_export_data = pd.DataFrame(export_data)
+        writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
+        df_export_data.to_excel(writer_temp, columns =[lib_map[each_] for each_ in ['x','h','k','y','y_sim','error']])
+        writer_temp.save()
+        #self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
+
 
     def calculate(self):
         pass

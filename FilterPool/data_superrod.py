@@ -95,6 +95,20 @@ class DataSet:
         cpy.safe_copy(self)
         return cpy
 
+    def apply_mask(self):
+        assert hasattr(self,'mask') and (len(self.mask) == len(self.x)),'dimension not matched!'
+        self.x = self.x[self.mask]
+        self.y = self.y[self.mask]
+        self.error = self.error[self.mask]
+        self.x_raw = self.x_raw[self.mask]
+        self.y_raw = self.y_raw[self.mask]
+        self.error_raw = self.error_raw[self.mask]
+        for each in self.extra_data:
+            self.extra_data[each] = self.extra_data[each][self.mask]
+        for each in self.extra_data_raw:
+            self.extra_data_raw[each] = self.extra_data_raw[each][self.mask]
+        self.mask = self.mask[self.mask]
+
     def safe_copy(self, new_set):
         '''safe_copy(self, new_set) --> None
 
@@ -110,6 +124,10 @@ class DataSet:
         self.x_raw = new_set.x_raw
         self.y_raw = new_set.y_raw
         self.error_raw = new_set.error_raw
+        try:
+            self.mask = new_set.mask
+        except:
+            pass
 
         # The dictonaries for the extra data
         try:

@@ -32,7 +32,9 @@ class Model:
         Create a instance and init all the varaibles.
         '''
         self.config = config
+        #self.data
         self.data = data.DataList()
+        self.data_original = data.DataList()
         self.script = ''
         self.parameters = parameters.Parameters()
 
@@ -88,6 +90,7 @@ class Model:
             new_data = pickle.loads(loadfile.read('data'),fix_imports=True, encoding = 'latin1')
             #print 'data_type',type(new_data)
             self.data.safe_copy(new_data)
+            self.data_original.safe_copy(new_data)
         except Exception as e:
             raise IOError('Could not locate the data section.', filename)
         try:
@@ -127,7 +130,7 @@ class Model:
         # Save the data structures to file
         try:
             #print self.data
-            savefile.writestr('data', pickle.dumps(self.data))
+            savefile.writestr('data', pickle.dumps(self.data_original))
 
         except Exception as e:
             raise IOError(str(e), filename)

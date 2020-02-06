@@ -469,7 +469,7 @@ class MyMainWindow(QMainWindow):
                     self.model.data.items[-1].set_extra_data(name = 'Y', value = data_loaded_pd[(data_loaded_pd['h']==h_temp) & (data_loaded_pd['k']==k_temp)]['Y'].to_numpy())
                     self.model.data.items[-1].set_extra_data(name = 'LB', value = data_loaded_pd[(data_loaded_pd['h']==h_temp) & (data_loaded_pd['k']==k_temp)]['LB'].to_numpy())
                     self.model.data.items[-1].set_extra_data(name = 'dL', value = data_loaded_pd[(data_loaded_pd['h']==h_temp) & (data_loaded_pd['k']==k_temp)]['dL'].to_numpy())
-
+                    self.model.data.items[-1].mask = np.array([True]*len(self.model.data.items[-1].x))
         #now remove the empty datasets
         empty_data_index = []
         i=0
@@ -484,6 +484,7 @@ class MyMainWindow(QMainWindow):
                     empty_data_index[ii] = empty_data_index[ii]-1
                 else:
                     pass
+        self.model.data_original = copy.deepcopy(self.model.data)
         #update script_module
         #self.model.script_module.__dict__['data'] = self.data
         #update the view
@@ -663,7 +664,9 @@ class MyMainWindow(QMainWindow):
         self.plainTextEdit_script.setPlainText(self.model.script)
 
     def save_script(self):
-        pass
+        path, _ = QFileDialog.getSaveFileName(self, "Save script file", "", "script file (*.py)")
+        with open(path,'w') as f:
+            f.write(self.model.script)
 
     def remove_selected_rows(self):
         # Delete the selected mytable lines
@@ -860,7 +863,9 @@ class MyMainWindow(QMainWindow):
         self.label_2.setText('FOM {}:{}'.format(self.model.fom_func.__name__,self.run_fit.solver.optimizer.best_fom))
 
     def save_par(self):
-        pass
+        path, _ = QFileDialog.getSaveFileName(self, "Save tab file", "", "table file (*.*)")
+        with open(path,'w') as f:
+            f.write(self.model.parameters.get_ascii_output())
 
 if __name__ == "__main__":
     QApplication.setStyle("windows")

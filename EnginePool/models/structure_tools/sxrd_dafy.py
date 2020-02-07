@@ -402,11 +402,17 @@ class Sample:
         if self.coherence==True:
             for key in self.domain.keys():
                 if self.domain[key]['wt']!=0:
-                    ftot = ftot+(fb+self.calc_fs(h, k, l,[self.domain[key]['slab']])+self.calc_fs_sorbate(h, k, l,[self.domain[key]['sorbate']],self.domain[key]['sorbate_sym']))*self.domain[key]['wt']
+                    if type(self.domain[key]['sorbate'])==type([]):
+                        ftot = ftot+(fb+self.calc_fs(h, k, l,[self.domain[key]['slab']])+self.calc_fs_sorbate(h, k, l,self.domain[key]['sorbate'],self.domain[key]['sorbate_sym']))*self.domain[key]['wt']
+                    else:
+                        ftot = ftot+(fb+self.calc_fs(h, k, l,[self.domain[key]['slab']])+self.calc_fs_sorbate(h, k, l,[self.domain[key]['sorbate']],self.domain[key]['sorbate_sym']))*self.domain[key]['wt']
         else:
             for key in self.domain.keys():
                 if self.domain[key]['wt']!=0:
-                    ftot = ftot+abs(fb+self.calc_fs(h, k, l,[self.domain[key]['slab']])+self.calc_fs_sorbate(h, k, l,[self.domain[key]['sorbate']],self.domain[key]['sorbate_sym']))*self.domain[key]['wt']
+                    if type(self.domain[key]['sorbate'])==type([]):
+                        ftot = ftot+abs(fb+self.calc_fs(h, k, l,[self.domain[key]['slab']])+self.calc_fs_sorbate(h, k, l,self.domain[key]['sorbate'],self.domain[key]['sorbate_sym']))*self.domain[key]['wt']
+                    else:
+                        ftot = ftot+abs(fb+self.calc_fs(h, k, l,[self.domain[key]['slab']])+self.calc_fs_sorbate(h, k, l,[self.domain[key]['sorbate']],self.domain[key]['sorbate_sym']))*self.domain[key]['wt']
         return abs(ftot)*self.inst.inten
 
     def calc_f2(self, h, k, l):
@@ -2284,32 +2290,13 @@ class Sample:
         x, y, z, u, oc, el = self._surf_pars(slabs)
         #Note that the u here has been recalculated to represent for the Gaussian distribution width of the thermal vibration (ie sigma in Angstrom)
         f=self._get_f(el, dinv)
-        #print x, y,z
-        # Create all the atomic structure factors
-        #print f.shape, h.shape, oc.shape, x.shape, y.shape, z.shape,el.shape
-        #change mark 3
-        #delta_l=1
-        #if self.delta1==[]:delta_l=0
-        # print('new')
-        # for sym_op in sorbate_sym:
-            # print(sym_op.trans_x(x,y))
         fs = np.sum(oc*f*np.exp(-2*np.pi**2*u**2*dinv[:,np.newaxis]**2)\
             *np.sum([np.exp(2.0*np.pi*1.0J*(
-                 h[:,np.newaxis]*(sym_op.trans_x(x, y)+self.delta1) +
-                 k[:,np.newaxis]*(sym_op.trans_y(x, y)+self.delta2) +
-                 l[:,np.newaxis]*(z[np.newaxis, :]+1)))
-              for sym_op in sorbate_sym], 0)
+                h[:,np.newaxis]*(sym_op.trans_x(x, y)+self.delta1) +
+                k[:,np.newaxis]*(sym_op.trans_y(x, y)+self.delta2) +
+                l[:,np.newaxis]*(z[np.newaxis, :]+1)))
+            for sym_op in sorbate_sym], 0)
                     ,1)
-        """
-        for id in slabs[0].id:
-            if "Pb" in str(id):
-
-                print id, np.sum([np.exp(2.0*np.pi*1.0J*(\
-                    1*(sym_op.trans_x(x, y)+self.delta1) +\
-                    1*(sym_op.trans_y(x, y)+self.delta2) +\
-                    1.3*(z[np.newaxis, :]+1)))\
-                    for sym_op in self.surface_sym][0][0])#[np.where(slabs[0].id==id)[0][0]]
-        """
         return fs
 
     def calc_fs_hematite_RAXR_MD(self, h, k, l,slabs,f1f2,res_el='Pb'):

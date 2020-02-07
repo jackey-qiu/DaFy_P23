@@ -700,7 +700,11 @@ class MyMainWindow(QMainWindow):
                 check_box.setChecked(False)
                 self.tableWidget_pars.setCellWidget(row_index,2,check_box)
             else:
-                qtablewidget = QTableWidgetItem()
+                qtablewidget = QTableWidgetItem('')
+                if i == 0:
+                    qtablewidget.setFont(QFont('Times',10,QFont.Bold))
+                elif i == 1:
+                    qtablewidget.setForeground(QBrush(QColor(255,0,255)))
                 self.tableWidget_pars.setItem(row_index,i,qtablewidget)
         self.update_model_parameter()
 

@@ -75,7 +75,7 @@ class CarbonOxygenMotif(object):
         self.domain.x[index], self.domain.y[index], self.domain.z[index] = coords
         items = ['dx1','dx2','dx3','dx4','dy1','dy2','dy3','dy4','dz1','dz2','dz3','dz4']
         for each in items:
-            getattr(self.domain,each)[index] = 0
+           getattr(self.domain,each)[index] = 0
 
     def extract_coord(self,id):
         #print(np.where(self.domain.id == id))
@@ -85,6 +85,9 @@ class CarbonOxygenMotif(object):
         x = self.domain.x[index] + self.domain.dx1[index] + self.domain.dx2[index] + self.domain.dx3[index] + self.domain.dx4[index]
         y = self.domain.y[index] + self.domain.dy1[index] + self.domain.dy2[index] + self.domain.dy3[index] + self.domain.dy4[index]
         z = self.domain.z[index] + self.domain.dz1[index] + self.domain.dz2[index] + self.domain.dz3[index] + self.domain.dz4[index]
+        # x = self.domain.x[index]
+        # y = self.domain.y[index]
+        # z = self.domain.z[index]
         return np.array([x, y, z])
 
     def make_cif_file(self, save_file):

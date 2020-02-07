@@ -237,7 +237,7 @@ class MyMainWindow(QMainWindow):
                     #line_symbol = list(fmt.rstrip().rsplit(';')[1])
                     # self.selected_data_profile.plot(self.data[i].x, self.data[i].y, clear = True)
                     # self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 0},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
-                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[1], clear = (len(plot_data_index) == 0))
+                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[2], clear = (len(plot_data_index) == 0))
                     plot_data_index.append(i)
             self.selected_data_profile.setLogMode(x=False,y=True)
             self.selected_data_profile.autoRange()
@@ -255,7 +255,7 @@ class MyMainWindow(QMainWindow):
                 line_symbol = list(fmt.rstrip().rsplit(';')[1].rsplit(':')[1])
                 # self.selected_data_profile.plot(self.data[i].x, self.data[i].y, clear = True)
                 # self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 0},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
-                self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[1], clear = (len(plot_data_index) == 0))
+                self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[2], clear = (len(plot_data_index) == 0))
                 if self.tableWidget_data.cellWidget(i,2).isChecked():
                     self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y_sim,pen={'color': line_symbol[1], 'width': int(line_symbol[0])},  clear = False)
                 else:

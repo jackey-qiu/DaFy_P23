@@ -20,6 +20,7 @@ sys.path.append(os.path.join(DaFy_path,'EnginePool'))
 sys.path.append(os.path.join(DaFy_path,'FilterPool'))
 sys.path.append(os.path.join(DaFy_path,'util'))
 sys.path.append(os.path.join(DaFy_path,'scripts'))
+import diffev
 from fom_funcs import *
 import parameters
 import data_superrod as data
@@ -133,6 +134,8 @@ class MyMainWindow(QMainWindow):
         self.pushButton_update_plot.clicked.connect(self.update_structure_view)
         self.pushButton_update_plot.clicked.connect(self.update_plot_data_view_upon_simulation)
         self.pushButton_update_plot.clicked.connect(self.update_par_bar_during_fit)
+        #pushbutton to cal errorbars
+        self.pushButton_calculate.clicked.connect(self.calculate_error_bars)
         #select dataset in the viewer
         self.comboBox_dataset.activated.connect(self.update_data_view)
 
@@ -300,6 +303,20 @@ class MyMainWindow(QMainWindow):
         else:
             pass
 
+    def calculate_error_bars(self):
+        try:
+            error_bars = self.run_fit.solver.CalcErrorBars()
+            total_num_par = len(self.model.parameters.data)
+            index_list = [i for i in range(total_num_par) if self.model.parameters.data[i][2]]
+
+            for i in range(len(error_bars)):
+                self.model.parameters.data[index_list[i]][-1] = error_bars[i]
+            
+            self.update_par_upon_load()
+        except diffev.ErrorBarError as e:
+            _ = QMessageBox.question(self, 'Runtime error message', str(e), QMessageBox.Ok)
+
+
     def update_plot(self):
         pass
 
@@ -326,7 +343,9 @@ class MyMainWindow(QMainWindow):
                 if not hasattr(each,'mask'):
                     each.mask = np.array([True]*len(each.x))
             #add model space to terminal
-            self.widget_terminal.update_name_space(self.model)
+            self.widget_terminal.update_name_space("model",self.model)
+            self.widget_terminal.update_name_space("solver",self.run_fit.solver)
+
             #remove items in the msv and re-initialize it
             self.widget_edp.items = []
             self.widget_msv_top.items = []
@@ -762,6 +781,7 @@ class MyMainWindow(QMainWindow):
         self.tableWidget_pars.setHorizontalHeaderLabels(['Parameter','Value','Fit','Min','Max','Error'])
         # self.tableWidget_pars.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         for i in range(len(lines)):
+            # print("test{}".format(i))
             items = lines[i]
             #items = line.rstrip().rsplit('\t')
             j = 0

@@ -391,15 +391,11 @@ class SolverController(QtCore.QObject):
 
         Method that calculates the errorbars for the fit that has been
         done. Note that the fit has to been conducted before this is runned.
-        
+        '''
         if self.optimizer.start_guess != None and not self.optimizer.running:
             n_elements = len(self.optimizer.start_guess)
             #print 'Number of elemets to calc errobars for ', n_elements
             error_values = []
-            dlg = wx.ProgressDialog("Calculating", \
-                               "Error bars are calculated ...", \
-                               maximum = n_elements, parent=self.parent, \
-                               style = wx.PD_AUTO_HIDE)
             for index in range(n_elements):
                 # calculate the error
                 # TODO: Check the error bar buisness again and how to treat
@@ -408,19 +404,13 @@ class SolverController(QtCore.QObject):
                 try:
                     (error_low, error_high) = self.optimizer.calc_error_bar(\
                                             index, self.fom_error_bars_level)
-                except diffev.ErrorBarError as e:
-                    ShowWarningDialog(self.parent, str(e))
-                    break
-                error_str = '(%.3e, %.3e,)'%(error_low, error_high)
+                except:
+                    raise diffev.ErrorBarError
+                error_str = '(%.3e, %.3e)'%(error_low, error_high)
                 error_values.append(error_str)
-                dlg.Update(index+1)
-
-            dlg.Destroy()
             return error_values
         else:
             raise ErrorBarError()
-        '''
-        pass
 
     def ProjectEvals(self, parameter):
         ''' ProjectEvals(self, parameter) --> prameter, fomvals

@@ -8,6 +8,6 @@ class TerminalWidget(ConsoleWidget):
         self.localNamespace['pg'] = pg
         self.localNamespace['np'] = np
 
-    def update_name_space(self, new_sub):
-        self.localNamespace['model'] = new_sub
+    def update_name_space(self, name, new_object):
+        self.localNamespace[name] = new_object
 

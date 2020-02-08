@@ -325,6 +325,8 @@ class MyMainWindow(QMainWindow):
             for each in self.model.data:
                 if not hasattr(each,'mask'):
                     each.mask = np.array([True]*len(each.x))
+            #add model space to terminal
+            self.widget_terminal.update_name_space(self.model)
             #remove items in the msv and re-initialize it
             self.widget_edp.items = []
             self.widget_msv_top.items = []

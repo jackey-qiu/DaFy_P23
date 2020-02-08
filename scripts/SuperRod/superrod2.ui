@@ -429,7 +429,7 @@
             <enum>QTabWidget::South</enum>
            </property>
            <property name="currentIndex">
-            <number>0</number>
+            <number>2</number>
            </property>
            <widget class="QWidget" name="tab_3">
             <attribute name="title">
@@ -466,6 +466,16 @@
                 <widget class="QPushButton" name="pushButton_remove_rows">
                  <property name="text">
                   <string>RemoveSelected</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="comboBox_register_par_set"/>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton">
+                 <property name="text">
+                  <string>AddParSet</string>
                  </property>
                 </widget>
                </item>
@@ -511,6 +521,33 @@
                 </widget>
                </item>
                <item>
+                <widget class="QLabel" name="label_4">
+                 <property name="text">
+                  <string>SorbateMotif</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="comboBox"/>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_5">
+                 <property name="text">
+                  <string>Layers</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSpinBox" name="spinBox"/>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_2">
+                 <property name="text">
+                  <string>ModifyScript</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <spacer name="horizontalSpacer_3">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
@@ -524,6 +561,16 @@
                 </spacer>
                </item>
               </layout>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="tab_11">
+            <attribute name="title">
+             <string>Terminal</string>
+            </attribute>
+            <layout class="QHBoxLayout" name="horizontalLayout_12">
+             <item>
+              <widget class="TerminalWidget" name="widget_terminal" native="true"/>
              </item>
             </layout>
            </widget>
@@ -542,7 +589,7 @@
      <x>0</x>
      <y>0</y>
      <width>1413</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -693,6 +740,12 @@
    <class>SolverParameters</class>
    <extends>QWidget</extends>
    <header location="global">parameter_tree.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TerminalWidget</class>
+   <extends>QWidget</extends>
+   <header>terminal_widget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -1,5 +1,7 @@
 import sys,os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
+import traceback
+from io import StringIO
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 from PyQt5 import uic
 import random
 import numpy as np
@@ -310,29 +312,34 @@ class MyMainWindow(QMainWindow):
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","rod file (*.rod);;zip Files (*.rar)", options=options)
         load_add_ = 'success'
         if fileName:
+            self.setWindowTitle('Data analysis factory: CTR data modeling-->{}'.format(fileName))
             self.model.load(fileName)
             try:
                 self.load_addition()
             except:
                 load_add_ = 'failure'
-        #add a mask attribute to each dataset
-        for each in self.model.data_original:
-            if not hasattr(each,'mask'):
-                each.mask = np.array([True]*len(each.x))
-        for each in self.model.data:
-            if not hasattr(each,'mask'):
-                each.mask = np.array([True]*len(each.x))
+            #add a mask attribute to each dataset
+            for each in self.model.data_original:
+                if not hasattr(each,'mask'):
+                    each.mask = np.array([True]*len(each.x))
+            for each in self.model.data:
+                if not hasattr(each,'mask'):
+                    each.mask = np.array([True]*len(each.x))
+            #remove items in the msv and re-initialize it
+            self.widget_edp.items = []
+            self.widget_msv_top.items = []
+            #update other pars
+            self.update_table_widget_data()
+            self.update_combo_box_dataset()
+            self.update_plot_data_view()
+            self.update_par_upon_load()
+            self.update_script_upon_load()
+            # self.init_structure_view()
 
-        self.update_table_widget_data()
-        self.update_combo_box_dataset()
-        self.update_plot_data_view()
-        self.update_par_upon_load()
-        self.update_script_upon_load()
-
-        self.statusbar.clearMessage()
-        self.statusbar.showMessage("Model is loaded, and {} in config loading".format(load_add_))
-        # self.update_mask_info_in_data()
-        self.init_mask_info_in_data_upon_loading_model()
+            self.statusbar.clearMessage()
+            self.statusbar.showMessage("Model is loaded, and {} in config loading".format(load_add_))
+            # self.update_mask_info_in_data()
+            self.init_mask_info_in_data_upon_loading_model()
 
     def save_model(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "rod file (*.rod);;zip files (*.rar)")
@@ -389,8 +396,18 @@ class MyMainWindow(QMainWindow):
         self.update_par_upon_change()
         self.model.script = (self.plainTextEdit_script.toPlainText())
         self.widget_solver.update_parameter_in_solver(self)
-        self.model.simulate()
-        self.label_2.setText('FOM {}:{}'.format(self.model.fom_func.__name__,self.model.fom))
+        try:
+            self.model.simulate()
+            self.label_2.setText('FOM {}:{}'.format(self.model.fom_func.__name__,self.model.fom))
+            self.update_plot_data_view_upon_simulation()
+            self.init_structure_view()
+            self.statusbar.clearMessage()
+            self.statusbar.showMessage("Model is simulated successfully!")
+        except model.ModelError as e:
+            _ = QMessageBox.question(self, 'Runtime error message', str(e), QMessageBox.Ok)
+            #print("test error message!")
+            #print(str(e))
+
         '''
         self.compile_script()
         # self.update_pars()
@@ -408,10 +425,6 @@ class MyMainWindow(QMainWindow):
 
         self.evaluate_sim_func()
         '''
-        self.update_plot_data_view_upon_simulation()
-        self.init_structure_view()
-        self.statusbar.clearMessage()
-        self.statusbar.showMessage("Model is simulated successfully!")
         #print(self.widget_solver.par.param("Fitting").param("start guess").value())
         #print(self.widget_solver.par.param("Fitting").param("Population size").value())
 
@@ -586,17 +599,25 @@ class MyMainWindow(QMainWindow):
         self.update_camera_position(widget_name = 'widget_msv_top', angle_type = 'elevation', angle = 90)
 
     def update_structure_view(self):
-        domain_tag = int(self.spinBox_domain.text())
-        size_domain = len(self.model.script_module.sample.domain)
-        if size_domain<(1+domain_tag):
-            domain_tag = size_domain -1
-        else:
-            pass        
-        # print(size_domain,domain_tag)
-        xyz = self.model.script_module.sample.extract_xyz(domain_tag)
-        self.widget_edp.update_structure(xyz)
-        xyz = self.model.script_module.sample.extract_xyz_top(domain_tag)
-        self.widget_msv_top.update_structure(xyz)
+        try:
+            domain_tag = int(self.spinBox_domain.text())
+            size_domain = len(self.model.script_module.sample.domain)
+            if size_domain<(1+domain_tag):
+                domain_tag = size_domain -1
+            else:
+                pass        
+            # print(size_domain,domain_tag)
+            xyz = self.model.script_module.sample.extract_xyz(domain_tag)
+            self.widget_edp.update_structure(xyz)
+            xyz = self.model.script_module.sample.extract_xyz_top(domain_tag)
+            self.widget_msv_top.update_structure(xyz)
+        except Exception as e:
+            outp = StringIO()
+            traceback.print_exc(200, outp)
+            val = outp.getvalue()
+            outp.close()
+            _ = QMessageBox.question(self, "",'Runtime error message:\n{}'.format(str(val)), QMessageBox.Ok)
+
 
     def start_timer_structure_view(self):
         self.timer_update_structure.start(2000)
@@ -614,24 +635,25 @@ class MyMainWindow(QMainWindow):
     #save data plus best fit profile
     def save_data(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "model file (*.*)")
-        keys_attri = ['x','y','y_sim','error']
-        keys_extra = ['h','k']
-        lib_map = {'x': 'L', 'y':'I','y_sim':'I_model','error':'error','h':'H','k':'K'}
-        export_data = {}
-        for key in ['x','h','k','y','y_sim','error']:
-            export_data[lib_map[key]] = []
-        for each in self.model.data:
-            if each.use:
-                for key in ['x','h','k','y','y_sim','error']:
-                    if key in keys_attri:
-                        export_data[lib_map[key]] = np.append(export_data[lib_map[key]], getattr(each,key))
-                    elif key in keys_extra:
-                        export_data[lib_map[key]] = np.append(export_data[lib_map[key]], each.extra_data[key])
-        df_export_data = pd.DataFrame(export_data)
-        writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
-        df_export_data.to_excel(writer_temp, columns =[lib_map[each_] for each_ in ['x','h','k','y','y_sim','error']])
-        writer_temp.save()
-        #self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
+        if path!="":
+            keys_attri = ['x','y','y_sim','error']
+            keys_extra = ['h','k']
+            lib_map = {'x': 'L', 'y':'I','y_sim':'I_model','error':'error','h':'H','k':'K'}
+            export_data = {}
+            for key in ['x','h','k','y','y_sim','error']:
+                export_data[lib_map[key]] = []
+            for each in self.model.data:
+                if each.use:
+                    for key in ['x','h','k','y','y_sim','error']:
+                        if key in keys_attri:
+                            export_data[lib_map[key]] = np.append(export_data[lib_map[key]], getattr(each,key))
+                        elif key in keys_extra:
+                            export_data[lib_map[key]] = np.append(export_data[lib_map[key]], each.extra_data[key])
+            df_export_data = pd.DataFrame(export_data)
+            writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
+            df_export_data.to_excel(writer_temp, columns =[lib_map[each_] for each_ in ['x','h','k','y','y_sim','error']])
+            writer_temp.save()
+            #self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
 
 
     def calculate(self):

@@ -20,6 +20,8 @@ sys.path.append(os.path.join(DaFy_path,'EnginePool'))
 sys.path.append(os.path.join(DaFy_path,'FilterPool'))
 sys.path.append(os.path.join(DaFy_path,'util'))
 sys.path.append(os.path.join(DaFy_path,'scripts'))
+from models.structure_tools.sxrd_dafy import AtomGroup
+from models.utils import UserVars
 import diffev
 from fom_funcs import *
 import parameters
@@ -134,6 +136,7 @@ class MyMainWindow(QMainWindow):
         self.pushButton_update_plot.clicked.connect(self.update_structure_view)
         self.pushButton_update_plot.clicked.connect(self.update_plot_data_view_upon_simulation)
         self.pushButton_update_plot.clicked.connect(self.update_par_bar_during_fit)
+        self.pushButton_add_par_set.clicked.connect(self.append_par_set)
         #pushbutton to cal errorbars
         self.pushButton_calculate.clicked.connect(self.calculate_error_bars)
         #select dataset in the viewer
@@ -356,11 +359,56 @@ class MyMainWindow(QMainWindow):
             self.update_par_upon_load()
             self.update_script_upon_load()
             # self.init_structure_view()
+            #model is simulated at the end of next step
+            self.init_mask_info_in_data_upon_loading_model()
+            #now set the comboBox for par set
+            self.update_combo_box_list_par_set()
 
             self.statusbar.clearMessage()
             self.statusbar.showMessage("Model is loaded, and {} in config loading".format(load_add_))
             # self.update_mask_info_in_data()
-            self.init_mask_info_in_data_upon_loading_model()
+
+    def update_combo_box_list_par_set(self):
+        attrs = self.model.script_module.__dir__()
+        attr_wanted = [each for each in attrs if type(getattr(self.model.script_module, each)) in [AtomGroup, UserVars]]
+        num_items = self.comboBox_register_par_set.count()
+        for i in range(num_items):
+            self.comboBox_register_par_set.removeItem(0)
+        self.comboBox_register_par_set.insertItems(0,attr_wanted)
+
+    def append_par_set(self):
+        par_selected = self.comboBox_register_par_set.currentText()
+        #attrs = getattr(self.model.script_module, par_selected)
+        attrs = eval("self.model.script_module.{}.__dir__()".format(par_selected))
+        attrs_wanted = [each for each in attrs if each.startswith("set")]
+
+        rows = self.tableWidget_pars.selectionModel().selectedRows()
+        if len(rows) == 0:
+            row_index = self.tableWidget_pars.rowCount()
+        else:
+            row_index = rows[-1].row()
+        for ii in range(len(attrs_wanted)):
+            self.tableWidget_pars.insertRow(row_index)
+            for i in range(6):
+                if i==2:
+                    check_box = QCheckBox()
+                    check_box.setChecked(False)
+                    self.tableWidget_pars.setCellWidget(row_index,2,check_box)
+                else:
+                    if i == 0:
+                        qtablewidget = QTableWidgetItem(".".join([par_selected,attrs_wanted[ii]]))
+                        qtablewidget.setFont(QFont('Times',10,QFont.Bold))
+                    elif i in [1]:
+                        qtablewidget = QTableWidgetItem('0.0000')
+                        qtablewidget.setForeground(QBrush(QColor(255,0,255)))
+                    elif i ==5:
+                        qtablewidget = QTableWidgetItem('(0,0)')
+                    else:
+                        qtablewidget = QTableWidgetItem('0.0000')
+                    self.tableWidget_pars.setItem(row_index,i,qtablewidget)
+        self.update_model_parameter()
+
+
 
     def save_model(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "rod file (*.rod);;zip files (*.rar)")

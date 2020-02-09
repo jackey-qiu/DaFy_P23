@@ -253,7 +253,7 @@
             </size>
            </property>
            <property name="styleSheet">
-            <string notr="true">color: rgb(85, 85, 0);</string>
+            <string notr="true"/>
            </property>
            <property name="tabPosition">
             <enum>QTabWidget::South</enum>
@@ -423,7 +423,7 @@
             </size>
            </property>
            <property name="styleSheet">
-            <string notr="true">color: rgb(85, 79, 255);</string>
+            <string notr="true"/>
            </property>
            <property name="tabPosition">
             <enum>QTabWidget::South</enum>

@@ -1,4 +1,4 @@
-import sys,os
+import sys,os, qdarkstyle
 import traceback
 from io import StringIO
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
@@ -348,6 +348,7 @@ class MyMainWindow(QMainWindow):
             #add model space to terminal
             self.widget_terminal.update_name_space("model",self.model)
             self.widget_terminal.update_name_space("solver",self.run_fit.solver)
+            self.widget_terminal.update_name_space("win",self)
 
             #remove items in the msv and re-initialize it
             self.widget_edp.items = []
@@ -971,5 +972,6 @@ if __name__ == "__main__":
     hightlight = syntax_pars.PythonHighlighter(myWin.plainTextEdit_script.document())
     myWin.plainTextEdit_script.show()
     myWin.plainTextEdit_script.setPlainText(myWin.plainTextEdit_script.toPlainText())
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     myWin.show()
     sys.exit(app.exec_())

@@ -13,10 +13,6 @@ import models.setup_domain_hematite_rcut as setup_domain_hematite_rcut
 from models.structure_tools import tool_box
 from models.structure_tools import sorbate_tool
 
-
-COUNT_TIME=False
-if COUNT_TIME:t_0=datetime.now()
-
 #setting slabs##
 wal=0.551#wavelength of x ray
 unitcell = model.UnitCell(3.615, 3.615, 3.615, 90, 90, 90)
@@ -78,10 +74,10 @@ output_file_path=output_path.module_path_locator()
 batch_path_head=batch_path.module_path_locator()
 tool_box.add_atom_in_slab(bulk,os.path.join(batch_path_head,'Cu100_bulk.str'))
 tool_box.add_atom_in_slab(surface_1,os.path.join(batch_path_head,'Cu100_surface_1.str'))
-tool_box.add_atom_in_slab(sorbate_1,os.path.join(batch_path_head,'Cu100_sorbate_OCCO_1.str'))
+tool_box.add_atom_in_slab(sorbate_1,os.path.join(batch_path_head,'Cu100_sorbate_OCCO_1b.str'))
 
 tool_box.add_atom_in_slab(surface_2,os.path.join(batch_path_head,'Cu100_surface_2.str'))
-tool_box.add_atom_in_slab(sorbate_2,os.path.join(batch_path_head,'Cu100_sorbate_OCCO_2.str'))
+tool_box.add_atom_in_slab(sorbate_2,os.path.join(batch_path_head,'Cu100_sorbate_OCCO_2b.str'))
 
 co2_1 = sorbate_tool.CarbonOxygenMotif(sorbate_1,['C2', 'O1', 'O2'], 'C1', 1.,0,0,flat_down_index=[])
 co2_1.set_coordinate_all(gamma_list=[180,180,0],delta_list = [0,30,30], r_list=[1.5,1.2,1.2], new_anchor_list = [None,'C2',None])
@@ -89,57 +85,59 @@ co2_1.set_coordinate_all(gamma_list=[180,180,0],delta_list = [0,30,30], r_list=[
 co2_2 = sorbate_tool.CarbonOxygenMotif(sorbate_2,['C2','O1', 'O2'], 'C1', 1.,0,0,flat_down_index=[])
 co2_2.set_coordinate_all(gamma_list=[180,180,0],delta_list = [0,30,30], r_list=[1.5,1.2,1.2], new_anchor_list = [None,'C2',None])
 
-atm_gp_sorbate_1 = model.AtomGroup()
+atm_gp_sorbate = model.AtomGroup()
 for id in ['O1', 'O2', 'C1', 'C2']:
-    atm_gp_sorbate_1.add_atom(sorbate_1,id)
+    atm_gp_sorbate.add_atom(sorbate_1,id)
+    atm_gp_sorbate.add_atom(sorbate_2,id)
 
-atm_gp_sorbate_2 = model.AtomGroup()
-for id in ['O1', 'O2', 'C1', 'C2']:
-    atm_gp_sorbate_2.add_atom(sorbate_2,id)
+#atm_gp_sorbate_2 = model.AtomGroup()
+#for id in ['O1', 'O2', 'C1', 'C2']:
+#    atm_gp_sorbate_2.add_atom(sorbate_2,id)
 
-atm_gp_surface_1st_layer_1 = model.AtomGroup()
+atm_gp_surface_1st_layer = model.AtomGroup()
 for id in ['Cu_top1_2','Cu_top2_2']:
-    atm_gp_surface_1st_layer_1.add_atom(surface_1,id)
+    atm_gp_surface_1st_layer.add_atom(surface_1,id)
+    atm_gp_surface_1st_layer.add_atom(surface_2,id)
 
-atm_gp_surface_1st_layer_2 = model.AtomGroup()
-for id in ['Cu_top1_2','Cu_top2_2']:
-    atm_gp_surface_1st_layer_2.add_atom(surface_2,id)
+#atm_gp_surface_1st_layer_2 = model.AtomGroup()
+#for id in ['Cu_top1_2','Cu_top2_2']:
+#    atm_gp_surface_1st_layer_2.add_atom(surface_2,id)
 
-atm_gp_surface_2nd_layer_1 = model.AtomGroup()
+atm_gp_surface_2nd_layer = model.AtomGroup()
 for id in ['Cu1_2','Cu2_2']:
-    atm_gp_surface_2nd_layer_1.add_atom(surface_1,id)
+    atm_gp_surface_2nd_layer.add_atom(surface_1,id)
 
-atm_gp_surface_2nd_layer_2 = model.AtomGroup()
+#atm_gp_surface_2nd_layer_2 = model.AtomGroup()
 for id in ['Cu3_2','Cu4_2']:
-    atm_gp_surface_2nd_layer_2.add_atom(surface_2,id)
+    atm_gp_surface_2nd_layer.add_atom(surface_2,id)
 ###################################fitting function part##########################################
 VARS=vars()#pass local variables to sim function
 if COUNT_TIME:t_1=datetime.now()
 
-sorbate_syms_1 = [model.SymTrans([[1,0],[0,1]]), model.SymTrans([[0,1],[-1,0]]), model.SymTrans([[1,0],[0,1]]), model.SymTrans([[0,-1],[1,0]])][0:1]
-sorbate_syms_2 = [model.SymTrans([[1,0],[0,1]]), model.SymTrans([[0,1],[-1,0]]), model.SymTrans([[1,0],[0,1]]), model.SymTrans([[0,-1],[1,0]])][0:1]
+sorbate_syms_1 = [model.SymTrans([[1,0],[0,1]]), model.SymTrans([[0,1],[-1,0]]), model.SymTrans([[1,0],[0,1]]), model.SymTrans([[0,-1],[1,0]])][0:2]
+sorbate_syms_2 = [model.SymTrans([[1,0],[0,1]]), model.SymTrans([[0,1],[-1,0]]), model.SymTrans([[1,0],[0,1]]), model.SymTrans([[0,-1],[1,0]])][0:2]
 #sorbate_syms = []
 sample = model.Sample(inst, bulk, {'domain1':{'slab':surface_1, 'sorbate':sorbate_1,'wt':rgh_wt.wt_domain1,'sorbate_sym':sorbate_syms_1},\
                                    'domain2':{'slab':surface_2, 'sorbate':sorbate_2,'wt':1-rgh_wt.wt_domain1,'sorbate_sym':sorbate_syms_2} }, unitcell)
 
 def Sim(data,VARS=VARS):
     #co2.make_cif_file('D://test.cif')
-
+    
     #for command in commands:eval(command)
-    co2_1.set_coordinate_all(gamma_list=[180+rgh_co2_1.gamma,180+rgh_co2_1.gamma, rgh_co2_1.gamma],delta_list = [0,rgh_co2_1.delta1,rgh_co2_1.delta2], r_list=[rgh_co2_1.r1,rgh_co2_1.r2,rgh_co2_1.r3], new_anchor_list = [None,'C2',None])
-    co2_2.set_coordinate_all(gamma_list=[180+rgh_co2_2.gamma,180+rgh_co2_2.gamma,rgh_co2_2.gamma],delta_list = [0,rgh_co2_2.delta1,rgh_co2_2.delta2], r_list=[rgh_co2_2.r1,rgh_co2_2.r2,rgh_co2_2.r3], new_anchor_list = [None,'C2',None])
+    co2_1.set_coordinate_all(gamma_list=[0,180+rgh_co2_1.gamma, rgh_co2_1.gamma],delta_list = [90,rgh_co2_1.delta1,rgh_co2_1.delta2], r_list=[rgh_co2_1.r1,rgh_co2_1.r2,rgh_co2_1.r3], new_anchor_list = [None,None,None])
+    co2_2.set_coordinate_all(gamma_list=[0,180+rgh_co2_1.gamma,rgh_co2_1.gamma],delta_list = [90,rgh_co2_1.delta1,rgh_co2_1.delta2], r_list=[rgh_co2_1.r1,rgh_co2_1.r2,rgh_co2_1.r3], new_anchor_list = [None,None,None])
     #co2_1.make_xyz_file('D://test.xyz')
-    # sample.make_xyz_file('D://test.xyz')
+    #sample.make_xyz_file('/Users/cqiu/app/DaFy_P23/dump_files/test.xyz')
     sample.domain['domain1']['wt']=rgh_wt.wt_domain1
     if rgh_wt.wt_domain1>1:
         sample.domain['domain2']['wt']=0
     else:
         sample.domain['domain2']['wt']=1-rgh_wt.wt_domain1
-
+    
     for each in sorbate_syms_1:
-        each.set_t([atm_gp_surface_1st_layer_1.getdx(),atm_gp_surface_1st_layer_1.getdy()])
-    for each in sorbate_syms_2:
-        each.set_t([atm_gp_surface_1st_layer_2.getdx(),atm_gp_surface_1st_layer_2.getdy()])
+        each.set_t([atm_gp_surface_1st_layer.getdx(),atm_gp_surface_1st_layer.getdy()]) 
+    #for each in sorbate_syms_2:
+    #    each.set_t([atm_gp_surface_1st_layer_2.getdx(),atm_gp_surface_1st_layer_2.getdy()]) 
 
     VARS=VARS
     F =[]
@@ -155,7 +153,7 @@ def Sim(data,VARS=VARS):
     #    vars()['wt_domain'+str(int(i+1))]=VARS['rgh_domain'+str(int(i+1))].wt
     #    total_wt=total_wt+vars()['wt_domain'+str(int(i+1))]
 
-
+    
 
     if COUNT_TIME:t_2=datetime.now()
 
@@ -180,12 +178,12 @@ def Sim(data,VARS=VARS):
     i=0
     for data_set in data:
         f=np.array([])
-        h = data_set.extra_data['h']
-        k = data_set.extra_data['k']
-        x = data_set.x
-        y = data_set.extra_data['Y']
-        LB = data_set.extra_data['LB']
-        dL = data_set.extra_data['dL']
+        h = data_set.extra_data['h'][data_set.mask]
+        k = data_set.extra_data['k'][data_set.mask]
+        x = data_set.x[data_set.mask]
+        y = data_set.extra_data['Y'][data_set.mask]
+        LB = data_set.extra_data['LB'][data_set.mask]
+        dL = data_set.extra_data['dL'][data_set.mask]
 
 
         if data_set.use:

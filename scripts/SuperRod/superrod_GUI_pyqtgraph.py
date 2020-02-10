@@ -201,20 +201,23 @@ class MyMainWindow(QMainWindow):
     def elevation_90(self):
         self.update_camera_position(angle_type="elevation", angle=90)
 
+    #do this after model is loaded, so that you know len(data)
+    def update_plot_dimension(self, columns = 2):
+        total_datasets = len(self.model.data)
+        # rows = int((total_datasets-total_datasets%columns)/columns+1)
+        self.data_profiles = []
+        for i in range(total_datasets):
+            hk_label = '{}{}L'.format(str(int(self.model.data[i].extra_data['h'][0])),str(int(self.model.data[i].extra_data['k'][0])))
+            if (i%columns)==0 and (i!=0):
+                self.widget_data.nextRow()
+                self.data_profiles.append(self.widget_data.addPlot(title=hk_label))
+            else:
+                self.data_profiles.append(self.widget_data.addPlot(title=hk_label))
 
     def setup_plot(self):
-        self.selected_data_profile = self.widget_data.addPlot()
         self.fom_evolution_profile = self.widget_fom.addPlot()
         self.par_profile = self.widget_pars.addPlot()
         self.fom_scan_profile = self.widget_fom_scan.addPlot()
-        # self.bar = pg.BarGraphItem(x=[],y=[],height = [], width = 0.2)
-        # self.par_profile.addItem(self.bar)
-        # print(dir(self.bar))
-        # print(self.bar.opts.get('x'))
-        # water = ChemlabDB().get('molecule', 'example.water')
-        # ar = AtomRenderer(self.widget_edp, water.r_array, water.type_array)
-        #ar = self.widget_edp.renderers.append(AtomRenderer(self.widget_edp, water.r_array, water.type_array))
-        #self.widget_edp.setup_view()
 
     def update_data_check_attr(self):
         re_simulate = False
@@ -232,44 +235,41 @@ class MyMainWindow(QMainWindow):
             self.update_data_check_attr()
             self.update_plot_data_view_upon_simulation()
         else:
-            plot_data_index = []
+            # plot_data_index = []
             for i in range(len(self.model.data)):
-                # if hasattr(self.model.data[i],'mask'):
-                    # mask_index = (self.model.data[i].mask==True)
-                # else:
-                    # mask_index = np.array([True]*len(self.model.data[i].x))
-                if self.tableWidget_data.cellWidget(i,1).isChecked():
-                    fmt = self.tableWidget_data.item(i,4).text()
-                    fmt_symbol = list(fmt.rstrip().rsplit(';')[0].rsplit(':')[1])
-                    #line_symbol = list(fmt.rstrip().rsplit(';')[1])
-                    # self.selected_data_profile.plot(self.data[i].x, self.data[i].y, clear = True)
-                    # self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 0},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
-                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[2], clear = (len(plot_data_index) == 0))
-                    plot_data_index.append(i)
-            self.selected_data_profile.setLogMode(x=False,y=True)
-            self.selected_data_profile.autoRange()
+                # if self.tableWidget_data.cellWidget(i,1).isChecked():
+                fmt = self.tableWidget_data.item(i,4).text()
+                fmt_symbol = list(fmt.rstrip().rsplit(';')[0].rsplit(':')[1])
+                # self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[2], clear = (len(plot_data_index) == 0))
+                self.data_profiles[i].plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[2], clear = True)
+                #plot_data_index.append(i)
+            [each.setLogMode(x=False,y=True) for each in self.data_profiles]
+            [each.autoRange() for each in self.data_profiles]
+            #self.selected_data_profile.autoRange()
 
     def update_plot_data_view_upon_simulation(self):
-        plot_data_index = []
         for i in range(len(self.model.data)):
             # if hasattr(self.model.data[i],'mask'):
                 # mask_index = (self.model.data[i].mask==True)
             # else:
                 # mask_index = np.array([True]*len(self.model.data[i].x))
-            if self.tableWidget_data.cellWidget(i,1).isChecked():
+            # if self.tableWidget_data.cellWidget(i,1).isChecked():
+            if 1:
                 fmt = self.tableWidget_data.item(i,4).text()
                 fmt_symbol = list(fmt.rstrip().rsplit(';')[0].rsplit(':')[1])
                 line_symbol = list(fmt.rstrip().rsplit(';')[1].rsplit(':')[1])
                 # self.selected_data_profile.plot(self.data[i].x, self.data[i].y, clear = True)
                 # self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen={'color': 'y', 'width': 0},  symbolBrush=(255,0,0), symbolSize=5,symbolPen='w', clear = (len(plot_data_index) == 0))
-                self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[2], clear = (len(plot_data_index) == 0))
+                self.data_profiles[i].plot(self.model.data[i].x, self.model.data[i].y,pen = None,  symbolBrush=fmt_symbol[1], symbolSize=int(fmt_symbol[0]),symbolPen=fmt_symbol[2], clear = True)
                 if self.tableWidget_data.cellWidget(i,2).isChecked():
-                    self.selected_data_profile.plot(self.model.data[i].x, self.model.data[i].y_sim,pen={'color': line_symbol[1], 'width': int(line_symbol[0])},  clear = False)
+                    self.data_profiles[i].plot(self.model.data[i].x, self.model.data[i].y_sim,pen={'color': line_symbol[1], 'width': int(line_symbol[0])},  clear = False)
                 else:
                     pass
-                plot_data_index.append(i)
-        self.selected_data_profile.setLogMode(x=False,y=True)
-        self.selected_data_profile.autoRange()
+                # plot_data_index.append(i)
+        [each.setLogMode(x=False,y=True) for each in self.data_profiles]
+        [each.autoRange() for each in self.data_profiles]
+        # self.selected_data_profile.setLogMode(x=False,y=True)
+        # self.selected_data_profile.autoRange()
         fom_log = np.array(self.run_fit.solver.optimizer.fom_log)
         #print(fom_log)
         self.fom_evolution_profile.plot(fom_log[:,0],fom_log[:,1],pen={'color': 'r', 'width': 2}, clear = True)
@@ -333,6 +333,7 @@ class MyMainWindow(QMainWindow):
         if fileName:
             self.setWindowTitle('Data analysis factory: CTR data modeling-->{}'.format(fileName))
             self.model.load(fileName)
+            self.update_plot_dimension()
             try:
                 self.load_addition()
             except:

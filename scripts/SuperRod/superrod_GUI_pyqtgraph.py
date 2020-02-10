@@ -104,12 +104,13 @@ class MyMainWindow(QMainWindow):
         self.actionSimulate.triggered.connect(self.simulate_model)
         self.actionRun.triggered.connect(self.run_model)
         self.actionStop.triggered.connect(self.stop_model)
+        self.actionCalculate.triggered.connect(self.calculate_error_bars)
         #pushbuttons for data handeling
         self.pushButton_load_data.clicked.connect(self.load_data_ctr)
         self.pushButton_append_data.clicked.connect(self.append_data)
         self.pushButton_delete_data.clicked.connect(self.delete_data)
         self.pushButton_save_data.clicked.connect(self.save_data)
-        self.pushButton_calculate.clicked.connect(self.calculate)
+        # self.pushButton_calculate.clicked.connect(self.calculate)
         self.pushButton_update_mask.clicked.connect(self.update_mask_info_in_data)
 
         #pushbuttons for structure view
@@ -137,8 +138,6 @@ class MyMainWindow(QMainWindow):
         self.pushButton_update_plot.clicked.connect(self.update_plot_data_view_upon_simulation)
         self.pushButton_update_plot.clicked.connect(self.update_par_bar_during_fit)
         self.pushButton_add_par_set.clicked.connect(self.append_par_set)
-        #pushbutton to cal errorbars
-        self.pushButton_calculate.clicked.connect(self.calculate_error_bars)
         #select dataset in the viewer
         self.comboBox_dataset.activated.connect(self.update_data_view)
 
@@ -362,6 +361,8 @@ class MyMainWindow(QMainWindow):
             # self.init_structure_view()
             #model is simulated at the end of next step
             self.init_mask_info_in_data_upon_loading_model()
+            #add name space for cal bond distance after simulation
+            self.widget_terminal.update_name_space("report_distance",self.model.script_module.sample.inter_atom_distance_report)
             #now set the comboBox for par set
             self.update_combo_box_list_par_set()
 

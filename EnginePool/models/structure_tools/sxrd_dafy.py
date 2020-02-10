@@ -145,7 +145,8 @@ import numpy as np
 from ..utils import f, rho
 import time,os
 import pickle,copy
-
+import pandas as pd
+from scipy.spatial import distance
 try:
     from scipy import weave
     _turbo_sim = True
@@ -343,6 +344,83 @@ class Sample:
             else:
                 pass
         return xyz_list
+
+    def inter_atom_distance_report(self, which_domain = 0, atm_id = None, max_distance = 3):
+        x_list, y_list, z_list, el_list, atm_id_list, tag_list = [],[],[],[],[],[]
+        which_key = list(self.domain.keys())[which_domain]
+        for key in self.domain.keys():
+            #print(key)
+            if key == which_key:
+                z_list_temp = np.array(self.domain[key]['slab'].z) + self.domain[key]['slab'].dz1 + self.domain[key]['slab'].dz2 + self.domain[key]['slab'].dz3 + self.domain[key]['slab'].dz4
+                z_max = z_list_temp.max()*self.unit_cell.c
+                for i in range(len(self.domain[key]['slab'].id)):
+                    el = self.domain[key]['slab'].el[i]
+                    x_, y_, z_ = self._extract_coord(self.domain[key]['slab'], self.domain[key]['slab'].id[i])*np.array([self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]) 
+                    if z_ == z_max:
+                        translation_offsets = [np.array([0,0,0]),np.array([1,0,0]),np.array([-1,0,0]),np.array([0,1,0]),np.array([0,-1,0]),np.array([1,-1,0]),np.array([-1,1,0]),np.array([1,1,0]),np.array([-1,-1,0])]
+                        for each in translation_offsets:
+                            x, y, z = np.array([x_, y_, z_]) + each * [self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]
+                            x_list.append(x)
+                            y_list.append(y)
+                            z_list.append(z)
+                            el_list.append(el)
+                            off_x, off_y, off_z = list(each)
+                            atm_id_list.append(self.domain[key]['slab'].id[i]+"_{}_{}_{}".format(off_x, off_y, off_z))
+                            tag_list.append("substrate")
+                    else:
+                        pass
+                for i in range(len(self.domain[key]['sorbate'].id)):
+                    el = self.domain[key]['sorbate'].el[i]
+                    x_, y_, z_ = self._extract_coord(self.domain[key]['sorbate'], self.domain[key]['sorbate'].id[i])*np.array([self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]) 
+                    # translation_offsets = [np.array([0,0,0]),np.array([1,0,0]),np.array([-1,0,0]),np.array([0,1,0]),np.array([0,-1,0]),np.array([1,-1,0]),np.array([-1,1,0]),np.array([1,1,0]),np.array([-1,-1,0])]
+                    translation_offsets = [np.array([0,0,0])]#only show one symmetry copy on the top view for clarity
+                    for each in translation_offsets:
+                        x, y, z = np.array([x_, y_, z_]) + each * [self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]
+                        x_list.append(x)
+                        y_list.append(y)
+                        z_list.append(z)
+                        el_list.append(el)
+                        off_x, off_y, off_z = list(each)
+                        atm_id_list.append(self.domain[key]['sorbate'].id[i]+"_{}_{}_{}".format(off_x, off_y, off_z))
+                        tag_list.append("sorbate")
+            else:
+                pass
+        data = {"x":x_list,"y":y_list,"z":z_list,"el":el_list,"id":atm_id_list,"tag":tag_list}
+        data_df = pd.DataFrame(data) 
+        if atm_id is None:
+            ids_sorbate = list(data_df[data_df['tag']=='sorbate']['id'])
+        else:
+            if type(atm_id)==type([]):
+                ids_sorbate = atm_id
+            else:
+                ids_sorbate = [atm_id]
+        for each in ids_sorbate:
+            xyz_all = np.array(data_df[["x","y","z"]])
+            xyz_current = np.array(data_df[data_df['id']==each][["x","y","z"]])
+            distance_list = []
+            for i in range(len(xyz_all)):
+                distance_list.append(distance.euclidean(xyz_current[0], xyz_all[i]))
+            df_temp = pd.DataFrame({each:distance_list})
+            data_df = pd.concat([data_df, df_temp], axis=1)
+            data_df = data_df.sort_values(each)
+            data_df = data_df.reset_index(drop = True)
+            # print(data_df[each])
+            print("Distance list between {} and the other atoms".format(each))
+            for ii in range(len(data_df)):
+                if data_df[each][ii]<max_distance:
+                    print("{}: {} A".format(data_df['id'][ii],data_df[each][ii]))
+                else:
+                    print("")
+                    break
+        
+
+        
+            
+
+                    
+
+
+
 
     def extract_exyz(self, which_domain = 0):
         xyz_list = []

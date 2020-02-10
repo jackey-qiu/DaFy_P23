@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1413</width>
-    <height>738</height>
+    <height>713</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -50,7 +50,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_2">
            <property name="sizeConstraint">
-            <enum>QLayout::SetFixedSize</enum>
+            <enum>QLayout::SetMinimumSize</enum>
            </property>
            <item>
             <widget class="QPushButton" name="pushButton_load_data">
@@ -60,11 +60,37 @@
             </widget>
            </item>
            <item>
+            <spacer name="horizontalSpacer_6">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
             <widget class="QPushButton" name="pushButton_append_data">
              <property name="text">
               <string>AppendData</string>
              </property>
             </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_7">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
            </item>
            <item>
             <widget class="QPushButton" name="pushButton_delete_data">
@@ -74,16 +100,22 @@
             </widget>
            </item>
            <item>
+            <spacer name="horizontalSpacer_8">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
             <widget class="QPushButton" name="pushButton_save_data">
              <property name="text">
               <string>SaveData</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushButton_calculate">
-             <property name="text">
-              <string>CalError</string>
              </property>
             </widget>
            </item>
@@ -660,6 +692,8 @@
    <addaction name="actionSimulate"/>
    <addaction name="actionRun"/>
    <addaction name="actionStop"/>
+   <addaction name="separator"/>
+   <addaction name="actionCalculate"/>
   </widget>
   <action name="actionSimulate">
    <property name="icon">
@@ -668,10 +702,10 @@
      <normalon>icons/simulate.png</normalon>icons/simulate.png</iconset>
    </property>
    <property name="text">
-    <string>Simulate</string>
+    <string>Simulate model</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:18pt; text-decoration: underline;&quot;&gt;Simulate&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>Simulate model</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -684,7 +718,7 @@
      <normalon>icons/run.png</normalon>icons/run.png</iconset>
    </property>
    <property name="text">
-    <string>Run</string>
+    <string>Run model</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Run&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -697,7 +731,7 @@
      <normalon>icons/stop.png</normalon>icons/stop.png</iconset>
    </property>
    <property name="text">
-    <string>Stop</string>
+    <string>Stop model</string>
    </property>
   </action>
   <action name="actionNew">
@@ -728,6 +762,21 @@
    </property>
    <property name="text">
     <string>Save</string>
+   </property>
+  </action>
+  <action name="actionCalculate">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/calculator3.png</normaloff>icons/calculator3.png</iconset>
+   </property>
+   <property name="text">
+    <string>calculate error bars</string>
    </property>
   </action>
  </widget>

@@ -12,7 +12,7 @@ class TerminalWidget(ConsoleWidget):
     def update_name_space(self, name, new_object):
         self.localNamespace[name] = new_object
 
-    def write_(self, strn, html=False):                                          
+    def write(self, strn, html=False):                                          
         self.output.moveCursor(QtGui.QTextCursor.End)                           
         if html:                                                                
             self.output.textCursor().insertHtml(strn)                           
@@ -21,4 +21,4 @@ class TerminalWidget(ConsoleWidget):
                 self.inCmd = False                                              
                 self.output.textCursor().insertHtml("</div><br><div style='font-weight: normal; background-color: black;color:white'>")
                 #self.stdout.write("</div><br><div style='font-weight: normal; background-color: #FFF;'>")
-        self.output.insertPlainText(strn) 
+            self.output.insertPlainText(strn) 

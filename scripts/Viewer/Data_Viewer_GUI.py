@@ -156,6 +156,29 @@ class MyMainWindow(QMainWindow):
         self.textEdit_summary_data.setText('\n'.join([col_labels,scan_numbers,phs]))
 
     def load_file(self):
+        if self.radioButton_ctr_model.isChecked():
+            self.load_file_ctr_model()
+        else:
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","Data Files (*.xlsx);;All Files (*.csv)", options=options)
+            if fileName:
+                self.lineEdit_data_file.setText(fileName)
+                self.data = pd.read_excel(fileName)
+            col_labels = 'col_labels\n'+str(list(self.data.columns))+'\n'
+            scans = list(set(list(self.data['scan_no'])))
+            self.scans_all = scans
+            scans.sort()
+            scan_numbers = 'scan_nos\n'+str(scans)+'\n'
+            # print(list(self.data[self.data['scan_no']==scans[0]]['phs'])[0])
+            if self.radioButton_xrv.isChecked():
+                self.phs_all = [list(self.data[self.data['scan_no']==scan]['phs'])[0] for scan in scans]
+                phs = 'pHs\n'+str(self.phs_all)+'\n'
+            else:
+                phs = ''
+            self.textEdit_summary_data.setText('\n'.join([col_labels,scan_numbers,phs]))
+
+    def load_file_ctr_model(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","Data Files (*.xlsx);;All Files (*.csv)", options=options)
@@ -163,18 +186,12 @@ class MyMainWindow(QMainWindow):
             self.lineEdit_data_file.setText(fileName)
             self.data = pd.read_excel(fileName)
         col_labels = 'col_labels\n'+str(list(self.data.columns))+'\n'
-        scans = list(set(list(self.data['scan_no'])))
-        self.scans_all = scans
-        scans.sort()
-        scan_numbers = 'scan_nos\n'+str(scans)+'\n'
-        # print(list(self.data[self.data['scan_no']==scans[0]]['phs'])[0])
-        if self.radioButton_xrv.isChecked():
-            self.phs_all = [list(self.data[self.data['scan_no']==scan]['phs'])[0] for scan in scans]
-            phs = 'pHs\n'+str(self.phs_all)+'\n'
-        else:
-            phs = ''
-        self.textEdit_summary_data.setText('\n'.join([col_labels,scan_numbers,phs]))
+        self.potentials = list(set(list(self.data['potential'])))
+        self.hk_list = list(set(list(zip(list(self.data['H']),list(self.data['K'])))))
 
+        self.textEdit_summary_data.setText('\n'.join([col_labels,str(self.hk_list),str(self.potentials)]))
+
+        
     #to fold or unfold the config file editor
     def fold_or_unfold(self):
         text = self.PushButton_fold_or_unfold.text()
@@ -188,8 +205,10 @@ class MyMainWindow(QMainWindow):
     def plot_figure(self):
         if self.radioButton_xrv.isChecked():
             self.plot_figure_xrv()
-        else:
+        elif self.radioButton_ctr.isChecked():
             self.plot_figure_ctr()
+        elif self.radioButton_ctr_model.isChecked():
+            self.plot_figure_ctr_model()
 
     def plot_data_summary_xrv(self):
         if self.radioButton_xrv.isChecked() and self.plot_data_summary_xrv!={}:
@@ -352,6 +371,50 @@ class MyMainWindow(QMainWindow):
         # print(self.data_summary)
         self.mplwidget.fig.subplots_adjust(wspace=0.04,hspace=0.04)
         self.mplwidget.canvas.draw()
+
+    def plot_figure_ctr_model(self):
+        self.mplwidget.fig.clear()
+        col_num=2#two columns only
+        if len(self.hk_list) in [1,2]:
+            col_num = 1
+        else:
+            pass
+
+        plot_dim = [int(len(self.hk_list)/col_num)+int(len(self.hk_list)%col_num != 0), col_num]
+        for i in range(len(self.hk_list)):
+            setattr(self,'plot_axis_plot_set{}'.format(i+1),self.mplwidget.canvas.figure.add_subplot(plot_dim[0], plot_dim[1],i+1))
+            current_hk = self.hk_list[i]
+            current_minimum = 0
+            for each_potential in self.potentials:
+                index_ = (self.data['potential']==each_potential)&(self.data['H']==current_hk[0])&(self.data['K']==current_hk[1])
+                if len(index_)==0:
+                    index_ = (self.data['potential']==each_potential)&(self.data['H']==current_hk[1])&(self.data['K']==current_hk[0])
+                x = self.data[index_]['L']
+                y_data=self.data[index_]['I']
+                y_model = self.data[index_]['I_model']
+                y_ideal = self.data[index_]['I_bulk']
+                if each_potential == self.potentials[0]:
+                    current_minimum = np.min(y_ideal)
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal,color ='k',linestyle =':', label = 'Unrelaxed structure')
+                else:
+                    pass
+                error = self.data[index_]['error']
+                use = list(self.data[index_]['use'])[0]
+                fmt = self.lineEdit_fmt.text().rstrip().rsplit(';')[self.potentials.index(each_potential)]
+                #np.min(y_ideal)
+                scale_factor = 5*current_minimum/np.min(y_data)
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).scatter(x,y_data*scale_factor,s = 5, marker = 'o',c='blue', label = 'Data '+str(each_potential)+'V w.r.t Ag/AgCl')
+                if use:
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_model*scale_factor,color ='r',linestyle ='-', label = 'Fit '+str(each_potential)+'V w.r.t Ag/AgCl')
+                
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_ylabel('Intensity')
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_xlabel('L')
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_title('{}{}L'.format(*current_hk))
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_yscale('log')
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).legend()
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).autoscale()
+                current_minimum = 5*current_minimum
+
 
     def plot_figure_ctr(self):
         self.mplwidget.fig.clear()

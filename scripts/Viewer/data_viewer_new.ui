@@ -126,6 +126,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QRadioButton" name="radioButton_ctr_model">
+           <property name="text">
+            <string>CTR model</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QRadioButton" name="radioButton_xrv">
            <property name="text">
             <string>XRV</string>

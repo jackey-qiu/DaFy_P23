@@ -413,15 +413,6 @@ class Sample:
                     print("")
                     break
         
-
-        
-            
-
-                    
-
-
-
-
     def extract_exyz(self, which_domain = 0):
         xyz_list = []
         e_list = []
@@ -491,6 +482,25 @@ class Sample:
                         ftot = ftot+abs(fb+self.calc_fs(h, k, l,[self.domain[key]['slab']])+self.calc_fs_sorbate(h, k, l,self.domain[key]['sorbate'],self.domain[key]['sorbate_sym']))*self.domain[key]['wt']
                     else:
                         ftot = ftot+abs(fb+self.calc_fs(h, k, l,[self.domain[key]['slab']])+self.calc_fs_sorbate(h, k, l,[self.domain[key]['sorbate']],self.domain[key]['sorbate_sym']))*self.domain[key]['wt']
+        return abs(ftot)*self.inst.inten
+
+    def calc_f_ideal(self, h, k, l):
+        '''
+        Calculate the structure factors for the non-relaxed sample (fb)
+        '''
+        #here the chemically equivalent domains will be added up in-coherently always
+        ftot=0
+        fb = self.calc_fb(h, k, l)
+
+        if self.coherence==True:
+            for key in self.domain.keys():
+                if self.domain[key]['wt']!=0:
+                    ftot = ftot + fb*self.domain[key]['wt']
+        else:
+            for key in self.domain.keys():
+                if self.domain[key]['wt']!=0:
+                    ftot = ftot + abs(fb*self.domain[key]['wt'])
+                    
         return abs(ftot)*self.inst.inten
 
     def calc_f2(self, h, k, l):

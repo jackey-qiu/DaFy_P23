@@ -705,6 +705,8 @@ class MyMainWindow(QMainWindow):
 
     #save data plus best fit profile
     def save_data(self):
+        potential = input('The potential corresponding to this dataset is:')
+
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "model file (*.*)")
         if path!="":
             keys_attri = ['x','y','y_sim','error']
@@ -713,6 +715,9 @@ class MyMainWindow(QMainWindow):
             export_data = {}
             for key in ['x','h','k','y','y_sim','error']:
                 export_data[lib_map[key]] = []
+            export_data['use'] = []
+            export_data['I_bulk'] = []
+            export_data['potential'] = []
             for each in self.model.data:
                 if each.use:
                     for key in ['x','h','k','y','y_sim','error']:
@@ -720,9 +725,22 @@ class MyMainWindow(QMainWindow):
                             export_data[lib_map[key]] = np.append(export_data[lib_map[key]], getattr(each,key))
                         elif key in keys_extra:
                             export_data[lib_map[key]] = np.append(export_data[lib_map[key]], each.extra_data[key])
+                    export_data['use'] = np.append(export_data['use'],[True]*len(each.x))
+                else:
+                    for key in ['x','h','k','y','y_sim','error']:
+                        if key in keys_attri:
+                            if key=='y_sim':
+                                export_data[lib_map[key]] = np.append(export_data[lib_map[key]], [0]*len(getattr(each,'x')))
+                            else:
+                                export_data[lib_map[key]] = np.append(export_data[lib_map[key]], getattr(each,key))
+                        elif key in keys_extra:
+                            export_data[lib_map[key]] = np.append(export_data[lib_map[key]], each.extra_data[key])
+                    export_data['use'] = np.append(export_data['use'],[False]*len(each.x))
+                export_data['potential'] = np.append(export_data['potential'],[float(potential)]*len(each.x))
+                export_data['I_bulk'] = np.append(export_data['I_bulk'],self.model.script_module.sample.calc_f_ideal(each.extra_data['h'], each.extra_data['k'], each.x))
             df_export_data = pd.DataFrame(export_data)
             writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
-            df_export_data.to_excel(writer_temp, columns =[lib_map[each_] for each_ in ['x','h','k','y','y_sim','error']])
+            df_export_data.to_excel(writer_temp, columns =['potential']+[lib_map[each_] for each_ in ['x','h','k','y','y_sim','error']]+['I_bulk','use'])
             writer_temp.save()
             #self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
 

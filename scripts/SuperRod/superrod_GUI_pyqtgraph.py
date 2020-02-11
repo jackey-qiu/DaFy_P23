@@ -73,6 +73,7 @@ class MyMainWindow(QMainWindow):
         self.stop = False
         self.show_checkBox_list = []
         self.domain_tag = 1
+        self.data_profiles = []
         #set fom_func
         #self.fom_func = chi2bars_2
         #parameters
@@ -203,16 +204,23 @@ class MyMainWindow(QMainWindow):
 
     #do this after model is loaded, so that you know len(data)
     def update_plot_dimension(self, columns = 2):
-        total_datasets = len(self.model.data)
-        # rows = int((total_datasets-total_datasets%columns)/columns+1)
+        self.widget_data.clear()
+        self.widget_data.ci.currentRow = 0
+        self.widget_data.ci.currentCol = 0
+
         self.data_profiles = []
+        total_datasets = len(self.model.data)
+        #current list of ax handle
+        # ax_list_now = list(range(len(self.data_profiles)))
         for i in range(total_datasets):
-            hk_label = '{}{}L'.format(str(int(self.model.data[i].extra_data['h'][0])),str(int(self.model.data[i].extra_data['k'][0])))
-            if (i%columns)==0 and (i!=0):
-                self.widget_data.nextRow()
-                self.data_profiles.append(self.widget_data.addPlot(title=hk_label))
-            else:
-                self.data_profiles.append(self.widget_data.addPlot(title=hk_label))
+            # if i not in ax_list_now:
+            if 1:
+                hk_label = '{}{}L'.format(str(int(self.model.data[i].extra_data['h'][0])),str(int(self.model.data[i].extra_data['k'][0])))
+                if (i%columns)==0 and (i!=0):
+                    self.widget_data.nextRow()
+                    self.data_profiles.append(self.widget_data.addPlot(title=hk_label))
+                else:
+                    self.data_profiles.append(self.widget_data.addPlot(title=hk_label))
 
     def setup_plot(self):
         self.fom_evolution_profile = self.widget_fom.addPlot()
@@ -516,7 +524,16 @@ class MyMainWindow(QMainWindow):
         # self.stop_timer_structure_view()
 
     def load_data(self, loader = 'ctr'):
+        self._empty_data_pool()
         exec('self.load_data_{}()'.format(loader))
+
+    def append_data(self):
+        self.load_data_ctr()
+
+    def _empty_data_pool(self):
+        #now empty the data pool
+        self.model.data.items = [data.DataSet(name='Data 0')]
+        self.model.data._counter = 1
 
     def load_data_ctr(self):
         #8 columns in total
@@ -524,9 +541,12 @@ class MyMainWindow(QMainWindow):
         #for CTR data, X column is L column, Y column all 0
         #for RAXR data, X column is energy column, Y column is L column
         # self.data = data.DataList()
+        #self.model.compiled = False
+        self.model.compiled = False
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","csv Files (*.csv);;data Files (*.dat);txt Files (*.txt)", options=options)
+        current_data_set_name = [self.tableWidget_data.item(i,0).text() for i in range(self.tableWidget_data.rowCount())]
         if fileName:
             with open(fileName,'r') as f:
                 data_loaded = np.loadtxt(f,comments = '#',delimiter=None)
@@ -539,9 +559,13 @@ class MyMainWindow(QMainWindow):
                 hk_unique.sort()
                 h_unique = [each[0] for each in hk_unique]
                 k_unique = [each[1] for each in hk_unique]
+
                 for i in range(len(h_unique)):
                     h_temp, k_temp = h_unique[i], k_unique[i]
                     name = 'Data-{}{}L'.format(h_temp, k_temp)
+                    tag = sum([int(name in each) for each in current_data_set_name])+1
+                    #if name in current_data_set_name:
+                    name = name + '_{}'.format(tag)
                     self.model.data.add_new(name = name)
                     self.model.data.items[-1].x = data_loaded_pd[(data_loaded_pd['h']==h_temp) & (data_loaded_pd['k']==k_temp)]['X'].to_numpy()
                     self.model.data.items[-1].y = data_loaded_pd[(data_loaded_pd['h']==h_temp) & (data_loaded_pd['k']==k_temp)]['I'].to_numpy()
@@ -575,6 +599,7 @@ class MyMainWindow(QMainWindow):
         #update the view
         self.update_table_widget_data()
         self.update_combo_box_dataset()
+        self.update_plot_dimension()
         self.update_plot_data_view()
 
     def update_table_widget_data(self):
@@ -697,10 +722,6 @@ class MyMainWindow(QMainWindow):
     def stop_timer_structure_view(self):
         self.timer_update_structure.stop()
 
-
-    def append_data(self):
-        pass
-
     def delete_data(self):
         pass
 
@@ -744,7 +765,6 @@ class MyMainWindow(QMainWindow):
             df_export_data.to_excel(writer_temp, columns =['potential']+[lib_map[each_] for each_ in ['x','h','k','y','y_sim','error']]+['I_bulk','use'])
             writer_temp.save()
             #self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
-
 
     def calculate(self):
         pass

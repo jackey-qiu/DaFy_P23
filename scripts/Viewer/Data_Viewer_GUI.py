@@ -385,7 +385,9 @@ class MyMainWindow(QMainWindow):
             setattr(self,'plot_axis_plot_set{}'.format(i+1),self.mplwidget.canvas.figure.add_subplot(plot_dim[0], plot_dim[1],i+1))
             current_hk = self.hk_list[i]
             current_minimum = 0
+            offset_list = self.lineEdit_ctr_offset.text().rstrip().rsplit('+')[i]
             for each_potential in self.potentials:
+                offset = float(offset_list.rstrip().rsplit(',')[self.potentials.index(each_potential)])
                 index_ = (self.data['potential']==each_potential)&(self.data['H']==current_hk[0])&(self.data['K']==current_hk[1])
                 if len(index_)==0:
                     index_ = (self.data['potential']==each_potential)&(self.data['H']==current_hk[1])&(self.data['K']==current_hk[0])
@@ -395,25 +397,35 @@ class MyMainWindow(QMainWindow):
                 y_ideal = self.data[index_]['I_bulk']
                 if each_potential == self.potentials[0]:
                     current_minimum = np.min(y_ideal)
-                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal,color ='k',linestyle =':', label = 'Unrelaxed structure')
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal,color ='k',linestyle ='--', label = 'Unrelaxed structure')
                 else:
                     pass
                 error = self.data[index_]['error']
                 use = list(self.data[index_]['use'])[0]
-                fmt = self.lineEdit_fmt.text().rstrip().rsplit(';')[self.potentials.index(each_potential)]
-                #np.min(y_ideal)
-                scale_factor = 5*current_minimum/np.min(y_data)
-                getattr(self,'plot_axis_plot_set{}'.format(i+1)).scatter(x,y_data*scale_factor,s = 5, marker = 'o',c='blue', label = 'Data '+str(each_potential)+'V w.r.t Ag/AgCl')
-                if use:
-                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_model*scale_factor,color ='r',linestyle ='-', label = 'Fit '+str(each_potential)+'V w.r.t Ag/AgCl')
+                fmt = self.lineEdit_fmt.text().rstrip().rsplit(',')[self.potentials.index(each_potential)]
                 
-                getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_ylabel('Intensity')
-                getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_xlabel('L')
+                #np.min(y_ideal)
+                scale_factor = offset*current_minimum/np.min(y_data)
+                
+                if use:
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_model*scale_factor,fmt, label = 'Fit '+str(each_potential)+'V w.r.t Ag/AgCl')
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).scatter(x,y_data*scale_factor,s = 5, marker = 'o',c=fmt[-1], label = None)
+                else:
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).scatter(x,y_data*scale_factor,s = 5, marker = 'o',c=fmt[-1], label = 'Data'+str(each_potential)+'V w.r.t Ag/AgCl')
+                if i in [0,2]:
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_ylabel('F',fontsize=15)
+                if i in [2,3]:
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_xlabel('L(r.l.u)',fontsize=15)
                 getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_title('{}{}L'.format(*current_hk))
                 getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_yscale('log')
-                getattr(self,'plot_axis_plot_set{}'.format(i+1)).legend()
+                if i in [0,1]:
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).legend()
                 getattr(self,'plot_axis_plot_set{}'.format(i+1)).autoscale()
-                current_minimum = 5*current_minimum
+                
+                #current_minimum = offset*current_minimum
+                current_minimum = offset*current_minimum
+        plt.tight_layout()
+
 
 
     def plot_figure_ctr(self):

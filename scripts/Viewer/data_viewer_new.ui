@@ -274,7 +274,7 @@
          <item>
           <widget class="QLineEdit" name="lineEdit_fmt">
            <property name="text">
-            <string>[*r;*b]+[*r;*b]</string>
+            <string>-r,-m,-g</string>
            </property>
           </widget>
          </item>
@@ -297,6 +297,26 @@
           </widget>
          </item>
         </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_15">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>CTR model plot offset</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEdit_ctr_offset">
+         <property name="text">
+          <string>1.5,2,2   +    1.5,2,2   +      2,4,2     +        1,5,5</string>
+         </property>
+        </widget>
        </item>
        <item>
         <layout class="QFormLayout" name="formLayout_3">

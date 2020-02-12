@@ -384,20 +384,23 @@ class MyMainWindow(QMainWindow):
         for i in range(len(self.hk_list)):
             setattr(self,'plot_axis_plot_set{}'.format(i+1),self.mplwidget.canvas.figure.add_subplot(plot_dim[0], plot_dim[1],i+1))
             current_hk = self.hk_list[i]
-            current_minimum = 0
+            current_maximum = 0
             offset_list = self.lineEdit_ctr_offset.text().rstrip().rsplit('+')[i]
             for each_potential in self.potentials:
-                offset = float(offset_list.rstrip().rsplit(',')[self.potentials.index(each_potential)])
+                #current_offset = float(offset_list.rstrip().rsplit(',')[self.potentials.index(each_potential)])
+                offset = np.multiply.accumulate([float(each) for each in offset_list.rstrip().rsplit(',')])[self.potentials.index(each_potential)]
                 index_ = (self.data['potential']==each_potential)&(self.data['H']==current_hk[0])&(self.data['K']==current_hk[1])
                 if len(index_)==0:
                     index_ = (self.data['potential']==each_potential)&(self.data['H']==current_hk[1])&(self.data['K']==current_hk[0])
                 x = self.data[index_]['L']
                 y_data=self.data[index_]['I']
                 y_model = self.data[index_]['I_model']
-                y_ideal = self.data[index_]['I_bulk']
+                y_ideal = np.array(self.data[index_]['I_bulk'])
+                
                 if each_potential == self.potentials[0]:
-                    current_minimum = np.min(y_ideal)
-                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal,color ='k',linestyle ='--', label = 'Unrelaxed structure')
+                    # current_minimum = np.min(y_ideal)
+                    current_maximum = np.max(y_ideal)
+                    # getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal,color ='k',linestyle ='--', label = 'Unrelaxed structure')
                 else:
                     pass
                 error = self.data[index_]['error']
@@ -405,7 +408,12 @@ class MyMainWindow(QMainWindow):
                 fmt = self.lineEdit_fmt.text().rstrip().rsplit(',')[self.potentials.index(each_potential)]
                 
                 #np.min(y_ideal)
-                scale_factor = offset*current_minimum/np.min(y_data)
+                # scale_factor = offset*current_minimum/np.min(y_data)
+                scale_factor = offset*current_maximum/np.max(y_ideal)
+                if each_potential == self.potentials[0]:
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal*scale_factor,color ='k',linestyle ='--', label = 'Unrelaxed structure')
+                else:
+                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal*scale_factor,color ='k',linestyle ='--', label = None)
                 
                 if use:
                     getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_model*scale_factor,fmt, label = 'Fit '+str(each_potential)+'V w.r.t Ag/AgCl')
@@ -423,7 +431,7 @@ class MyMainWindow(QMainWindow):
                 getattr(self,'plot_axis_plot_set{}'.format(i+1)).autoscale()
                 
                 #current_minimum = offset*current_minimum
-                current_minimum = offset*current_minimum
+                #current_minimum = offset*current_minimum
         plt.tight_layout()
 
 

@@ -328,9 +328,6 @@ class MyMainWindow(QMainWindow):
             _ = QMessageBox.question(self, 'Runtime error message', str(e), QMessageBox.Ok)
 
 
-    def update_plot(self):
-        pass
-
     def init_new_model(self):
         reply = QMessageBox.question(self, 'Message', 'Would you like to save the current model first?', QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
@@ -783,7 +780,10 @@ class MyMainWindow(QMainWindow):
                             export_data[lib_map[key]] = np.append(export_data[lib_map[key]], each.extra_data[key])
                     export_data['use'] = np.append(export_data['use'],[False]*len(each.x))
                 export_data['potential'] = np.append(export_data['potential'],[float(potential)]*len(each.x))
-                export_data['I_bulk'] = np.append(export_data['I_bulk'],self.model.script_module.sample.calc_f_ideal(each.extra_data['h'], each.extra_data['k'], each.x))
+                beta = self.model.script_module.rgh.beta
+                #rough = (1-beta)/((1-beta)**2 + 4*beta*np.sin(np.pi*(each.x-each.extra_data['LB'])/each.extra_data['dL'])**2)**0.5
+                rough = 1
+                export_data['I_bulk'] = np.append(export_data['I_bulk'],rough**2*np.array(self.model.script_module.sample.calc_f_ideal(each.extra_data['h'], each.extra_data['k'], each.x)**2))
             df_export_data = pd.DataFrame(export_data)
             writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
             df_export_data.to_excel(writer_temp, columns =['potential']+[lib_map[each_] for each_ in ['x','h','k','y','y_sim','error']]+['I_bulk','use'])

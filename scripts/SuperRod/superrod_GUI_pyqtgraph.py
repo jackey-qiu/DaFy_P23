@@ -34,7 +34,7 @@ matplotlib.use("Qt5Agg")
 import pyqtgraph as pg
 import pyqtgraph.exporters
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QCheckBox, QRadioButton, QTableWidgetItem, QHeaderView, QAbstractItemView
+from PyQt5.QtWidgets import QCheckBox, QRadioButton, QTableWidgetItem, QHeaderView, QAbstractItemView, QInputDialog
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QTransform, QFont, QBrush, QColor, QIcon
 from pyqtgraph.Qt import QtGui
@@ -154,6 +154,7 @@ class MyMainWindow(QMainWindow):
         #table view for parameters set to selecting row basis
         # self.tableWidget_pars.itemChanged.connect(self.update_par_upon_change)
         self.tableWidget_pars.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tableWidget_data.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.timer_save_data = QtCore.QTimer(self)
         self.timer_save_data.timeout.connect(self.save_model)
         self.timer_update_structure = QtCore.QTimer(self)
@@ -331,7 +332,17 @@ class MyMainWindow(QMainWindow):
         pass
 
     def init_new_model(self):
-        pass
+        reply = QMessageBox.question(self, 'Message', 'Would you like to save the current model first?', QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        if reply == QMessageBox.Yes:
+            self.save_model()
+        self.model = model.Model()
+        self.run_fit.solver.model = self.model
+        self.tableWidget_data.setRowCount(0)
+        self.tableWidget_pars.setRowCount(0)
+        self.plainTextEdit_script.setPlainText('')
+        self.comboBox_dataset.clear()
+        self.tabelWidget_data_view.setRowCount(0)
+        self.update_plot_data_view()
 
     def open_model(self):
         options = QFileDialog.Options()
@@ -602,6 +613,19 @@ class MyMainWindow(QMainWindow):
         self.update_plot_dimension()
         self.update_plot_data_view()
 
+    def delete_data(self):
+        self.model.compiled = False
+        # Delete the selected mytable lines
+        row_index = [each.row() for each in self.tableWidget_data.selectionModel().selectedRows()]
+        row_index = sorted(row_index, reverse=True)
+        for each in row_index:
+            self.model.data.delete_item(each)
+        #self._deleteRows(self.tableWidget_data.selectionModel().selectedRows(), self.tableWidget_data)
+        self.update_table_widget_data()
+        self.update_combo_box_dataset()
+        self.update_plot_dimension()
+        self.update_plot_data_view()
+
     def update_table_widget_data(self):
         self.tableWidget_data.clear()
         self.tableWidget_data.setRowCount(len(self.model.data))
@@ -722,13 +746,13 @@ class MyMainWindow(QMainWindow):
     def stop_timer_structure_view(self):
         self.timer_update_structure.stop()
 
-    def delete_data(self):
-        pass
 
     #save data plus best fit profile
     def save_data(self):
-        potential = input('The potential corresponding to this dataset is:')
-
+        #potential = input('The potential corresponding to this dataset is:')
+        potential, done = QInputDialog.getDouble(self, 'Potential_info', 'Enter the potential for this dataset (in V):')
+        if not done:
+            potential = None
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "model file (*.*)")
         if path!="":
             keys_attri = ['x','y','y_sim','error']
@@ -765,9 +789,6 @@ class MyMainWindow(QMainWindow):
             df_export_data.to_excel(writer_temp, columns =['potential']+[lib_map[each_] for each_ in ['x','h','k','y','y_sim','error']]+['I_bulk','use'])
             writer_temp.save()
             #self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
-
-    def calculate(self):
-        pass
 
     #not implemented!
     def change_plot_style(self):

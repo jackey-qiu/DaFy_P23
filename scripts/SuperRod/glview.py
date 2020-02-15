@@ -124,19 +124,25 @@ class GLViewWidget_cum(gl.GLViewWidget):
         self.opts['distance'] = 25
         self.opts['fov'] = 60
 
-    def draw_chemical_bond(self,v1, v2, mesh_item = None):
+    def draw_chemical_bond(self,v1, v2, color = (1,0,0,0.8),mesh_item = None):
         dist = np.linalg.norm(np.array(v1)-np.array(v2))
         c = np.dot([0,0,1],v2-v1)/np.linalg.norm(v2-v1)
         ang = np.arccos(np.clip(c,-1,1))/np.pi*180
         vec_norm = np.cross([0,0,1],v2-v1)
         md = gl.MeshData.cylinder(rows=10, cols=20, radius=[0.25,0.25],length = dist)
         if mesh_item == None:
-            mesh_item = gl.GLMeshItem(meshdata=md, smooth=True,color=(1, 0, 0, 0.8), shader='shaded', glOptions='opaque')
+            mesh_item = gl.GLMeshItem(meshdata=md, smooth=True,color=color, shader='shaded', glOptions='opaque')
         else:
             mesh_item.setMeshData(meshdata = md)
         mesh_item.rotate(ang,*vec_norm)
         mesh_item.translate(*v1)
         return mesh_item
+
+    def draw_two_chemical_bonds(self,v1, v2, colors = [(1,0,0,0.8),(1,0,0,0.8)], mesh_items = [None,None]):
+        v12 = (np.array(v1)+np.array(v2))/2
+        item1 = self.draw_chemical_bond(v1,v12,colors[0],mesh_items[0])
+        item2 = self.draw_chemical_bond(v12,v2,colors[1],mesh_items[1]) 
+        return item1, item2
 
     def show_structure(self, xyz, bond_index= None, a = 3.615, grid_num = 15):
         # self.setCameraPosition(distance=55, azimuth=-90)
@@ -177,7 +183,10 @@ class GLViewWidget_cum(gl.GLViewWidget):
                 for each_bond_index in bond_index:
                     v1 = np.array(xyz[each_bond_index[0]][1:])
                     v2 = np.array(xyz[each_bond_index[1]][1:])
-                    self.addItem(self.draw_chemical_bond(v1,v2))
+                    color1= color_to_rgb(color_lib[xyz[each_bond_index[0]][0].upper()])
+                    color2= color_to_rgb(color_lib[xyz[each_bond_index[1]][0].upper()])
+                    items = self.draw_two_chemical_bonds(v1, v2, [color1,color2])
+                    [self.addItem(item) for item in items]
 
         else:
             for each in xyz:
@@ -190,10 +199,14 @@ class GLViewWidget_cum(gl.GLViewWidget):
             if bond_index!=None:
                 for each_bond_index in bond_index:
                     self.items[ii+grid_num].resetTransform()
+                    self.items[ii+grid_num+1].resetTransform()
                     v1 = np.array(xyz[each_bond_index[0]][1:])
                     v2 = np.array(xyz[each_bond_index[1]][1:])
-                    self.items[ii+grid_num] = self.draw_chemical_bond(v1,v2,self.items[ii+grid_num])
-                    ii +=1
+                    color1= color_to_rgb(color_lib[xyz[each_bond_index[0]][0].upper()])
+                    color2= color_to_rgb(color_lib[xyz[each_bond_index[1]][0].upper()])
+                    items = self.draw_two_chemical_bonds(v1, v2, [color1,color2],[self.items[ii+grid_num],self.items[ii+grid_num+1]])
+                    self.items[ii+grid_num], self.items[ii+grid_num+1]= items
+                    ii +=2
         self.setProjection()
 
     def update_structure(self, xyz, bond_index= None, grid_number=15):
@@ -207,11 +220,15 @@ class GLViewWidget_cum(gl.GLViewWidget):
             ii=1
             for each_bond_index in bond_index:
                 self.items[ii+i+grid_number].resetTransform()
+                self.items[ii+i+grid_number+1].resetTransform()
                 v1 = np.array(xyz[each_bond_index[0]][1:])
                 v2 = np.array(xyz[each_bond_index[1]][1:])
-                self.items[ii+i+grid_number] = self.draw_chemical_bond(v1,v2,self.items[ii+i+grid_number])
+                color1= color_to_rgb(color_lib[xyz[each_bond_index[0]][0].upper()])
+                color2= color_to_rgb(color_lib[xyz[each_bond_index[1]][0].upper()])
+                items = self.draw_two_chemical_bonds(v1, v2, [color1,color2],[self.items[ii+i+grid_number],self.items[ii+i+grid_number+1]])
+                self.items[ii+i+grid_number],self.items[ii+i+grid_number+1] = items
                 # self.items[ii+i+grid_number].scale(0.3,0.3,0.3)
-                ii +=1
+                ii +=2
 
     def setup_view(self):
         self.setCameraPosition(distance=15, azimuth=-90)

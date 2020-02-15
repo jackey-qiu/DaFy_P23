@@ -124,7 +124,19 @@ class GLViewWidget_cum(gl.GLViewWidget):
         self.opts['distance'] = 25
         self.opts['fov'] = 60
 
-    def show_structure(self, xyz, a = 3.615, grid_num = 15):
+    def draw_chemical_bond(self,v1, v2, mesh_item = None):
+        dist = np.linalg.norm(np.array(v1)-np.array(v2))
+        c = np.dot([0,0,1],v2-v1)/np.linalg.norm(v2-v1)
+        ang = np.arccos(np.clip(c,-1,1))/np.pi*180
+        vec_norm = np.cross([0,0,1],v2-v1)
+        md = gl.MeshData.cylinder(rows=10, cols=20, radius=[0.25,0.25],length = dist)
+        if mesh_item == None:
+            mesh_item = gl.GLMeshItem(meshdata=md, smooth=True, shader='viewNormalColor', glOptions='opaque')
+        mesh_item.rotate(ang,*vec_norm)
+        mesh_item.translate(*v1)
+        return mesh_item
+
+    def show_structure(self, xyz, bond_index= None, a = 3.615, grid_num = 15):
         # self.setCameraPosition(distance=55, azimuth=-90)
         # self.setCameraPosition(azimuth=0)
         # self.setProjection()
@@ -159,6 +171,12 @@ class GLViewWidget_cum(gl.GLViewWidget):
                 m1.translate(x, y, z)
                 m1.scale(0.5, 0.5, 0.5)
                 self.addItem(m1)
+            if bond_index!=None:
+                for each_bond_index in bond_index:
+                    v1 = np.array(xyz[each_bond_index[0]][1:])
+                    v2 = np.array(xyz[each_bond_index[1]][1:])
+                    self.addItem(self.draw_chemical_bond(v1,v2))
+
         else:
             for each in xyz:
                 _,x,y,z = each
@@ -167,15 +185,31 @@ class GLViewWidget_cum(gl.GLViewWidget):
                 self.items[ii+grid_num].translate(x,y,z)
                 self.items[ii+grid_num].scale(0.5, 0.5, 0.5)
                 ii += 1
+            if bond_index!=None:
+                for each_bond_index in bond_index:
+                    self.items[ii+grid_num].resetTransform()
+                    v1 = np.array(xyz[each_bond_index[0]][1:])
+                    v2 = np.array(xyz[each_bond_index[1]][1:])
+                    _ = self.draw_chemical_bond(v1,v2,self.items[ii+grid_num])
+                    ii +=1
         self.setProjection()
 
-    def update_structure(self, xyz,grid_number=15):
+    def update_structure(self, xyz, bond_index= None, grid_number=15):
         for i in range(len(xyz)):
             _,x,y,z = xyz[i]
             #first item is grid net
             self.items[i+grid_number].resetTransform()
             self.items[i+grid_number].translate(x,y,z)
             self.items[i+grid_number].scale(0.5, 0.5, 0.5)
+        if bond_index!=None:
+            ii=1
+            for each_bond_index in bond_index:
+                self.items[ii+i+grid_number].resetTransform()
+                v1 = np.array(xyz[each_bond_index[0]][1:])
+                v2 = np.array(xyz[each_bond_index[1]][1:])
+                _ = self.draw_chemical_bond(v1,v2,self.items[ii+i+grid_number])
+                # self.items[ii+i+grid_number].scale(0.3,0.3,0.3)
+                ii +=1
 
     def setup_view(self):
         self.setCameraPosition(distance=15, azimuth=-90)

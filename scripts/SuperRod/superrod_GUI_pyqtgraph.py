@@ -711,8 +711,8 @@ class MyMainWindow(QMainWindow):
         self.widget_edp.show_structure(xyz)
         self.update_camera_position(widget_name = 'widget_edp', angle_type="azimuth", angle=0)
         self.update_camera_position(widget_name = 'widget_edp', angle_type = 'elevation', angle = 0)
-        xyz = self.model.script_module.sample.extract_xyz_top(domain_tag)
-        self.widget_msv_top.show_structure(xyz)
+        xyz,bond_index = self.model.script_module.sample.extract_xyz_top(domain_tag)
+        self.widget_msv_top.show_structure(xyz,bond_index)
         self.update_camera_position(widget_name = 'widget_msv_top', angle_type="azimuth", angle=0)
         self.update_camera_position(widget_name = 'widget_msv_top', angle_type = 'elevation', angle = 90)
 
@@ -727,8 +727,8 @@ class MyMainWindow(QMainWindow):
             # print(size_domain,domain_tag)
             xyz = self.model.script_module.sample.extract_xyz(domain_tag)
             self.widget_edp.update_structure(xyz)
-            xyz = self.model.script_module.sample.extract_xyz_top(domain_tag)
-            self.widget_msv_top.update_structure(xyz)
+            xyz, bond_index = self.model.script_module.sample.extract_xyz_top(domain_tag)
+            self.widget_msv_top.update_structure(xyz, bond_index)
         except Exception as e:
             outp = StringIO()
             traceback.print_exc(200, outp)

@@ -29,6 +29,7 @@ class CarbonOxygenMotif(object):
             for each_index in flat_down_index:
                 self.delta_list[each_index] = 0
                 self.ids_flat_down.append(self.ids[each_index])
+        self.bond_index=[]
         #self.set_coordinate_all()
         
     def set_coordinate_all(self, r_list = None, delta_list = None, gamma_list = None, new_anchor_list = None):
@@ -45,6 +46,17 @@ class CarbonOxygenMotif(object):
             new_anchor_list = [None]*len(self.gamma_list)
         else:
             assert len(new_anchor_list) == len(self.gamma_list), 'Dimensions of new_anchor_list must match!'
+
+        self.bond_index = []
+        for i in range(len(new_anchor_list)):
+            each = new_anchor_list[i]
+            current_id = self.ids[i]
+            domain_id = list(self.domain.id)
+            if each==None:
+                self.bond_index.append((domain_id.index(current_id),domain_id.index(self.anchor_id)))
+            else:
+                self.bond_index.append((domain_id.index(current_id),domain_id.index(each)))
+        self.domain.bond_index = self.bond_index
 
         #make sure the anchor atom to be calculated first
         #new_anchor_id_unique = []

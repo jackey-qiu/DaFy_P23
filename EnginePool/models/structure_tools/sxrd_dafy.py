@@ -318,6 +318,8 @@ class Sample:
     def extract_xyz_top(self, which_domain = 0):
         xyz_list = []
         which_key = list(self.domain.keys())[which_domain]
+        bond_index = []
+        number_items_slab = 0
         for key in self.domain.keys():
             #print(key)
             if key == which_key:
@@ -333,6 +335,8 @@ class Sample:
                             xyz_list.append((el, x, y, z))
                     else:
                         pass
+                number_items_slab = len(xyz_list)
+                bond_index = self.domain[key]['sorbate'].bond_index
                 for i in range(len(self.domain[key]['sorbate'].id)):
                     el = self.domain[key]['sorbate'].el[i]
                     x_, y_, z_ = self._extract_coord(self.domain[key]['sorbate'], self.domain[key]['sorbate'].id[i])*np.array([self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]) 
@@ -343,7 +347,8 @@ class Sample:
                         xyz_list.append((el, x, y, z))
             else:
                 pass
-        return xyz_list
+        bond_index = [np.array(each) + number_items_slab for each in bond_index]
+        return xyz_list, bond_index
 
     def inter_atom_distance_report(self, which_domain = 0, atm_id = None, max_distance = 3):
         x_list, y_list, z_list, el_list, atm_id_list, tag_list = [],[],[],[],[],[]

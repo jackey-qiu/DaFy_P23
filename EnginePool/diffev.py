@@ -3,11 +3,11 @@ for fitting.
 Programmed by: Matts Bjorck
 Last changed: 2008 11 23
 '''
-MPI_RUN=False
 try:
     from mpi4py import MPI#cautions:this line could be buggy when you have mpi4py installed on your computer
 except:
     MPI_RUN=False
+MPI_RUN=False
 from numpy import *
 import _thread as thread
 import time
@@ -33,18 +33,11 @@ if not MPI_RUN:
     try:
         import multiprocessing as processing
         __parallel_loaded__ = True
-        _cpu_count = processing.cpu_count
+        _cpu_count = processing.cpu_count()
     except:
-        try:
-            import processing
-            __parallel_loaded__ = True
-            _cpu_count = processing.cpuCount()
-        except:
-            #print 'processing not installed no parallel processing possible'
-            pass
+        pass
 
-
-import model
+# import model
 
 from Simplex import Simplex
 
@@ -101,7 +94,7 @@ class DiffEv:
         # evaluations
         self.fom_allowed_dis = 1e-10
         # Flag if we should use parallel processing
-        self.use_parallel_processing = __parallel_loaded__*0
+        self.use_parallel_processing = __parallel_loaded__
         if __parallel_loaded__:
             self.processes = _cpu_count
         else:
@@ -325,10 +318,14 @@ class DiffEv:
 
         Makes the eval_fom function
         '''
+        # MPI_RUN = False
+        # self.use_parallel_processing = True
+        # self.__parallel_loaded__ = True
         if not MPI_RUN:
             # Setting up for parallel processing
             if self.use_parallel_processing and __parallel_loaded__:
                 self.text_output('Setting up a pool of workers ...')
+                print('Setting up a pool of workers ...')
                 self.setup_parallel()
                 self.eval_fom = self.calc_trial_fom_parallel
             else:
@@ -445,6 +442,8 @@ class DiffEv:
         algorithm. Note that this method does not run in a separate thread.
         For threading use start_fit, stop_fit and resume_fit instead.
         '''
+        # global model
+        # self.model = model
         if not MPI_RUN:
             self.text_output('Calculating start FOM ...')
             self.running = True
@@ -493,6 +492,8 @@ class DiffEv:
                 # Create the vectors who will be compared to the
                 # population vectors
                 [self.create_trial(index) for index in range(self.n_pop)]
+                # global model
+                # self.model = model
                 #print(self.trial_vec[0])
                 self.eval_fom()
                 # Calculate the fom of the trial vectors and update the population
@@ -511,7 +512,7 @@ class DiffEv:
                 # print(self.fom_log)
                 # Let the model calculate the simulation of the best.
                 sim_fom = self.calc_sim(self.best_vec)
-
+                # print(sim_fom)
                 # Sanity of the model does the simualtions fom agree with
                 # the best fom
                 if abs(sim_fom - self.best_fom) > self.fom_allowed_dis:
@@ -736,9 +737,14 @@ class DiffEv:
         setup for parallel proccesing. Creates a pool of workers with
         as many cpus there is available
         '''
+        # self.pool = processing.Pool(processes = self.processes,\
+                        # initializer = parallel_init,\
+                        # initargs = (self.model.pickable_copy(), ))
         self.pool = processing.Pool(processes = self.processes,\
                         initializer = parallel_init,\
-                        initargs = (self.model.pickable_copy(), ))
+                        initargs = (self.model,))
+
+        print(self.processes,"Processors!")
         self.text_output("Starting a pool with %i workers ..."%\
                             (self.processes, ))
         time.sleep(1.0)
@@ -797,8 +803,9 @@ class DiffEv:
 
         Function to calculate the fom in parallel using the pool
         '''
-        self.trial_fom = self.pool.map(parallel_calc_fom, self.trial_vec,\
-                        chunksize = self.chunksize)
+        self.trial_fom = self.pool.map(parallel_calc_fom, self.trial_vec)
+        self.n_fom += len(self.trial_vec) 
+        # print("chunksize", self.chunksize)
 
     def calc_error_bar(self, index, fom_level):
         '''calc_error_bar(self, parameter) --> (error_bar_low, error_bar_high)
@@ -1381,10 +1388,13 @@ def parallel_calc_fom(vec):
     global model, par_funcs
     #print 'Trying to set parameters'
     # set the parameter values in the model
-    map(lambda func, value:func(value), par_funcs, vec)
+    # map(lambda func, value:func(value), par_funcs, vec)
+    for i in range(len(par_funcs)):
+        par_funcs[i](vec[i])
     #print 'Trying to evaluate'
     # evaluate the model and calculate the fom
     fom = model.evaluate_fit_func()
+    #print("now",vec,fom,'\n')
 
     return fom
 

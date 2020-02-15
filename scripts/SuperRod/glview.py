@@ -131,7 +131,9 @@ class GLViewWidget_cum(gl.GLViewWidget):
         vec_norm = np.cross([0,0,1],v2-v1)
         md = gl.MeshData.cylinder(rows=10, cols=20, radius=[0.25,0.25],length = dist)
         if mesh_item == None:
-            mesh_item = gl.GLMeshItem(meshdata=md, smooth=True, shader='viewNormalColor', glOptions='opaque')
+            mesh_item = gl.GLMeshItem(meshdata=md, smooth=True,color=(1, 0, 0, 0.8), shader='shaded', glOptions='opaque')
+        else:
+            mesh_item.setMeshData(meshdata = md)
         mesh_item.rotate(ang,*vec_norm)
         mesh_item.translate(*v1)
         return mesh_item
@@ -190,7 +192,7 @@ class GLViewWidget_cum(gl.GLViewWidget):
                     self.items[ii+grid_num].resetTransform()
                     v1 = np.array(xyz[each_bond_index[0]][1:])
                     v2 = np.array(xyz[each_bond_index[1]][1:])
-                    _ = self.draw_chemical_bond(v1,v2,self.items[ii+grid_num])
+                    self.items[ii+grid_num] = self.draw_chemical_bond(v1,v2,self.items[ii+grid_num])
                     ii +=1
         self.setProjection()
 
@@ -207,7 +209,7 @@ class GLViewWidget_cum(gl.GLViewWidget):
                 self.items[ii+i+grid_number].resetTransform()
                 v1 = np.array(xyz[each_bond_index[0]][1:])
                 v2 = np.array(xyz[each_bond_index[1]][1:])
-                _ = self.draw_chemical_bond(v1,v2,self.items[ii+i+grid_number])
+                self.items[ii+i+grid_number] = self.draw_chemical_bond(v1,v2,self.items[ii+i+grid_number])
                 # self.items[ii+i+grid_number].scale(0.3,0.3,0.3)
                 ii +=1
 

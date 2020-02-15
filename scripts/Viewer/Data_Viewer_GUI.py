@@ -39,7 +39,7 @@ class MyMainWindow(QMainWindow):
         plt.rcParams.update({'axes.labelsize': 10})
         plt.rc('font',size = 10)
         plt.rcParams['axes.linewidth'] = 1.5
-        plt.rcParams['axes.grid'] = True
+        plt.rcParams['axes.grid'] = False
         plt.rcParams['xtick.major.size'] = 6
         plt.rcParams['xtick.major.width'] = 2
         plt.rcParams['xtick.minor.size'] = 4
@@ -410,28 +410,21 @@ class MyMainWindow(QMainWindow):
                 #np.min(y_ideal)
                 # scale_factor = offset*current_minimum/np.min(y_data)
                 scale_factor = offset*current_maximum/np.max(y_ideal)
-                if each_potential == self.potentials[0]:
-                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal*scale_factor,color ='k',linestyle ='--', label = 'Unrelaxed structure')
-                else:
-                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal*scale_factor,color ='k',linestyle ='--', label = None)
-                
+                #if each_potential == self.potentials[0]:
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_ideal*scale_factor,color ='0.5',linestyle ='-', label = [None,'Unrelaxed structure'][int(each_potential == self.potentials[0])])
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).scatter(x,y_data*scale_factor,s = 8, marker = 'o',c=fmt[-1], label = ['Data'+str(each_potential)+'V w.r.t Ag/AgCl',None][int(use)])
                 if use:
                     getattr(self,'plot_axis_plot_set{}'.format(i+1)).plot(x,y_model*scale_factor,fmt, label = 'Fit '+str(each_potential)+'V w.r.t Ag/AgCl')
-                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).scatter(x,y_data*scale_factor,s = 5, marker = 'o',c=fmt[-1], label = None)
-                else:
-                    getattr(self,'plot_axis_plot_set{}'.format(i+1)).scatter(x,y_data*scale_factor,s = 5, marker = 'o',c=fmt[-1], label = 'Data'+str(each_potential)+'V w.r.t Ag/AgCl')
                 if i in [0,2]:
                     getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_ylabel('F',fontsize=15)
                 if i in [2,3]:
                     getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_xlabel('L(r.l.u)',fontsize=15)
                 getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_title('{}{}L'.format(*current_hk))
                 getattr(self,'plot_axis_plot_set{}'.format(i+1)).set_yscale('log')
-                if i in [0,1]:
+                if i in [0,2]:#manually set this accordingly
                     getattr(self,'plot_axis_plot_set{}'.format(i+1)).legend()
                 getattr(self,'plot_axis_plot_set{}'.format(i+1)).autoscale()
-                
-                #current_minimum = offset*current_minimum
-                #current_minimum = offset*current_minimum
+                getattr(self,'plot_axis_plot_set{}'.format(i+1)).tick_params(axis='both',which='major',labelsize = 14)
         plt.tight_layout()
 
 

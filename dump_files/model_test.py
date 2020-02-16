@@ -228,4 +228,4 @@ def Sim(data,VARS=VARS):
         print("It took "+str(t_3-t_2)+" seconds to calculate structure factor")
 
     #you may play with the weighting rule by setting eg 2**bv, 5**bv for the wt factor, that way you are pushing the GenX to find a fit btween a good fit (low wt factor) and a reasonable fit (high wt factor)
-    return F,1+1*bv,fom_scaler
+    return F,1+1*sample.bond_distance_constraint(which_domain=0, max_distance =2.2)+sample.bond_distance_constraint(which_domain=1, max_distance =2.2),fom_scaler

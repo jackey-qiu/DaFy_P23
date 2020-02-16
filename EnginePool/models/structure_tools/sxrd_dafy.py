@@ -350,6 +350,40 @@ class Sample:
         bond_index = [np.array(each) + number_items_slab for each in bond_index]
         return xyz_list, bond_index
 
+    def bond_distance_constraint(self, which_domain = 0, atm_id = None, max_distance = 2.2, p_factor = 100):
+        x_list, y_list, z_list, el_list, atm_id_list, tag_list = [],[],[],[],[],[]
+        xyz_substrate = []
+        xyz_sorbate = []
+        which_key = list(self.domain.keys())[which_domain]
+        for key in self.domain.keys():
+            #print(key)
+            if key == which_key:
+                z_list_temp = np.array(self.domain[key]['slab'].z) + self.domain[key]['slab'].dz1 + self.domain[key]['slab'].dz2 + self.domain[key]['slab'].dz3 + self.domain[key]['slab'].dz4
+                z_max = z_list_temp.max()*self.unit_cell.c
+                for i in range(len(self.domain[key]['slab'].id)):
+                    el = self.domain[key]['slab'].el[i]
+                    x_, y_, z_ = self._extract_coord(self.domain[key]['slab'], self.domain[key]['slab'].id[i])*np.array([self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]) 
+                    if z_ == z_max:
+                        translation_offsets = [np.array([0,0,0]),np.array([1,0,0]),np.array([-1,0,0]),np.array([0,1,0]),np.array([0,-1,0]),np.array([1,-1,0]),np.array([-1,1,0]),np.array([1,1,0]),np.array([-1,-1,0])]
+                        for each in translation_offsets:
+                            x, y, z = np.array([x_, y_, z_]) + each * [self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]
+                            xyz_substrate.append([x,y,z])
+                    else:
+                        pass
+                for i in range(len(self.domain[key]['sorbate'].id)):
+                    x_, y_, z_ = self._extract_coord(self.domain[key]['sorbate'], self.domain[key]['sorbate'].id[i])*np.array([self.unit_cell.a, self.unit_cell.b,self.unit_cell.c]) 
+                    xyz_sorbate.append([x_,y_,z_])
+            else:
+                pass
+        for each in xyz_sorbate:
+            for i in range(len(xyz_substrate)):
+                temp_dist = distance.euclidean(each, xyz_substrate[i])
+                if temp_dist<max_distance:
+                    return p_factor
+                else:
+                    pass
+        return 1
+
     def inter_atom_distance_report(self, which_domain = 0, atm_id = None, max_distance = 3):
         x_list, y_list, z_list, el_list, atm_id_list, tag_list = [],[],[],[],[],[]
         which_key = list(self.domain.keys())[which_domain]

@@ -295,9 +295,6 @@ class SolverController(QtCore.QObject):
             solver.model.parameters.data[index_for_update[i]][1] = best_vec[i]
 
         #self.parent.update_par()
-        
-        
-        
     
     def ModelLoaded(self):
         '''ModelLoaded(self) --> None

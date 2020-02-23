@@ -170,6 +170,7 @@ class Sample:
         self.delta2=surface_parms['delta2']
         self.domain=slabs
         self.coherence=coherence
+        self.fb ={}
 
     def set_bulk_slab(self, bulk_slab):
         '''Set the bulk unit cell to bulk_slab
@@ -2691,31 +2692,37 @@ class Sample:
     def calc_fb(self, h, k, l):
         '''Calculate the structure factors from the bulk
         '''
-        dinv = self.unit_cell.abs_hkl(h, k, l)
-        x, y, z, el, u, oc, c = self.bulk_slab._extract_values()
-        oc = oc/float(len(self.bulk_sym))
-        f = self._get_f(el, dinv)
-        # Calculate the "shape factor" for the CTRs
-        eff_thick = self.unit_cell.c/np.sin(self.inst.alpha*np.pi/180.0)
-        alpha = (2.82e-5*self.inst.wavel*eff_thick/self.unit_cell.vol()*
-                                              np.sum(f.imag,1))
-        #change mark 1,l was changed to zeta
-        denom = 1.0-np.exp(-2.0*np.pi*1.0J*(self.delta1*h+self.delta2*k+l))*np.exp(-alpha)
-        # Delta functions to remove finite size effect in hk plane
-        delta_funcs=(abs(h - np.round(h)) < 1e-12)*(
-            abs(k - np.round(k)) < 1e-12)
-        # Sum up the uc struct factors
-        f_u = np.sum(oc*f*np.exp(-2*np.pi**2*u**2*dinv[:, np.newaxis]**2)*
-                     np.sum([np.exp(2.0*np.pi*1.0J*(
-                            h[:,np.newaxis]*sym_op.trans_x(x, y) +
-                            k[:,np.newaxis]*sym_op.trans_y(x, y) +
-                            l[:,np.newaxis]*z [np.newaxis, :]))
-                     for sym_op in self.bulk_sym], 0)
-                    ,1)
-        # Putting it all togheter
-        fb = f_u/denom*delta_funcs
-
-        return fb
+        key = (int(h[0]),int(k[0]),len(l))
+        fb = None
+        if key not in self.fb:
+            dinv = self.unit_cell.abs_hkl(h, k, l)
+            x, y, z, el, u, oc, c = self.bulk_slab._extract_values()
+            oc = oc/float(len(self.bulk_sym))
+            f = self._get_f(el, dinv)
+            # Calculate the "shape factor" for the CTRs
+            eff_thick = self.unit_cell.c/np.sin(self.inst.alpha*np.pi/180.0)
+            alpha = (2.82e-5*self.inst.wavel*eff_thick/self.unit_cell.vol()*
+                                                np.sum(f.imag,1))
+            #change mark 1,l was changed to zeta
+            denom = 1.0-np.exp(-2.0*np.pi*1.0J*(self.delta1*h+self.delta2*k+l))*np.exp(-alpha)
+            # Delta functions to remove finite size effect in hk plane
+            delta_funcs=(abs(h - np.round(h)) < 1e-12)*(
+                abs(k - np.round(k)) < 1e-12)
+            # Sum up the uc struct factors
+            f_u = np.sum(oc*f*np.exp(-2*np.pi**2*u**2*dinv[:, np.newaxis]**2)*
+                        np.sum([np.exp(2.0*np.pi*1.0J*(
+                                h[:,np.newaxis]*sym_op.trans_x(x, y) +
+                                k[:,np.newaxis]*sym_op.trans_y(x, y) +
+                                l[:,np.newaxis]*z [np.newaxis, :]))
+                        for sym_op in self.bulk_sym], 0)
+                        ,1)
+            # Putting it all togheter
+            fb = f_u/denom*delta_funcs
+            self.fb[key] = fb
+            return fb
+        else:
+            return self.fb[key]
+        #return fb
 
     def calc_rhos(self, x, y, z, sb = 0.8):
         '''Calcualte the electron density of the unitcell

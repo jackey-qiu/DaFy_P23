@@ -737,12 +737,12 @@ class DiffEv:
         setup for parallel proccesing. Creates a pool of workers with
         as many cpus there is available
         '''
-        # self.pool = processing.Pool(processes = self.processes,\
-                        # initializer = parallel_init,\
-                        # initargs = (self.model.pickable_copy(), ))
         self.pool = processing.Pool(processes = self.processes,\
                         initializer = parallel_init,\
-                        initargs = (self.model,))
+                        initargs = (self.model.pickable_copy(), ))
+        #self.pool = processing.Pool(processes = self.processes,\
+        #                initializer = parallel_init,\
+        #                initargs = (self.model,))
 
         print(self.processes,"Processors!")
         self.text_output("Starting a pool with %i workers ..."%\

@@ -33,6 +33,29 @@ import matplotlib.pyplot as pyplot
 if (sys.version_info > (3, 0)):
     raw_input = input
 
+def locate_tag(lines, tag='wavelength'):
+    target_zone_begin = None
+    target_zone_end = None
+    for i in range(len(lines)):
+        line = lines[i]
+        if line.startswith('#/{}/begin#'.format(tag)):
+            target_zone_begin = i+1
+        elif line.startswith('#/{}/end#'.format(tag)):
+            target_zone_end = i
+            break
+    return target_zone_begin, target_zone_end
+
+def apply_modification_of_code_block(lines, tag, vars_labels = [], vars_values = []):
+    target_begin, target_end = locate_tag(lines, tag)
+    for i in range(target_begin, target_end):
+        for var in vars_labels:
+            if var in lines[i]:
+                lines[i] = '{} = {}\n'.format(var, vars_values[vars_labels.index(var)])
+    return lines
+    
+
+
+
 def show_status_bar(img_loader, column_size_offset = 22):
     finish_percent = (img_loader.frame_number+1)/float(img_loader.total_frame_number)
     column_size = int(get_console_size()[0])-column_size_offset

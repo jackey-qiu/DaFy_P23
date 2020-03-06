@@ -10,6 +10,12 @@ def cal_azimuth_from_hkl(h,k,l, E=25.4, c=3.615):
     else:
         B = 90
     return np.arccos(cosA)/np.pi*180-B
+    # return np.arccos(cosA)/np.pi*180
+
+def cal_2theta_from_l(l, E = 25.4, c=3.615):
+    wl = E*0.019217594
+    sin2theta = wl*l/c
+    return np.arcsin(sin2theta)/np.pi*180
 
 def find_limits_for_l(h,k, E=25.4, c=3.615):
     ls=np.arange(0.1,6,0.01)
@@ -32,6 +38,6 @@ if __name__ == '__main__':
     for each in hks:
         print(each)
         max_angle,max_l = find_limits_for_l(each[0],each[1],E,c)
-        print('{}{}L rod, maximum l={} reached at azimuth angle of{}'.format(each[0],each[1],max_l,max_angle))
+        print('{}{}L rod, maximum l={} reached at azimuth angle of{}, and 2theta angle of {}'.format(each[0],each[1],max_l,max_angle, cal_2theta_from_l(max_l, E, c)))
 
 

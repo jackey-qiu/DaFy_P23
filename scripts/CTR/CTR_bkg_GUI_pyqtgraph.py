@@ -86,7 +86,7 @@ class MyMainWindow(QMainWindow):
 
         #self.setup_image()
         self.timer_save_data = QtCore.QTimer(self)
-        self.timer_save_data.timeout.connect(self.save_data)
+        # self.timer_save_data.timeout.connect(self.save_data)
         
     #to fold or unfold the config file editor
     def fold_or_unfold(self):
@@ -376,7 +376,7 @@ class MyMainWindow(QMainWindow):
         if fileName:
             self.lineEdit.setText(fileName)
             #self.app_ctr.run(self.lineEdit.text())
-            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            #self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
             #self.current_image_no = 0
             #self.current_scan_number = self.app_ctr.img_loader.scan_number
             #self.plot_()
@@ -403,7 +403,23 @@ class MyMainWindow(QMainWindow):
             self.statusbar.showMessage('Initialization failed!')
 
     def launch_file(self):
-        self.save_file()  
+        self.save_file()
+        self.timer_save_data.timeout.connect(self.save_data)
+        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+
+        self.app_ctr.run(self.lineEdit.text())
+        self.update_poly_order(init_step=True)
+        self.update_cost_func(init_step=True)
+        if self.launch.text()=='Launch':
+            self.setup_image()
+        else:
+            pass
+        self.timer_save_data.stop()
+        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+        self.plot_()
+        self.launch.setText("Relaunch")
+        self.statusbar.showMessage('Initialization succeed!')
+
         try:
             self.app_ctr.run(self.lineEdit.text())
             self.update_poly_order(init_step=True)

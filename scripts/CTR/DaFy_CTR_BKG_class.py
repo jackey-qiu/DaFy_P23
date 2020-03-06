@@ -101,7 +101,7 @@ class run_app(object):
             #img = img/self.bkg_clip_image
             if hasattr(self,'current_scan_number'):
                 if self.current_scan_number!=self.img_loader.scan_number:
-                    self.save_data_file(self.data_path)
+                    # self.save_data_file(self.data_path)
                     self.current_scan_number = self.img_loader.scan_number
             else:
                 setattr(self,'current_scan_number',self.img_loader.scan_number)
@@ -122,21 +122,15 @@ class run_app(object):
         self.data['bkg'][-1] = bkg_intensity
 
     def save_data_file(self,path):
-        if hasattr(self,'writer'):
+        #update path for saving data
+        if path == self.data_path:
             pass
         else:
-            try:
-                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
-            except:
-                df_temp = pd.DataFrame({})
-                writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
-                df_temp.to_excel(writer_temp)
-                writer_temp.save()
-                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
-        df = pd.DataFrame(self.data)
-        #df.to_excel(path)
-        df.to_excel(self.writer,sheet_name='CTR_data',columns = self.data_keys)
-        self.writer.save()
+            self.data_path = path
+        self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='w')
+        with self.writer as writer:
+            pd.DataFrame(self.data).to_excel(writer,sheet_name='CTR_data',columns = self.data_keys)
+            writer.save()
 
 if __name__ == "__main__":
     run_app()

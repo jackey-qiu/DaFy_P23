@@ -11,6 +11,22 @@ def qsi_correction(data_path='M:\\fwog\\members\\qiu05\\mica\\nQc_zr_mica_CTR_Ma
     np.savetxt(data_path.replace('.dat','_Q_corrected.dat'),data,fmt='%.5e')
     return True
 
+def format_hkl(h_,k_,x_):
+    new_h,new_k,new_x=[],[],[]
+    if np.around(h_[0],0) in [1,2,3] and np.around(k_[0],0)==0:
+        for iii in range(len(x_)):
+            if x_[iii]>0:
+                new_h.append(-h_[iii])
+                new_k.append(-k_[iii])
+                new_x.append(-x_[iii])
+            else:
+                new_h.append(h_[iii])
+                new_k.append(k_[iii])
+                new_x.append(x_[iii])
+        return  np.array(new_h),np.array(new_k),np.array(new_x)
+    else:
+        return np.array(h_),np.array(k_),np.array(x_)
+
 def l_correction(data_path='P:\\apps\\genx_pc_qiu\\dump_files\\temp_full_dataset.dat',L_column=[0,3],I_column=4,correction_factor=0.3125,l_shift=0):
     data=np.loadtxt(data_path)
     raxr_first=None

@@ -32,6 +32,8 @@ from scipy import misc
 from ctr_corr import ctr_data
 import matplotlib.patches as patches
 import time
+from nexusformat.nexus import *
+
 if (sys.version_info > (3, 0)):
     raw_input = input
 
@@ -1235,6 +1237,12 @@ class background_subtraction_single_img_old():
             for each in config.items(section):
                 setattr(self,each[0], eval(each[1]))
 
+    def get_image_from_nexus_file(self, nexus_path = 'C:\\apps\\DaFy_P23\\data\\test.nx5', image_path = ['scan', 'data', 'counts_XSpectrumLambda'], image_number = 0):
+        data=nxload(nexus_path)
+        images = eval('.'.join(['data']+image_path))
+        img=np.array(images[image_number])
+        return img
+
     def integrate_one_image(self,img, peak_width=30, plot_live = False):
         self.img = img
         center_pix=self.center_pix
@@ -1266,6 +1274,12 @@ class background_subtraction_single_img_old():
         n=np.array(range(len(y)))
         ## Then, use BACKCOR to estimate the spectrum background
         #  Either you know which cost-function to use as well as the polynomial order and the threshold value or not.
+
+        fig,ax=pyplot.subplots()
+        ax.imshow(img)
+        rect = patches.Rectangle((x_min,y_min),x_span,y_span,linewidth=1,edgecolor='r',facecolor='none')
+        ax.add_patch(rect)
+        plt.show()
 
         # If you know the parameter, use this syntax:
         I_container=[]
@@ -1327,6 +1341,7 @@ class background_subtraction_single_img_old():
             plt.plot(n[index],y[index]-z[index],color="m",label="data-background")
             plt.plot(n[index],[0]*len(index),color='black')
             plt.legend()
+            plt.show()
             print ("When s=",s_container[index_best],'pow=',ord_cus_container[index_best],"integration sum is ",np.sum(y[index]-z[index]), " counts!")
         #return np.sum(y[index]-z[index]),abs(np.sum(z[index])),np.sum(y[index])**0.5+np.sum(y[index]-z[index])**0.5
         return I_container[index_best],FOM_container[index_best][1],Ierr_container[index_best],s_container[index_best],ord_cus_container[index_best],center_pix,peak_width,r_width,c_width

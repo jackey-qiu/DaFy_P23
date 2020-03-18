@@ -68,8 +68,9 @@ class MyMainWindow(QMainWindow):
         pg.mkQApp()
         uic.loadUi(os.path.join(DaFy_path,'scripts','SuperRod','superrod2.ui'),self)
         self.setWindowTitle('Data analysis factory: CTR data modeling')
-        self.setWindowIcon(QIcon(os.path.join(script_path,"DAFY.png")))
-        self.show()
+        icon = QIcon(os.path.join(script_path,"DAFY.png"))
+        self.setWindowIcon(icon)
+        # self.show()
         self.stop = False
         self.show_checkBox_list = []
         self.domain_tag = 1
@@ -1029,7 +1030,7 @@ if __name__ == "__main__":
     QApplication.setStyle("windows")
     app = QApplication(sys.argv)
     myWin = MyMainWindow()
-    myWin.setWindowIcon(QtGui.QIcon('dafy.PNG'))
+    myWin.setWindowIcon(QtGui.QIcon('DAFY.png'))
     hightlight = syntax_pars.PythonHighlighter(myWin.plainTextEdit_script.document())
     myWin.plainTextEdit_script.show()
     myWin.plainTextEdit_script.setPlainText(myWin.plainTextEdit_script.toPlainText())

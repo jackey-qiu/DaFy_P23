@@ -1,4 +1,4 @@
-import sys,os
+import sys,os,qdarkstyle
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
 from PyQt5 import uic
 import random
@@ -53,7 +53,7 @@ class MyMainWindow(QMainWindow):
         pg.setConfigOptions(imageAxisOrder='row-major')
         pg.mkQApp()
         #load ui script
-        uic.loadUi(os.path.join(DaFy_path,'scripts','XRV','XRV_bkg_pyqtgraph_new.ui'),self)
+        uic.loadUi(os.path.join(DaFy_path,'scripts','XRV','XRV_bkg_pyqtgraph_new2.ui'),self)
         self.setWindowTitle('Data analysis factory: XRV data analasis')
         self.app_ctr=run_app()
         self.current_image_no = 0
@@ -76,7 +76,7 @@ class MyMainWindow(QMainWindow):
         self.plot.clicked.connect(self.plot_figure)
         self.runstepwise.clicked.connect(self.plot_)
         self.pushButton_filePath.clicked.connect(self.locate_data_folder)
-        self.pushButton_fold_or_unfold.clicked.connect(self.fold_or_unfold)
+        # self.pushButton_fold_or_unfold.clicked.connect(self.fold_or_unfold)
         for each in self.groupBox_2.findChildren(QCheckBox):
             each.released.connect(self.update_poly_order)
         for each in self.groupBox_cost_func.findChildren(QRadioButton):
@@ -107,6 +107,7 @@ class MyMainWindow(QMainWindow):
     #fun to save data
     def save_data(self):
         data_file = os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text())
+        self.app_ctr.save_data_file(data_file)
         try:
             self.app_ctr.save_data_file(data_file)
             self.statusbar.showMessage('Data file is saved as {}!'.format(data_file))
@@ -371,9 +372,10 @@ class MyMainWindow(QMainWindow):
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","Config Files (*.ini)", os.path.join(DaFy_path,'scripts','XRV'),options = options)
         if fileName:
             self.lineEdit.setText(fileName)
-            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
-            with open(fileName,'r') as f:
-                self.textEdit.setText(f.read())
+            #self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            self.widget_config.update_parameter(fileName)
+            #with open(fileName,'r') as f:
+            #    self.textEdit.setText(f.read())
 
     def locate_data_folder(self):
         options = QFileDialog.Options()
@@ -383,7 +385,25 @@ class MyMainWindow(QMainWindow):
             self.lineEdit_data_file_path.setText(os.path.dirname(fileName))
 
     def launch_file(self):
-        self.save_file()  
+        self.save_file() 
+        #update the path to save data
+        data_file = os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text())
+        self.app_ctr.data_path = data_file
+        self.app_ctr.run(self.lineEdit.text())
+        self.update_poly_order(init_step=True)
+        self.update_cost_func(init_step=True)
+        if self.launch.text()=='Launch':
+            self.setup_image()
+            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000*60)
+        else:
+            pass
+            self.timer_save_data.stop()
+            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000*60)
+        #self.timer_save_data.stop()
+        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000*60)
+        self.plot_()
+        self.launch.setText("Relaunch")
+        self.statusbar.showMessage('Initialization succeed!') 
         try:
             self.app_ctr.run(self.lineEdit.text())
             self.update_poly_order(init_step=True)
@@ -408,12 +428,13 @@ class MyMainWindow(QMainWindow):
         self.statusbar.showMessage('Config file is saved as {}!'.format(path))
 
     def save_file(self):
-        text = self.textEdit.toPlainText()
-        if text=='':
+        # text = self.textEdit.toPlainText()
+        if self.lineEdit.text()=='':
             self.statusbar.showMessage('Text editor is empty. Config file is not saved!')
         else:
-            with open(self.lineEdit.text(), 'w') as f:
-                f.write(text)
+            #with open(self.lineEdit.text(), 'w') as f:
+            #    f.write(text)
+            self.widget_config.save_parameter(self.lineEdit.text())
             self.statusbar.showMessage('Config file is saved with the same file name!')
 
     def plot_figure(self):
@@ -492,5 +513,6 @@ if __name__ == "__main__":
     QApplication.setStyle("windows")
     app = QApplication(sys.argv)
     myWin = MyMainWindow()
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     myWin.show()
     sys.exit(app.exec_())

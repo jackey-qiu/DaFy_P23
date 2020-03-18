@@ -110,31 +110,19 @@ class run_app(object):
         self.data['bkg'][-1] = bkg_intensity
 
     def save_data_file(self, path):
-        if hasattr(self,'writer'):
-            pass
-        else:
-            try:
-                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
-            except:
-                df_temp = pd.DataFrame({})
-                writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
-                df_temp.to_excel(writer_temp)
-                writer_temp.save()
-                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
-
-        df = pd.DataFrame(self.data)
-        df.to_excel(self.writer,sheet_name='CV_XRD_data',columns =self.kwarg_global['data_keys'])
-        self.writer.save()
-        df.to_csv(path.replace('.xlsx','.csv'),index= False)
+        self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='w')
+        with self.writer as writer:
+            pd.DataFrame(self.data).to_excel(writer,sheet_name='CV_XRD_data',columns = self.kwarg_global['data_keys'])
+            writer.save()
         make_data_config_file(
                             DaFy_path = DaFy_path,
                             data_folder = os.path.join(DaFy_path,'data'),
-                            data = df,
+                            data = pd.DataFrame(self.data),
                             film_material_cif=self.kwarg_film['film_material_cif'],
                             hkls=self.kwarg_film['film_hkl_bragg_peak'],
                             pot_step = self.kwarg_peak_fit['pot_step_scan'],
-                            beamline=self.name,
-                            beamtime=self.beamtime,
+                            beamline=self.beamline,
+                            beamtime=self.beamtime_id,
                             kwarg = self.kwarg_data
                             )
 

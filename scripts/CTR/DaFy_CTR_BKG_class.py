@@ -68,8 +68,8 @@ class run_app(object):
             setattr(self,each,self.kwarg_global[each])
 
         #pars lib for everything else
-        self.kwarg_visulization = extract_vars_from_config(self.conf_file, section_var ='Visulization')
-        self.kwarg_data = extract_vars_from_config(self.conf_file, section_var ='Data_Storage')
+        #self.kwarg_visulization = extract_vars_from_config(self.conf_file, section_var ='Visulization')
+        #self.kwarg_data = extract_vars_from_config(self.conf_file, section_var ='Data_Storage')
         self.kwarg_image = extract_vars_from_config(self.conf_file, section_var = 'Image_Loader')
         self.kwarg_mask = extract_vars_from_config(self.conf_file,section_var = 'Mask')
 

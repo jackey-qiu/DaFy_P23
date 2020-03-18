@@ -1,4 +1,4 @@
-import sys,os
+import sys,os,qdarkstyle
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
 from PyQt5 import uic
 import random
@@ -36,7 +36,7 @@ class MyMainWindow(QMainWindow):
         super(MyMainWindow, self).__init__(parent)
         pg.setConfigOptions(imageAxisOrder='row-major')
         #pg.mkQApp()
-        uic.loadUi(os.path.join(DaFy_path,'scripts','PXRD','pxrd_pyqtgraph.ui'),self)
+        uic.loadUi(os.path.join(DaFy_path,'scripts','PXRD','pxrd_pyqtgraph_new.ui'),self)
         self.setWindowTitle('Data analysis factory: PXRD data analasis')
         self.app_ctr=run_app()
         #self.app_ctr.run()
@@ -71,7 +71,7 @@ class MyMainWindow(QMainWindow):
         #self.pushButton_remove_current_point.clicked.connect(self.remove_data_point)
         self.pushButton_remove_current_point.setEnabled(False)
         self.pushButton_remove_spike.clicked.connect(self.remove_spikes)
-        self.pushButton_fold_or_unfold.clicked.connect(self.fold_or_unfold)
+        #self.pushButton_fold_or_unfold.clicked.connect(self.fold_or_unfold)
         self.doubleSpinBox_ss_factor.valueChanged.connect(self.update_ss_factor)
         self.comboBox_p3.activated.connect(self.select_source_for_plot_p3)
         self.comboBox_p4.activated.connect(self.select_source_for_plot_p4)
@@ -84,7 +84,7 @@ class MyMainWindow(QMainWindow):
         setattr(self.app_ctr,'p5_data_source',self.comboBox_p5.currentText())
         #self.setup_image()
         self.timer_save_data = QtCore.QTimer(self)
-        self.timer_save_data.timeout.connect(self.save_data)
+        # self.timer_save_data.timeout.connect(self.save_data)
 
     #to fold or unfold the config file editor
     def fold_or_unfold(self):
@@ -384,8 +384,9 @@ class MyMainWindow(QMainWindow):
         if fileName:
             self.lineEdit.setText(fileName)
             #self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
-            with open(fileName,'r') as f:
-                self.textEdit.setText(f.read())
+            self.widget_config.update_parameter(fileName)
+            # with open(fileName,'r') as f:
+                # self.textEdit.setText(f.read())
 
     def locate_data_folder(self):
         options = QFileDialog.Options()
@@ -407,6 +408,23 @@ class MyMainWindow(QMainWindow):
 
     def launch_file(self):
         self.save_file()  
+        self.timer_save_data.timeout.connect(self.save_data)
+        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+        #update the path to save data
+        data_file = os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text())
+        self.app_ctr.data_path = data_file
+        self.app_ctr.run(self.lineEdit.text())
+        self.update_poly_order(init_step=True)
+        self.update_cost_func(init_step=True)
+        if self.launch.text()=='Launch':
+            self.setup_image()
+        else:
+            pass
+        self.timer_save_data.stop()
+        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+        self.plot_()
+        self.launch.setText("Relaunch")
+        self.statusbar.showMessage('Initialization succeed!')
         try:
             self.app_ctr.run(self.lineEdit.text())
             self.update_poly_order(init_step=True)
@@ -431,13 +449,18 @@ class MyMainWindow(QMainWindow):
         self.statusbar.showMessage('Config file is saved as {}!'.format(path))
 
     def save_file(self):
-        text = self.textEdit.toPlainText()
-        if text=='':
-            self.statusbar.showMessage('Text editor is empty. Config file is not saved!')
-        else:
-            with open(self.lineEdit.text(), 'w') as f:
-                f.write(text)
+        # text = self.textEdit.toPlainText()
+        # if text=='':
+            # self.statusbar.showMessage('Text editor is empty. Config file is not saved!')
+        # else:
+            # with open(self.lineEdit.text(), 'w') as f:
+                # f.write(text)
+            # self.statusbar.showMessage('Config file is saved with the same file name!')
+        if self.lineEdit.text()!='':
+            self.widget_config.save_parameter(self.lineEdit.text())
             self.statusbar.showMessage('Config file is saved with the same file name!')
+        else:
+            self.statusbar.showMessage('Failure to save Config file with the file name of {}!'.format(self.lineEdit.text()))
 
     def plot_figure(self):
         #auto plotting timmer
@@ -512,5 +535,6 @@ if __name__ == "__main__":
     QApplication.setStyle("windows")
     app = QApplication(sys.argv)
     myWin = MyMainWindow()
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     myWin.show()
     sys.exit(app.exec_())

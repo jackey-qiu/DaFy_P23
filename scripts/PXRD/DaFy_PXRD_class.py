@@ -68,11 +68,15 @@ class run_app(object):
             self.plot_pxrd = plot_pxrd_profile_time_scan
         else:
             self.plot_pxrd = plot_pxrd_profile
-
+        #set data to empty lib {}
+        self.data = {}
         #pars lib for everything else
         self.kwarg_image = extract_vars_from_config(self.conf_file, section_var = 'Image_Loader')
         self.kwarg_mask = extract_vars_from_config(self.conf_file,section_var = 'Mask')
-        self.kwarg_bkg = extract_vars_from_config(self.conf_file,section_var = 'Background_Subtraction')
+        try:
+            self.kwarg_bkg = extract_vars_from_config(self.conf_file,section_var = 'Background_Subtraction')
+        except:
+            self.kwarg_bkg = {"ord_cus_s":8, "ss":5, "ss_factor":0.08, "fct":"ah"}
         self.kwarg_peak_fit = extract_vars_from_config(self.conf_file,section_var = 'Peak_Fit')
 
         #recal clip_boundary and cen(you need to remove the edges)
@@ -363,17 +367,18 @@ class run_app(object):
         else:
             keys = ['2theta','intensity','intensity_without_bkg','potential','current']
         #print(keys)
-        if hasattr(self,'writer'):
-            pass
-        else:
-            try:
-                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
-            except:
-                df_temp = pd.DataFrame({})
-                writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
-                df_temp.to_excel(writer_temp)
-                writer_temp.save()
-                self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='a')
+        self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='w')
+        # if hasattr(self,'writer'):
+            # pass
+        # else:
+            # try:
+                # self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='w')
+            # except:
+                # df_temp = pd.DataFrame({})
+                # writer_temp = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))])
+                # df_temp.to_excel(writer_temp)
+                # writer_temp.save()
+                # self.writer = pd.ExcelWriter([path+'.xlsx',path][int(path.endswith('.xlsx'))],engine = 'openpyxl',mode ='w')
         #data = {key:self.data[self.img_loader.scan_number][key] for key in keys}
         if not one_sheet:
             data = {key:self.data[self.current_scan_number][key] for key in keys}

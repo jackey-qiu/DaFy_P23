@@ -422,6 +422,17 @@ def plot_bkg_fit_gui_pyqtgraph(ax_profile, ax_ctr, ax_pot,app_ctr):
     plot_index = [i for i in range(len(data['mask_ctr'])) if data['mask_ctr'][i]==True]
     imge_no = [data['image_no'][i] for i in plot_index]
     L_list = [data['L'][i] for i in plot_index]
+    offset_L = 0
+    L_list = []
+    for i in plot_index:
+        if i>0:
+            if data['L'][i]<data['L'][i-1]:
+                offset_L = data['L'][i-1]+offset_L
+            else:
+                pass
+        else:
+            pass
+        L_list.append(data['L'][i]+offset_L)
     potential = [data['potential'][i] for i in plot_index]
     current = [data['current'][i] for i in plot_index]
     peak_intensity = np.array([data['peak_intensity'][i] for i in plot_index])

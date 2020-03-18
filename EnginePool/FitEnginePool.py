@@ -733,16 +733,33 @@ class background_subtraction_single_img():
         self.x_span = None
         self.y_span = None
         self.fit_status = False
+        self.col_width_origin = 5
+        self.col_width = 5
+        self.row_width_origin = 10
+        self.row_width = 10
+        self.bkg_row_width = 10
+        self.bkg_col_width = 10
+        self.ord_cus_s = [1]
+        self.ss = [1]
+        self.ss_factor = 1
+        self.fct = 'atq'
+        self.peak_shift = 0
+        self.peak_width = 15
+        self.bkg_win_cen_offset_lr = 10
+        self.bkg_win_cen_offset_ud = 10
 
     def config_file_parser(self, config_file, sections):
         config = configparser.ConfigParser()
         config.read(config_file)
         for section in sections:
             for each in config.items(section):
-                setattr(self,each[0], eval(each[1]))
+                try:
+                    setattr(self,each[0], eval(each[1]))
+                except:
+                    setattr(self,each[0], each[1])
         #self.center_pix_origin = self.center_pix
-        self.col_width_origin = self.col_width
-        self.row_width_origin = self.row_width
+        # self.col_width_origin = self.col_width
+        # self.row_width_origin = self.row_width
 
     def update_center_pix_up_and_down(self,offset):
         offset = int(offset)

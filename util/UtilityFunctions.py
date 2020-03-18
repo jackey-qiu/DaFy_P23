@@ -167,7 +167,11 @@ def extract_vars_from_config(config_file, section_var):
     config.read(config_file)
     kwarg = {}
     for each in config.items(section_var):
-        kwarg[each[0]] = eval(each[1])
+        try:
+            kwarg[each[0]] = eval(each[1])
+        except:
+            kwarg[each[0]] = each[1]
+
     return kwarg
 
 def get_console_size():

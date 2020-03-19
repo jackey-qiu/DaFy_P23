@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1413</width>
-    <height>713</height>
+    <width>1440</width>
+    <height>830</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -633,7 +633,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1413</width>
+     <width>1440</width>
      <height>22</height>
     </rect>
    </property>
@@ -784,7 +784,13 @@
   <customwidget>
    <class>GraphicsLayoutWidget</class>
    <extends>QWidget</extends>
-   <header>pyqtgraph.h</header>
+   <header location="global">pyqtgraph.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SolverParameters</class>
+   <extends>QWidget</extends>
+   <header location="global">parameter_tree.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -796,12 +802,6 @@
    <class>GLViewWidget_cum</class>
    <extends>QWidget</extends>
    <header>glview.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>SolverParameters</class>
-   <extends>QWidget</extends>
-   <header location="global">parameter_tree.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

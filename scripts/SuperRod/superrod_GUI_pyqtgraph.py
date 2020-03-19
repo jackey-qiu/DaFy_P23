@@ -673,7 +673,12 @@ class MyMainWindow(QMainWindow):
             for j in range(len(all_labels)):
                 if all_labels[j] in column_labels_main:
                     # print(getattr(dataset,'x')[i])
-                    qtablewidget = QTableWidgetItem(str(getattr(dataset,all_labels[j])[i]))
+                    # qtablewidget = QTableWidgetItem(str(round(getattr(dataset,all_labels[j])[i],4)))
+                    item_ = getattr(dataset,all_labels[j])[i]
+                    if all_labels[j] == 'mask':
+                        qtablewidget = QTableWidgetItem(str(item_))
+                    else:
+                        qtablewidget = QTableWidgetItem(str(round(item_,4)))
                 elif all_labels[j] in extra_labels:
                     qtablewidget = QTableWidgetItem(str(dataset.get_extra_data(all_labels[j])[i]))
                 else:
@@ -917,7 +922,10 @@ class MyMainWindow(QMainWindow):
                         check_box.setChecked(item==True)
                         self.tableWidget_pars.setCellWidget(i,2,check_box)
                     else:
-                        qtablewidget = QTableWidgetItem(str(item))
+                        if j == 1:
+                            qtablewidget = QTableWidgetItem(str(round(item,5)))
+                        else:
+                            qtablewidget = QTableWidgetItem(str(item))
                         # qtablewidget.setTextAlignment(Qt.AlignCenter)
                         if j == 0:
                             qtablewidget.setFont(QFont('Times',10,QFont.Bold))

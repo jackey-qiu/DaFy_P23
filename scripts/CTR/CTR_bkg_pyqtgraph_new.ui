@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1260</width>
-    <height>1047</height>
+    <width>1440</width>
+    <height>830</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -308,7 +308,7 @@
           <item>
            <widget class="QLabel" name="label_8">
             <property name="text">
-             <string>  seconds</string>
+             <string>min</string>
             </property>
            </widget>
           </item>
@@ -1212,7 +1212,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1260</width>
+     <width>1440</width>
      <height>22</height>
     </rect>
    </property>
@@ -1300,7 +1300,7 @@
   <customwidget>
    <class>GraphicsLayoutWidget</class>
    <extends>QWidget</extends>
-   <header>pyqtgraph.h</header>
+   <header location="global">pyqtgraph.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>

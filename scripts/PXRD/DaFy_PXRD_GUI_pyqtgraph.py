@@ -409,7 +409,7 @@ class MyMainWindow(QMainWindow):
     def launch_file(self):
         self.save_file()  
         self.timer_save_data.timeout.connect(self.save_data)
-        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000*60)
         #update the path to save data
         data_file = os.path.join(self.lineEdit_data_file_path.text(),self.lineEdit_data_file_name.text())
         self.app_ctr.data_path = data_file
@@ -421,7 +421,7 @@ class MyMainWindow(QMainWindow):
         else:
             pass
         self.timer_save_data.stop()
-        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+        self.timer_save_data.start(self.spinBox_save_frequency.value()*1000*60)
         self.plot_()
         self.launch.setText("Relaunch")
         self.statusbar.showMessage('Initialization succeed!')
@@ -434,7 +434,7 @@ class MyMainWindow(QMainWindow):
             else:
                 pass
             self.timer_save_data.stop()
-            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000)
+            self.timer_save_data.start(self.spinBox_save_frequency.value()*1000*60)
             self.plot_()
             self.launch.setText("Relaunch")
             self.statusbar.showMessage('Initialization succeed!')

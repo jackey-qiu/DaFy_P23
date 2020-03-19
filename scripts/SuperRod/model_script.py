@@ -113,7 +113,7 @@ for i in range(num_surface_slabs):
     rgh_wt.new_var('wt_domain{}'.format(i+1),1)
 #/rgh/domain_weight/end#
 #/rgh/end#
-
+"C<-O->C<-O<-C
 #/atmgroup/begin#
 #/sorbate/begin#
 for i in range(num_sorbate_slabs):

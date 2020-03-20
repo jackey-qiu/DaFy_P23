@@ -85,6 +85,13 @@ for i in range(num_sorbate_slabs):
     globals()['{}{}'.format(sorbate_instance_head, i+1)].set_coordinate_all(gamma_list = gamma_list,delta_list = delta_list, r_list=r_list, new_anchor_list = new_anchor_list)
 #/sorbatecoordinates/end#
 
+#         C1
+#         |
+#      C2-O1-C3
+#         |
+#         C4
+# =================== 
+
 #--set rgh--#
 #/rgh/begin#
 
@@ -113,7 +120,7 @@ for i in range(num_surface_slabs):
     rgh_wt.new_var('wt_domain{}'.format(i+1),1)
 #/rgh/domain_weight/end#
 #/rgh/end#
-"C<-O->C<-O<-C
+
 #/atmgroup/begin#
 #/sorbate/begin#
 for i in range(num_sorbate_slabs):

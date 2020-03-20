@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import models.structure_tools.sxrd_dafy as model
 from models.utils import UserVars
 import models.sxrd_new1 as model
 import numpy as np
@@ -31,7 +32,58 @@ class CarbonOxygenMotif(object):
                 self.ids_flat_down.append(self.ids[each_index])
         self.bond_index=[]
         #self.set_coordinate_all()
+
+    @classmethod
+    def build_instance(cls,xyzu_oc_m = [0.5, 0.5, 1.5, 0.1, 1, 1], els = ['O','C','C','O'], flat_down_index = [2],anchor_index_list = [1, None, 1, 2 ], lat_pars = [3.615, 3.615, 3.615, 90, 90, 90]):
+        domain = model.Slab(T_factor = 'u')
+        ids_all = deepcopy(els)
+        for each in set(els):
+            index_temp_all = list(np.where(np.array(els) == each)[0])
+            for index_temp in index_temp_all:
+                ids_all[index_temp] = "{}{}".format(ids_all[index_temp], index_temp_all.index(index_temp)+1)
+        for i in range(len(ids_all)):
+            domain.add_atom(ids_all[i],els[i],*xyzu_oc_m)
+        ids = deepcopy(ids_all)
+        del(ids[anchor_index_list.index(None)])
+        anchor_id = ids_all[anchor_index_list.index(None)]
+        flat_down_index_new = [[i,i-1][int(i>anchor_index_list.index(None))] for i in flat_down_index]
+
+        r_list_names = []
+        gamma_list_names = []
+        delta_list_names = []
+        for i in range(len(anchor_index_list)):
+            each = anchor_index_list[i]
+            if each != None:
+                if i not in flat_down_index:
+                    delta_list_names.append("delta_{}_{}".format(ids_all[i],ids_all[each]))
+            if each != None:
+                r_list_names.append("r_{}_{}".format(ids_all[i],ids_all[each]))
+                gamma_list_names.append("gamma_{}_{}".format(ids_all[i],ids_all[each]))
+        rgh = UserVars()
+        rgh.new_var('gamma',0)
+        for r in r_list_names:
+            rgh.new_var(r, 1.5)
+        for delta in delta_list_names:
+            rgh.new_var(delta, 10)
+        #for gamma in gamma_list_names:
+        #    rgh.new_var(gamma, 10)
         
+        instance = cls(domain, ids, anchor_id, flat_down_index = flat_down_index_new, lat_pars = lat_pars)
+        instance.rgh = rgh
+        instance.r_list_names = r_list_names
+        instance.delta_list_names = delta_list_names
+        instance.gamma_list_names = gamma_list_names
+        instance.gamma_handedness = [1]*anchor_index_list.index(None)+[0]*(len(anchor_index_list)-anchor_index_list.index(None)-1)
+        instance.new_anchor_list = [ids_all[i] for i in anchor_index_list if i!=None]
+        return instance
+
+    def set_coordinate_all_rgh(self):
+        r_list = [getattr(self.rgh, each) for each in self.r_list_names]
+        delta_list = [getattr(self.rgh, each) for each in self.delta_list_names]
+        gamma_list = [self.rgh.gamma+360*each for each in self.gamma_handedness]
+        self.set_coordinate_all(r_list, delta_list, gamma_list, self.new_anchor_list)
+
+
     def set_coordinate_all(self, r_list = None, delta_list = None, gamma_list = None, new_anchor_list = None):
         if r_list!=None:
             assert len(r_list) == len(self.r_list), 'Dimensions of r_list must match!'

@@ -12,6 +12,51 @@ from copy import deepcopy
 from random import uniform
 # from coordinate_system import CoordinateSystem
 
+__all__ = ['OCCO','CCO', 'CO', 'CarbonOxygenMotif']
+
+#sorbate structure motifs
+##OCCO##
+structure_OCCO="""
+#       O1    O2
+#        \   /
+#        C1-C2
+#===================
+"""
+OCCO = {
+        "els_sorbate":['O','C','C', 'O'],
+        "anchor_index_list":[1, None, 1, 2 ],
+        "flat_down_index": [2],
+        "structure":structure_OCCO
+        }
+
+##CCO#
+structure_CCO="""
+#       C2
+#      /  \\
+#     C1   O1
+#====================
+"""
+CCO = {
+        "els_sorbate":['C','C', 'O'],
+        "anchor_index_list":[None, 0, 1 ],
+        "flat_down_index": [2],
+        "structure":structure_CCO
+        }
+
+##CO##
+structure_CO="""
+#        O1   
+#        |   
+#        C1
+#====================
+"""
+CO = {
+        "els_sorbate":['C','O'],
+        "anchor_index_list":[None, 0],
+        "flat_down_index": [],
+        "structure":structure_CO
+        }
+
 class CarbonOxygenMotif(object):
     def __init__(self, domain, ids, anchor_id, r = 2, delta =0, gamma = 0, flat_down_index = None, lat_pars = [3.615, 3.615, 3.615, 90, 90, 90]):
         self.domain = domain
@@ -153,6 +198,12 @@ class CarbonOxygenMotif(object):
         # y = self.domain.y[index]
         # z = self.domain.z[index]
         return np.array([x, y, z])
+
+    def make_atom_group(self):
+        atm_gp = model.AtomGroup()
+        for id in self.domain.id:
+            atm_gp.add_atom(self.domain, id)
+        return atm_gp
 
     def make_cif_file(self, save_file):
         with open(save_file,'w') as f:

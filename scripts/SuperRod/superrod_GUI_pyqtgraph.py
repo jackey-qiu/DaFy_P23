@@ -20,6 +20,8 @@ sys.path.append(os.path.join(DaFy_path,'EnginePool'))
 sys.path.append(os.path.join(DaFy_path,'FilterPool'))
 sys.path.append(os.path.join(DaFy_path,'util'))
 sys.path.append(os.path.join(DaFy_path,'scripts'))
+from UtilityFunctions import locate_tag
+from UtilityFunctions import apply_modification_of_code_block as script_block_modifier
 from models.structure_tools.sxrd_dafy import AtomGroup
 from models.utils import UserVars
 import diffev
@@ -39,6 +41,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QTransform, QFont, QBrush, QColor, QIcon
 from pyqtgraph.Qt import QtGui
 import syntax_pars
+from models.structure_tools import sorbate_tool
 # from chemlab.graphics.renderers import AtomRenderer
 # from chemlab.db import ChemlabDB
 
@@ -131,6 +134,7 @@ class MyMainWindow(QMainWindow):
         #pushbutton to load/save script
         self.pushButton_load_script.clicked.connect(self.load_script)
         self.pushButton_save_script.clicked.connect(self.save_script)
+        self.pushButton_modify_script.clicked.connect(self.modify_script)
         #pushbutton to load/save parameter file
         self.pushButton_load_table.clicked.connect(self.load_par)
         self.pushButton_save_table.clicked.connect(self.save_par)
@@ -826,6 +830,46 @@ class MyMainWindow(QMainWindow):
         path, _ = QFileDialog.getSaveFileName(self, "Save script file", "", "script file (*.py)")
         with open(path,'w') as f:
             f.write(self.model.script)
+
+    def modify_script(self):
+        assert self.model.script!="","No script to work on, please load script first!"
+        domain_num = int(self.lineEdit_domain_number.text().rstrip())
+        motif_chain = self.lineEdit_sorbate_motif.text().strip().rsplit(",")
+        #print(self.lineEdit_sorbate_motif.text().strip().rsplit(","))
+        #print(self.lineEdit_sorbate_motif.text().strip().rsplit(","))
+
+        assert domain_num == len(motif_chain), "Number of domain not match with the motif number. Fix it first!!"
+        lines = script_block_modifier(self.model.script.rsplit("\n"), 'slabnumber',["num_surface_slabs"],[domain_num])
+
+        els_sorbate = []
+        anchor_index_list = []
+        flat_down_index = []
+        xyzu_oc_m = []
+        structure = []
+        for each in motif_chain:
+            each = each.strip()
+            properties_temp = getattr(sorbate_tool,each)
+            for each_key in properties_temp:
+                if each_key == "els_sorbate":
+                    els_sorbate.append(properties_temp[each_key])
+                elif each_key == "anchor_index_list":
+                    anchor_index_list.append(properties_temp[each_key])
+                elif each_key == "flat_down_index":
+                    flat_down_index.append(properties_temp[each_key])
+                elif each_key == "structure":
+                    structure.append("#"+each+properties_temp[each_key])
+        xyzu_oc_m = [[0.5, 0.5, 1.5, 0.1, 1, 1]]*len(els_sorbate)
+        tag_list = ['els_sorbate', 'anchor_index_list', 'flat_down_index', 'xyzu_oc_m']
+        tag_value_list = [els_sorbate, anchor_index_list, flat_down_index, xyzu_oc_m]
+        lines = script_block_modifier(lines, 'sorbateproperties',tag_list, tag_value_list)
+        left_, right_ = locate_tag(lines,'sorbatestructure')
+        del(lines[left_:right_])
+        if structure[-1][-1] == "\n":
+            structure[-1] = structure[-1][0:-1]
+        lines.insert(left_,"\n".join(structure))
+
+        self.model.script = '\n'.join(lines)
+        self.plainTextEdit_script.setPlainText(self.model.script)
 
     def remove_selected_rows(self):
         # Delete the selected mytable lines

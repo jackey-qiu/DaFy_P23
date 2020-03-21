@@ -49,13 +49,10 @@ def apply_modification_of_code_block(lines, tag, vars_labels = [], vars_values =
     target_begin, target_end = locate_tag(lines, tag)
     for i in range(target_begin, target_end):
         for var in vars_labels:
-            if var in lines[i]:
-                lines[i] = '{} = {}\n'.format(var, vars_values[vars_labels.index(var)])
+            if lines[i].startswith(var):
+                lines[i] = '{} = {}'.format(var, vars_values[vars_labels.index(var)])
     return lines
     
-
-
-
 def show_status_bar(img_loader, column_size_offset = 22):
     finish_percent = (img_loader.frame_number+1)/float(img_loader.total_frame_number)
     column_size = int(get_console_size()[0])-column_size_offset

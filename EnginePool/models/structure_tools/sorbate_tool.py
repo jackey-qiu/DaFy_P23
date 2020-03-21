@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import models.structure_tools.sxrd_dafy as model
+import models.structure_tools.sxrd_dafy as model_2
 from models.utils import UserVars
 import models.sxrd_new1 as model
 import numpy as np
@@ -80,7 +80,7 @@ class CarbonOxygenMotif(object):
 
     @classmethod
     def build_instance(cls,xyzu_oc_m = [0.5, 0.5, 1.5, 0.1, 1, 1], els = ['O','C','C','O'], flat_down_index = [2],anchor_index_list = [1, None, 1, 2 ], lat_pars = [3.615, 3.615, 3.615, 90, 90, 90]):
-        domain = model.Slab(T_factor = 'u')
+        domain = model_2.Slab(T_factor = 'u')
         ids_all = deepcopy(els)
         for each in set(els):
             index_temp_all = list(np.where(np.array(els) == each)[0])
@@ -99,8 +99,8 @@ class CarbonOxygenMotif(object):
         for i in range(len(anchor_index_list)):
             each = anchor_index_list[i]
             if each != None:
-                if i not in flat_down_index:
-                    delta_list_names.append("delta_{}_{}".format(ids_all[i],ids_all[each]))
+                # if i not in flat_down_index:
+                delta_list_names.append("delta_{}_{}".format(ids_all[i],ids_all[each]))
             if each != None:
                 r_list_names.append("r_{}_{}".format(ids_all[i],ids_all[each]))
                 gamma_list_names.append("gamma_{}_{}".format(ids_all[i],ids_all[each]))
@@ -125,7 +125,7 @@ class CarbonOxygenMotif(object):
     def set_coordinate_all_rgh(self):
         r_list = [getattr(self.rgh, each) for each in self.r_list_names]
         delta_list = [getattr(self.rgh, each) for each in self.delta_list_names]
-        gamma_list = [self.rgh.gamma+360*each for each in self.gamma_handedness]
+        gamma_list = [self.rgh.gamma+180*each for each in self.gamma_handedness]
         self.set_coordinate_all(r_list, delta_list, gamma_list, self.new_anchor_list)
 
 
@@ -200,7 +200,7 @@ class CarbonOxygenMotif(object):
         return np.array([x, y, z])
 
     def make_atom_group(self):
-        atm_gp = model.AtomGroup()
+        atm_gp = model_2.AtomGroup()
         for id in self.domain.id:
             atm_gp.add_atom(self.domain, id)
         return atm_gp

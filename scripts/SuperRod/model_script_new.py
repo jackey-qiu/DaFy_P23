@@ -8,7 +8,6 @@ import dump_files.locate_path as output_path
 import models.domain_creator as domain_creator
 import accessory_functions.make_par_table.make_parameter_table_GenX_hematite_rcut as make_grid
 import accessory_functions.data_formating.formate_xyz_to_vtk as xyz
-import accessory_functions.format_data.format_hkl as format_hkl
 from copy import deepcopy
 import models.setup_domain_hematite_rcut as setup_domain_hematite_rcut
 from models.structure_tools import tool_box
@@ -17,7 +16,7 @@ from models.structure_tools import sorbate_tool
 #--global settings--#
 #/globalsetting/begin#
 #/path/begin#
-batch_path_head=batch_path.module_path_locator()
+batch_path_head=os.path.join(batch_path.module_path_locator(),'Cu100')
 output_file_path=output_path.module_path_locator()
 #/path/end#
 #/wavelength/begin#
@@ -27,20 +26,22 @@ wal=0.551
 num_surface_slabs = 2
 num_sorbate_slabs = num_surface_slabs
 #/slabnumber/end#
-#/expconstant/begin#
-re = 2.818e-5#electron radius
-kvect=2*np.pi/wal#k vector
-Egam = 6.626*(10**-34)*3*(10**8)/wal*10**10/1.602*10**19#energy in ev
-LAM=1.5233e-22*Egam**6 - 1.2061e-17*Egam**5 + 2.5484e-13*Egam**4 + 1.6593e-10*Egam**3 + 1.9332e-06*Egam**2 + 1.1043e-02*Egam
-exp_const = 4*kvect/LAM
-#/expconstant/end#
-#globalsetting/end#
 
 #--set unitcell--#
 #/unitcell/begin#
 lat_pars = [3.615, 3.615, 3.615, 90, 90, 90]
 unitcell = model.UnitCell(*lat_pars)
 #/unitcell/end#
+
+#/expconstant/begin#
+re = 2.818e-5#electron radius
+kvect=2*np.pi/wal#k vector
+Egam = 6.626*(10**-34)*3*(10**8)/wal*10**10/1.602*10**19#energy in ev
+LAM=1.5233e-22*Egam**6 - 1.2061e-17*Egam**5 + 2.5484e-13*Egam**4 + 1.6593e-10*Egam**3 + 1.9332e-06*Egam**2 + 1.1043e-02*Egam
+exp_const = 4*kvect/LAM
+auc=unitcell.a*unitcell.b*np.sin(unitcell.gamma)
+#/expconstant/end#
+#globalsetting/end#
 
 #--set instrument--#
 #/instrument/begin#
@@ -57,7 +58,7 @@ tool_box.add_atom_in_slab(bulk,os.path.join(batch_path_head,bulk_file))
 #--set surface slabs--#
 #/surfaceslab/begin#
 surface_slab_head = 'Cu100_surface_'
-use_same_tag = None
+use_same_tag = 1
 for i in range(num_surface_slabs):
     globals()['surface_{}'.format(i+1)] = model.Slab(c = 1.0)
     if use_same_tag == None:
@@ -70,13 +71,13 @@ for i in range(num_surface_slabs):
 #--set sorbate properties--#
 #/sorbateproperties/begin#
 sorbate_instance_head = 'CO2_'
-sorbate_rgh_head = 'rgh_co2_'
+sorbate_rgh_head = 'rgh_CO2_'
 els_sorbate = ['O']
 anchor_index_list = [[1, None, 1, 2 ],[1, None, 1, 2 ]]
 flat_down_index = [[2],[2]]
 xyzu_oc_m = [[0.5, 0.5, 1.5, 0.1, 1, 1],[0.5, 0.5, 1.5, 0.1, 1, 1]]
 for i in range(num_sorbate_slabs):
-    globals()['{}{}'.format(sorbate_instance_head, i+1)] = sorbate_tool.CarbonOxygenMotif.build_instance(xyzu_oc_m = xyzu_oc_m[i],els=eles_sorbate[i],flat_down_index = flat_down_index[i],anchor_index_list=anchor_index_list[i],lat_pars = lat_pars)
+    globals()['{}{}'.format(sorbate_instance_head, i+1)] = sorbate_tool.CarbonOxygenMotif.build_instance(xyzu_oc_m = xyzu_oc_m[i],els=els_sorbate[i],flat_down_index = flat_down_index[i],anchor_index_list=anchor_index_list[i],lat_pars = lat_pars)
     globals()['{}{}'.format(sorbate_instance_head, i+1)].set_coordinate_all_rgh()
     globals()['sorbate_{}'.format(i+1)] = globals()['{}{}'.format(sorbate_instance_head, i+1)].domain
     globals()['{}{}'.format(sorbate_rgh_head,i+1)] = globals()['{}{}'.format(sorbate_instance_head, i+1)].rgh
@@ -138,7 +139,7 @@ for i in range(num_surface_slabs):
     domains['domain{}'.format(i+1)] = {}
     domains['domain{}'.format(i+1)]['slab'] = globals()['surface_{}'.format(i+1)]
     domains['domain{}'.format(i+1)]['sorbate'] = globals()['sorbate_{}'.format(i+1)]
-    domains['domain{}'.format(i+1)]['wt'] = globals()['rgh_wt']['wt_domain{}'.format(i+1)]
+    domains['domain{}'.format(i+1)]['wt'] = getattr(globals()['rgh_wt'],'wt_domain{}'.format(i+1))
     domains['domain{}'.format(i+1)]['sorbate_sym'] = globals()['sorbate_syms_{}'.format(i+1)]
 sample = model.Sample(inst, bulk, domains, unitcell)
 #/sample/end#
@@ -167,19 +168,19 @@ def Sim(data,VARS=vars()):
 
     for data_set in data:
         f=np.array([])
-        h = data_set.extra_data['h']
-        k = data_set.extra_data['k']
-        x = data_set.x
-        y = data_set.extra_data['Y']
-        LB = data_set.extra_data['LB']
-        dL = data_set.extra_data['dL']
+        h = data_set.extra_data['h'][data_set.mask]
+        k = data_set.extra_data['k'][data_set.mask]
+        x = data_set.x[data_set.mask]
+        y = data_set.extra_data['Y'][data_set.mask]
+        LB = data_set.extra_data['LB'][data_set.mask]
+        dL = data_set.extra_data['dL'][data_set.mask]
 
         if data_set.use:
             if data_set.x[0]>100:#doing RAXR calculation(x is energy column typically in magnitude of 10000 ev)
                 #not yet implemented
                 pass
             else:
-                h,k,x=format_hkl(h,k,x)
+                #h,k,x=format_hkl(h,k,x)
                 rough = (1-beta)/((1-beta)**2 + 4*beta*np.sin(np.pi*(x-LB)/dL)**2)**0.5#roughness model, double check LB and dL values are correctly set up in data file
                 if h[0]==0 and k[0]==0:#consider layered water only for specular rod if existent
                     q=np.pi*2*unitcell.abs_hkl(h,k,x)
@@ -195,5 +196,5 @@ def Sim(data,VARS=vars()):
             fom_scaler.append(1)
 
     #you may play with the weighting rule by setting eg 2**bv, 5**bv for the wt factor, that way you are pushing the GenX to find a fit btween a good fit (low wt factor) and a reasonable fit (high wt factor)
-    panelty_factor = [sample.bond_distance_constraint(which_domain=i, max_distance =2.2) for i in num_surface_slabs]
-    return F,1+panelty_factor,fom_scaler
+    panelty_factor = [sample.bond_distance_constraint(which_domain=i, max_distance =2.2) for i in range(num_surface_slabs)]
+    return F,1+sum(panelty_factor),fom_scaler

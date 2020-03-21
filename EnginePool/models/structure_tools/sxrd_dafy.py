@@ -3391,7 +3391,7 @@ class AtomGroup:
         '''Add an atom to the group.
         '''
 
-        if not id in slab:
+        if not id in slab.id:
             raise ValueError('The id %s is not a member of the slab'%id)
 
         self.ids.append(id)

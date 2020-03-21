@@ -413,6 +413,7 @@ class MyMainWindow(QMainWindow):
             row_index = rows[-1].row()
         for ii in range(len(attrs_wanted)):
             self.tableWidget_pars.insertRow(row_index)
+            current_value = eval("self.model.script_module."+par_selected+'.'+attrs_wanted[ii].replace('set','get')+"()")
             for i in range(6):
                 if i==2:
                     check_box = QCheckBox()
@@ -423,12 +424,15 @@ class MyMainWindow(QMainWindow):
                         qtablewidget = QTableWidgetItem(".".join([par_selected,attrs_wanted[ii]]))
                         qtablewidget.setFont(QFont('Times',10,QFont.Bold))
                     elif i in [1]:
-                        qtablewidget = QTableWidgetItem('0.0000')
+                        qtablewidget = QTableWidgetItem(str(round(current_value,4)))
                         qtablewidget.setForeground(QBrush(QColor(255,0,255)))
                     elif i ==5:
                         qtablewidget = QTableWidgetItem('(0,0)')
-                    else:
-                        qtablewidget = QTableWidgetItem('0.0000')
+                    elif i ==3:
+                        qtablewidget = QTableWidgetItem(str(round(current_value*0.5,4)))
+                    elif i ==4:
+                        qtablewidget = QTableWidgetItem(str(round(current_value*1.5,4)))
+
                     self.tableWidget_pars.setItem(row_index,i,qtablewidget)
         self.update_model_parameter()
 
@@ -495,6 +499,7 @@ class MyMainWindow(QMainWindow):
             self.update_plot_data_view_upon_simulation()
             self.init_structure_view()
             self.statusbar.clearMessage()
+            self.update_combo_box_list_par_set()
             self.statusbar.showMessage("Model is simulated successfully!")
         except model.ModelError as e:
             _ = QMessageBox.question(self, 'Runtime error message', str(e), QMessageBox.Ok)

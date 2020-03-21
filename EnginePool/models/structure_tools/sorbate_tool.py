@@ -65,7 +65,7 @@ class CarbonOxygenMotif(object):
         self.anchor_id = anchor_id
         self.flat_down_index = flat_down_index
         self.r_list = [r for each in ids]
-        self.delta_list = [delta for each in ids]
+        self.delta_list = [delta for i in ids]
         self.gamma_list = [gamma for each in ids]
         self.lat_abc = np.array(lat_pars[0:3])
         self.lat_angles = np.array(lat_pars[3:])
@@ -99,7 +99,7 @@ class CarbonOxygenMotif(object):
         for i in range(len(anchor_index_list)):
             each = anchor_index_list[i]
             if each != None:
-                # if i not in flat_down_index:
+                #if i not in flat_down_index:
                 delta_list_names.append("delta_{}_{}".format(ids_all[i],ids_all[each]))
             if each != None:
                 r_list_names.append("r_{}_{}".format(ids_all[i],ids_all[each]))
@@ -108,8 +108,13 @@ class CarbonOxygenMotif(object):
         rgh.new_var('gamma',0)
         for r in r_list_names:
             rgh.new_var(r, 1.5)
-        for delta in delta_list_names:
-            rgh.new_var(delta, 10)
+        for i in range(len(delta_list_names)):
+            delta = delta_list_names[i]
+            if i in flat_down_index_new:
+                rgh.new_var(delta, 0)
+            else:
+                rgh.new_var(delta, 20)
+
         #for gamma in gamma_list_names:
         #    rgh.new_var(gamma, 10)
         

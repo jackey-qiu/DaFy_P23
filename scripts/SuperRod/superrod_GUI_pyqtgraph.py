@@ -73,6 +73,7 @@ class MyMainWindow(QMainWindow):
         self.setWindowTitle('Data analysis factory: CTR data modeling')
         icon = QIcon(os.path.join(script_path,"DAFY.png"))
         self.setWindowIcon(icon)
+        self.comboBox_all_motif.insertItems(0, sorbate_tool.ALL_MOTIF_COLLECTION)
         # self.show()
         self.stop = False
         self.show_checkBox_list = []
@@ -150,7 +151,7 @@ class MyMainWindow(QMainWindow):
         #syntax highlight
         self.plainTextEdit_script.setStyleSheet("""QPlainTextEdit{
 	                            font-family:'Consolas';
-                                font-size:12pt;
+                                font-size:14pt;
 	                            color: #ccc;
 	                            background-color: #2b2b2b;}""")
         self.plainTextEdit_script.setTabStopWidth(self.plainTextEdit_script.fontMetrics().width(' ')*4)

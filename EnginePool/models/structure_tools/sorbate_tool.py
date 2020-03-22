@@ -12,7 +12,7 @@ from copy import deepcopy
 from random import uniform
 # from coordinate_system import CoordinateSystem
 
-__all__ = ['OCCO','CCO', 'CO', 'CarbonOxygenMotif']
+ALL_MOTIF_COLLECTION = ['OCCO','CCO', 'CO']
 
 #sorbate structure motifs
 ##OCCO##

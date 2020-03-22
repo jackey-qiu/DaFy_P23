@@ -100,7 +100,7 @@ for i in range(num_sorbate_slabs):
 rgh = UserVars()
 rgh.new_var('beta', 0.0)#roughness factor
 rgh.new_var('mu',1)#liquid film thickness
-scales=['scale_CTR']
+scales=['scale_nonspecular_rods','scale_specular_rod']
 for scale in scales:
     rgh.new_var(scale,1.)
 #/rgh/global/end#
@@ -148,7 +148,6 @@ def Sim(data,VARS=vars()):
     F =[]
     fom_scaler=[]
     beta=rgh.beta
-    SCALES=[getattr(rgh,scale) for scale in scales]
 
     #/update_sorbate/begin#
     for i in range(num_sorbate_slabs):
@@ -185,9 +184,9 @@ def Sim(data,VARS=vars()):
                 if h[0]==0 and k[0]==0:#consider layered water only for specular rod if existent
                     q=np.pi*2*unitcell.abs_hkl(h,k,x)
                     pre_factor=(np.exp(-exp_const*rgh.mu/q))*(4*np.pi*re/auc)*3e6
-                    f = pre_factor*SCALES[0]*rough*sample.calc_f_all(h, k, x)
+                    f = pre_factor*rgh.scale_specular_rod*rough*sample.calc_f_all(h, k, x)
                 else:
-                    f = rough*sample.calc_f_all(h, k, x)
+                    f = rough*rgh.scale_nonspecular_rods*sample.calc_f_all(h, k, x)
                 F.append(abs(f*f))
                 fom_scaler.append(1)
         else:
@@ -195,6 +194,5 @@ def Sim(data,VARS=vars()):
             F.append(f)
             fom_scaler.append(1)
 
-    #you may play with the weighting rule by setting eg 2**bv, 5**bv for the wt factor, that way you are pushing the GenX to find a fit btween a good fit (low wt factor) and a reasonable fit (high wt factor)
     panelty_factor = [sample.bond_distance_constraint(which_domain=i, max_distance =2.2) for i in range(num_surface_slabs)]
     return F,1+sum(panelty_factor),fom_scaler

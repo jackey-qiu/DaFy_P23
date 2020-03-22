@@ -69,7 +69,7 @@ class MyMainWindow(QMainWindow):
         super(MyMainWindow, self).__init__(parent)
         pg.setConfigOptions(imageAxisOrder='row-major', background = 'k')
         pg.mkQApp()
-        uic.loadUi(os.path.join(DaFy_path,'scripts','SuperRod','superrod2.ui'),self)
+        uic.loadUi(os.path.join(DaFy_path,'scripts','SuperRod','superrod3.ui'),self)
         self.setWindowTitle('Data analysis factory: CTR data modeling')
         icon = QIcon(os.path.join(script_path,"DAFY.png"))
         self.setWindowIcon(icon)
